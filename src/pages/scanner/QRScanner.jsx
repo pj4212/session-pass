@@ -138,7 +138,8 @@ export default function QRScanner() {
       }
       setCheckedIn(prev => prev + 1);
     } else if (data.status === 'warning') {
-      setResult({ type: 'warning', title: 'Warning', subtitle: data.reason });
+      const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;
+      setResult({ type: 'warning', title: name || 'Warning', subtitle: data.reason });
     } else {
       setResult({ type: 'error', title: 'Error', subtitle: data.reason || 'Check-in failed' });
     }
