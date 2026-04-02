@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Monitor, Users, Edit, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -177,17 +177,33 @@ export default function EventTimeline({ events, locations, ticketCounts, seriesM
       }));
   }, [events]);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const currentWeekMonday = getMonday(todayStr);
+
   if (!timeline.length) {
     return <p className="text-center text-muted-foreground py-12">No upcoming sessions found. Create recurring events and publish them to see the projected timeline.</p>;
   }
 
   return (
     <div className="space-y-6">
-      {timeline.map(week => (
-        <div key={week.weekStart}>
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            {formatWeekLabel(week.weekStart)}
-          </h3>
+      {timeline.map(week => {
+        const isCurrentWeek = week.weekStart === currentWeekMonday;
+        const weekEndDate = new Date(week.weekStart + 'T00:00:00');
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
+        const isPastWeek = weekEndDate.toISOString().slice(0, 10) < todayStr;
+
+        return (
+        <div key={week.weekStart} className={isCurrentWeek ? 'ring-2 ring-primary/50 rounded-xl p-4 -mx-1 bg-primary/5' : ''}>
+          <div className="flex items-center gap-2 mb-3">
+            {isCurrentWeek && <Star className="h-4 w-4 text-primary fill-primary" />}
+            <h3 className={`text-sm font-semibold uppercase tracking-wider ${
+              isCurrentWeek ? 'text-primary' : isPastWeek ? 'text-muted-foreground/50' : 'text-muted-foreground'
+            }`}>
+              {formatWeekLabel(week.weekStart)}
+              {isCurrentWeek && <span className="ml-2 normal-case tracking-normal text-xs font-medium bg-primary text-primary-foreground px-2 py-0.5 rounded-full">This Week</span>}
+              {isPastWeek && <span className="ml-2 normal-case tracking-normal text-xs font-medium text-muted-foreground/50">Past</span>}
+            </h3>
+          </div>
           <div className="space-y-2">
             {week.sessions.map((session, idx) => {
               const loc = locations[session.location_id];
@@ -195,15 +211,26 @@ export default function EventTimeline({ events, locations, ticketCounts, seriesM
               const sourceId = session._sourceId || session.id;
               const seriesName = seriesMap[session._seriesId || session.series_id]?.name;
               const count = ticketCounts[session.id] || 0;
+              const sessionPast = session.event_date < todayStr;
 
               return (
-                <div key={session.id + '-' + idx} className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${isProjected ? 'bg-card/50 border-border/50' : 'bg-card border-border'}`}>
+                <div key={session.id + '-' + idx} className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${
+                  sessionPast
+                    ? 'bg-muted/30 border-border/30 opacity-60'
+                    : isProjected
+                      ? 'bg-card/50 border-border/50'
+                      : isCurrentWeek
+                        ? 'bg-card border-primary/30'
+                        : 'bg-card border-border'
+                }`}>
                   {/* Date pill */}
-                  <div className="hidden sm:flex flex-col items-center justify-center bg-secondary rounded-lg px-3 py-2 min-w-[70px]">
+                  <div className={`hidden sm:flex flex-col items-center justify-center rounded-lg px-3 py-2 min-w-[70px] ${
+                    sessionPast ? 'bg-muted/50' : isCurrentWeek && !isProjected ? 'bg-primary/20' : 'bg-secondary'
+                  }`}>
                     <span className="text-xs font-medium text-muted-foreground uppercase">
                       {new Date(session.event_date + 'T00:00:00').toLocaleDateString('en-AU', { weekday: 'short' })}
                     </span>
-                    <span className="text-xl font-bold text-foreground leading-tight">
+                    <span className={`text-xl font-bold leading-tight ${sessionPast ? 'text-muted-foreground' : 'text-foreground'}`}>
                       {new Date(session.event_date + 'T00:00:00').getDate()}
                     </span>
                   </div>
@@ -211,8 +238,9 @@ export default function EventTimeline({ events, locations, ticketCounts, seriesM
                   {/* Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-semibold text-foreground truncate">{session.name}</span>
-                      {isProjected && <Badge variant="outline" className="text-xs py-0 text-muted-foreground">Projected</Badge>}
+                      <span className={`font-semibold truncate ${sessionPast ? 'text-muted-foreground' : 'text-foreground'}`}>{session.name}</span>
+                      {sessionPast && <Badge variant="secondary" className="text-xs py-0 gap-1"><CheckCircle2 className="h-3 w-3" />Completed</Badge>}
+                      {isProjected && !sessionPast && <Badge variant="outline" className="text-xs py-0 text-muted-foreground">Projected</Badge>}
                       {seriesName && <span className="text-xs text-muted-foreground">· {seriesName}</span>}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -261,7 +289,8 @@ export default function EventTimeline({ events, locations, ticketCounts, seriesM
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
