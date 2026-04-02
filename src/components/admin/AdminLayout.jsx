@@ -8,12 +8,11 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'event_admin', 'report_viewer'] },
+  { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'event_admin'] },
   { path: '/admin/series', label: 'Event Series', icon: FolderOpen, roles: ['super_admin', 'event_admin'] },
   { path: '/admin/events', label: 'Sessions', icon: Calendar, roles: ['super_admin', 'event_admin'] },
-  { path: '/admin/reports', label: 'Reports', icon: BarChart3, roles: ['super_admin', 'event_admin', 'report_viewer'] },
+  { path: '/admin/reports', label: 'Reports', icon: BarChart3, roles: ['super_admin', 'event_admin'] },
   { path: '/admin/settings/users', label: 'Users', icon: Users, roles: ['super_admin'] },
-  { path: '/admin/settings/mentors', label: 'Mentors', icon: Settings, roles: ['super_admin'] },
   { path: '/admin/settings/platinum-leaders', label: 'Platinum Leaders', icon: Settings, roles: ['super_admin'] },
   { path: '/admin/settings/email-testing', label: 'Email Testing', icon: Mail, roles: ['super_admin'] },
 ];
@@ -29,7 +28,7 @@ export default function AdminLayout() {
   useEffect(() => {
     async function loadUser() {
       const me = await base44.auth.me();
-      if (!me || !['super_admin', 'event_admin', 'report_viewer', 'admin'].includes(me.role)) {
+      if (!me || !['super_admin', 'event_admin', 'admin'].includes(me.role)) {
         navigate('/');
         return;
       }
