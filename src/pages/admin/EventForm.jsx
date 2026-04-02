@@ -15,6 +15,19 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+const TIMEZONES = [
+  { value: 'Australia/Brisbane', label: 'Brisbane (AEST, UTC+10)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT, UTC+10/+11)' },
+  { value: 'Australia/Melbourne', label: 'Melbourne (AEST/AEDT, UTC+10/+11)' },
+  { value: 'Australia/Hobart', label: 'Hobart (AEST/AEDT, UTC+10/+11)' },
+  { value: 'Australia/Adelaide', label: 'Adelaide (ACST/ACDT, UTC+9:30/+10:30)' },
+  { value: 'Australia/Darwin', label: 'Darwin (ACST, UTC+9:30)' },
+  { value: 'Australia/Perth', label: 'Perth (AWST, UTC+8)' },
+  { value: 'Pacific/Auckland', label: 'Auckland (NZST/NZDT, UTC+12/+13)' },
+  { value: 'Pacific/Chatham', label: 'Chatham Islands (UTC+12:45/+13:45)' },
+  { value: 'Europe/London', label: 'London (GMT/BST, UTC+0/+1)' },
+];
+
 export default function EventForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -277,7 +290,12 @@ export default function EventForm() {
         </div>
         <div>
           <Label>Timezone</Label>
-          <Input value={form.timezone} onChange={e => updateForm('timezone', e.target.value)} />
+          <Select value={form.timezone} onValueChange={v => updateForm('timezone', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {TIMEZONES.map(tz => <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
