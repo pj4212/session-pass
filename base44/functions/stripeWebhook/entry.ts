@@ -6,6 +6,29 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
+// Retry wrapper with exponential backoff for email sending and DB ops
+async function sendWithRetry(fn, maxRetries = 5) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await fn();
+      return result;
+    } catch (err) {
+      const isRateLimit = err?.statusCode === 429 || err?.message?.includes('rate');
+      const isServerError = err?.statusCode >= 500;
+      const isRetryable = isRateLimit || isServerError || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET';
+      
+      if (!isRetryable || attempt === maxRetries) {
+        console.error(`sendWithRetry failed after ${attempt} attempts:`, err.message);
+        throw err;
+      }
+      
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 500, 30000);
+      console.warn(`sendWithRetry attempt ${attempt} failed (${err.message}), retrying in ${Math.round(delay)}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
 async function generateQrHash(ticketId, occurrenceId) {
   const salt = Deno.env.get("QR_SECRET_SALT");
   const data = new TextEncoder().encode(ticketId + occurrenceId + salt);
@@ -124,10 +147,16 @@ Deno.serve(async (req) => {
       }
 
       if (occurrence) {
-        await sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap);
-        for (const ticket of tickets) {
-          await sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id]);
-        }
+        // Send emails in parallel with individual retry protection
+        const emailPromises = [
+          sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
+            .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
+          ...tickets.map(ticket =>
+            sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id])
+              .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
+          )
+        ];
+        await Promise.all(emailPromises);
       }
 
       console.log("Order completed successfully:", orderNumber);
@@ -390,22 +419,24 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
 async function sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap) {
   const html = buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap);
 
-  await resend.emails.send({
+  await sendWithRetry(() => resend.emails.send({
     from: 'Session Pass <noreply@session-pass.com>',
     to: order.buyer_email,
     subject: `Booking Confirmed — ${occurrence.name} | Order #${order.order_number}`,
     html: html
-  });
+  }));
+  console.log(`Order receipt email sent to ${order.buyer_email} for order ${order.order_number}`);
 }
 
 async function sendTicketEmail(base44, ticket, occurrence, ticketType) {
   const isOnline = ticket.attendance_mode === 'online';
   const html = buildTicketEmailHtml(ticket, occurrence, ticketType);
 
-  await resend.emails.send({
+  await sendWithRetry(() => resend.emails.send({
     from: 'Session Pass <noreply@session-pass.com>',
     to: ticket.attendee_email,
     subject: `Your ${isOnline ? 'Online' : 'In-Person'} Ticket — ${occurrence.name}`,
     html: html
-  });
+  }));
+  console.log(`Ticket email sent to ${ticket.attendee_email} for ticket ${ticket.id}`);
 }

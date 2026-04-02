@@ -1,5 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+// Retry wrapper with exponential backoff for DB operations under load
+async function withRetry(fn, label = 'operation', maxRetries = 4) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRateLimit = err?.statusCode === 429 || err?.message?.includes('rate');
+      const isServerError = err?.statusCode >= 500;
+      const isRetryable = isRateLimit || isServerError || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET';
+      
+      if (!isRetryable || attempt === maxRetries) {
+        console.error(`${label} failed after ${attempt} attempts:`, err.message);
+        throw err;
+      }
+      
+      const delay = Math.min(500 * Math.pow(2, attempt - 1) + Math.random() * 300, 10000);
+      console.warn(`${label} attempt ${attempt} failed, retrying in ${Math.round(delay)}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -73,21 +95,27 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Perform check-in
+      // Perform check-in with retry protection
       const now = new Date().toISOString();
-      await base44.asServiceRole.entities.Ticket.update(ticket.id, {
-        check_in_status: 'checked_in',
-        checked_in_at: now,
-        checked_in_by: user.id
-      });
+      await withRetry(
+        () => base44.asServiceRole.entities.Ticket.update(ticket.id, {
+          check_in_status: 'checked_in',
+          checked_in_at: now,
+          checked_in_by: user.id
+        }),
+        `checkin-update-${ticket.id}`
+      );
 
-      // Write CheckInLog
-      await base44.asServiceRole.entities.CheckInLog.create({
-        ticket_id: ticket.id,
-        occurrence_id: ticket.occurrence_id,
-        action: 'check_in',
-        performed_by: user.id
-      });
+      // Write CheckInLog with retry
+      await withRetry(
+        () => base44.asServiceRole.entities.CheckInLog.create({
+          ticket_id: ticket.id,
+          occurrence_id: ticket.occurrence_id,
+          action: 'check_in',
+          performed_by: user.id
+        }),
+        `checkin-log-${ticket.id}`
+      );
 
       // Build warnings list
       const warnings = [];
@@ -123,18 +151,24 @@ Deno.serve(async (req) => {
         return Response.json({ status: 'warning', reason: 'Not checked in' });
       }
 
-      await base44.asServiceRole.entities.Ticket.update(ticket.id, {
-        check_in_status: 'not_checked_in',
-        checked_in_at: '',
-        checked_in_by: ''
-      });
+      await withRetry(
+        () => base44.asServiceRole.entities.Ticket.update(ticket.id, {
+          check_in_status: 'not_checked_in',
+          checked_in_at: '',
+          checked_in_by: ''
+        }),
+        `undo-checkin-${ticket.id}`
+      );
 
-      await base44.asServiceRole.entities.CheckInLog.create({
-        ticket_id: ticket.id,
-        occurrence_id: ticket.occurrence_id,
-        action: 'undo_check_in',
-        performed_by: user.id
-      });
+      await withRetry(
+        () => base44.asServiceRole.entities.CheckInLog.create({
+          ticket_id: ticket.id,
+          occurrence_id: ticket.occurrence_id,
+          action: 'undo_check_in',
+          performed_by: user.id
+        }),
+        `undo-checkin-log-${ticket.id}`
+      );
 
       return Response.json({ 
         status: 'success',
