@@ -1,0 +1,43 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "title": "Role",
+      "enum": [
+        "super_admin",
+        "event_admin",
+        "scanner",
+        "report_viewer",
+        "user"
+      ],
+      "default": "user"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "default_upline_mentor_id": {
+      "type": "string",
+      "title": "Default Upline Mentor",
+      "relationType": "UplineMentor"
+    },
+    "default_platinum_leader_id": {
+      "type": "string",
+      "title": "Default Platinum Leader",
+      "relationType": "PlatinumLeader"
+    },
+    "last_login": {
+      "type": "string",
+      "title": "Last Login",
+      "format": "date-time"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+    }
+  },
+  "required": []
+}

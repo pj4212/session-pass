@@ -1,0 +1,39 @@
+{
+  "name": "CheckInLog",
+  "type": "object",
+  "properties": {
+    "ticket_id": {
+      "type": "string",
+      "title": "Ticket",
+      "relationType": "Ticket"
+    },
+    "occurrence_id": {
+      "type": "string",
+      "title": "Event Occurrence",
+      "relationType": "EventOccurrence"
+    },
+    "action": {
+      "type": "string",
+      "title": "Action",
+      "enum": [
+        "check_in",
+        "undo_check_in"
+      ]
+    },
+    "performed_by": {
+      "type": "string",
+      "title": "Performed By",
+      "relationType": "User"
+    },
+    "device_id": {
+      "type": "string",
+      "title": "Device ID"
+    }
+  },
+  "required": [
+    "ticket_id",
+    "occurrence_id",
+    "action",
+    "performed_by"
+  ]
+}

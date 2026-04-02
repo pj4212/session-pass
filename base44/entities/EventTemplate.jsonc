@@ -1,0 +1,60 @@
+{
+  "name": "EventTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "default_location_id": {
+      "type": "string",
+      "title": "Default Location",
+      "relationType": "Location"
+    },
+    "event_mode": {
+      "type": "string",
+      "title": "Event Mode",
+      "enum": [
+        "online_stream",
+        "in_person",
+        "hybrid"
+      ]
+    },
+    "recurrence_pattern": {
+      "type": "string",
+      "title": "Recurrence Pattern",
+      "enum": [
+        "fortnightly_A",
+        "fortnightly_B",
+        "weekly",
+        "custom"
+      ]
+    },
+    "default_start_time": {
+      "type": "string",
+      "title": "Default Start Time"
+    },
+    "default_duration_mins": {
+      "type": "number",
+      "title": "Default Duration (mins)"
+    },
+    "default_ticket_type_configs": {
+      "type": "string",
+      "title": "Default Ticket Type Configs"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "event_mode",
+    "recurrence_pattern"
+  ]
+}

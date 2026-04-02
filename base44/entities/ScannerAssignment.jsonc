@@ -1,0 +1,34 @@
+{
+  "name": "ScannerAssignment",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "title": "User",
+      "relationType": "User"
+    },
+    "occurrence_id": {
+      "type": "string",
+      "title": "Event Occurrence",
+      "relationType": "EventOccurrence"
+    },
+    "location_id": {
+      "type": "string",
+      "title": "Location",
+      "relationType": "Location"
+    },
+    "can_undo_checkin": {
+      "type": "boolean",
+      "title": "Can Undo Check-In",
+      "default": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+    }
+  },
+  "required": [
+    "user_id"
+  ]
+}

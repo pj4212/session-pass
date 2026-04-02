@@ -1,0 +1,99 @@
+{
+  "name": "Ticket",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "title": "Order",
+      "relationType": "Order"
+    },
+    "occurrence_id": {
+      "type": "string",
+      "title": "Event Occurrence",
+      "relationType": "EventOccurrence"
+    },
+    "ticket_type_id": {
+      "type": "string",
+      "title": "Ticket Type",
+      "relationType": "TicketType"
+    },
+    "attendance_mode": {
+      "type": "string",
+      "title": "Attendance Mode",
+      "enum": [
+        "online",
+        "in_person"
+      ]
+    },
+    "attendee_first_name": {
+      "type": "string",
+      "title": "Attendee First Name"
+    },
+    "attendee_last_name": {
+      "type": "string",
+      "title": "Attendee Last Name"
+    },
+    "attendee_email": {
+      "type": "string",
+      "title": "Attendee Email",
+      "format": "email"
+    },
+    "upline_mentor_id": {
+      "type": "string",
+      "title": "Upline Mentor",
+      "relationType": "UplineMentor"
+    },
+    "platinum_leader_id": {
+      "type": "string",
+      "title": "Platinum Leader",
+      "relationType": "PlatinumLeader"
+    },
+    "qr_code_hash": {
+      "type": "string",
+      "title": "QR Code Hash"
+    },
+    "qr_code_url": {
+      "type": "string",
+      "title": "QR Code URL"
+    },
+    "check_in_status": {
+      "type": "string",
+      "title": "Check-In Status",
+      "enum": [
+        "not_checked_in",
+        "checked_in"
+      ],
+      "default": "not_checked_in"
+    },
+    "checked_in_at": {
+      "type": "string",
+      "title": "Checked In At",
+      "format": "date-time"
+    },
+    "checked_in_by": {
+      "type": "string",
+      "title": "Checked In By",
+      "relationType": "User"
+    },
+    "ticket_status": {
+      "type": "string",
+      "title": "Ticket Status",
+      "enum": [
+        "active",
+        "cancelled",
+        "refunded"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "order_id",
+    "occurrence_id",
+    "ticket_type_id",
+    "attendance_mode",
+    "attendee_first_name",
+    "attendee_last_name",
+    "attendee_email",
+    "qr_code_hash"
+  ]
+}

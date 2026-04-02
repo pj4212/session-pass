@@ -1,0 +1,103 @@
+{
+  "name": "EventOccurrence",
+  "type": "object",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "title": "Event Template",
+      "relationType": "EventTemplate"
+    },
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "slug": {
+      "type": "string",
+      "title": "Slug"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "event_date": {
+      "type": "string",
+      "title": "Event Date",
+      "format": "date"
+    },
+    "start_datetime": {
+      "type": "string",
+      "title": "Start Date/Time",
+      "format": "date-time"
+    },
+    "end_datetime": {
+      "type": "string",
+      "title": "End Date/Time",
+      "format": "date-time"
+    },
+    "timezone": {
+      "type": "string",
+      "title": "Timezone"
+    },
+    "event_mode": {
+      "type": "string",
+      "title": "Event Mode",
+      "enum": [
+        "online_stream",
+        "in_person",
+        "hybrid"
+      ]
+    },
+    "location_id": {
+      "type": "string",
+      "title": "Location",
+      "relationType": "Location"
+    },
+    "zoom_link": {
+      "type": "string",
+      "title": "Zoom Link"
+    },
+    "zoom_meeting_id": {
+      "type": "string",
+      "title": "Zoom Meeting ID"
+    },
+    "venue_details": {
+      "type": "string",
+      "title": "Venue Details"
+    },
+    "is_published": {
+      "type": "boolean",
+      "title": "Is Published",
+      "default": false
+    },
+    "sales_open_date": {
+      "type": "string",
+      "title": "Sales Open Date",
+      "format": "date-time"
+    },
+    "sales_close_date": {
+      "type": "string",
+      "title": "Sales Close Date",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "draft",
+        "published",
+        "cancelled",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "name",
+    "slug",
+    "event_date",
+    "start_datetime",
+    "end_datetime",
+    "timezone",
+    "event_mode"
+  ]
+}

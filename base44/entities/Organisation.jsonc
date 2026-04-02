@@ -1,0 +1,32 @@
+{
+  "name": "Organisation",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "default_timezone": {
+      "type": "string",
+      "title": "Default Timezone",
+      "default": "Australia/Brisbane"
+    },
+    "logo_url": {
+      "type": "string",
+      "title": "Logo URL"
+    },
+    "support_email": {
+      "type": "string",
+      "title": "Support Email",
+      "format": "email"
+    },
+    "stripe_account_id": {
+      "type": "string",
+      "title": "Stripe Account ID"
+    }
+  },
+  "required": [
+    "name",
+    "support_email"
+  ]
+}

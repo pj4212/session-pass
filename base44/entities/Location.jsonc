@@ -1,0 +1,41 @@
+{
+  "name": "Location",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "city": {
+      "type": "string",
+      "title": "City"
+    },
+    "state": {
+      "type": "string",
+      "title": "State"
+    },
+    "timezone": {
+      "type": "string",
+      "title": "Timezone"
+    },
+    "default_capacity": {
+      "type": "number",
+      "title": "Default Capacity"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "city",
+    "state",
+    "timezone"
+  ]
+}
