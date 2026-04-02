@@ -41,116 +41,85 @@ export default function SeriesPage() {
 
 
 
-  // Build a week-by-week timeline for the next 12 months
+  // Build a week-by-week timeline showing only the next upcoming week
   const weeklyTimeline = useMemo(() => {
     if (!sessions.length) return [];
 
-    // Get Monday of a given date's week
+    // Local date helpers (avoid UTC conversion bugs)
+    function toLocalDateStr(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    function localDate(dateStr) {
+      const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0);
+    }
     function getMonday(dateStr) {
-      const d = new Date(dateStr + 'T00:00:00');
+      const d = localDate(dateStr);
       const day = d.getDay();
       const diff = d.getDate() - day + (day === 0 ? -6 : 1);
       const monday = new Date(d);
       monday.setDate(diff);
-      return monday.toISOString().slice(0, 10);
+      return toLocalDateStr(monday);
     }
 
-    // Determine the fortnightly pattern from existing sessions
     const fortnightlyA = sessions.filter(s => s.recurrence_pattern === 'fortnightly_A');
     const fortnightlyB = sessions.filter(s => s.recurrence_pattern === 'fortnightly_B');
     const weeklySessions = sessions.filter(s => s.recurrence_pattern === 'weekly' || !s.recurrence_pattern);
 
-    // Figure out which weeks are A and which are B from existing data
-    const weekAMondays = new Set(fortnightlyA.map(s => getMonday(s.event_date)));
-    const weekBMondays = new Set(fortnightlyB.map(s => getMonday(s.event_date)));
-
-    // Generate weeks for next 12 months
-    const today = new Date();
-    const startMonday = new Date(getMonday(today.toISOString().slice(0, 10)) + 'T00:00:00');
-    const endDate = new Date(today);
-    endDate.setMonth(endDate.getMonth() + 12);
-
-    // Find a reference A and B monday to establish the fortnightly cadence
     let refAMonday = null;
     let refBMonday = null;
-    if (fortnightlyA.length) {
-      refAMonday = new Date(getMonday(fortnightlyA[0].event_date) + 'T00:00:00');
-    }
-    if (fortnightlyB.length) {
-      refBMonday = new Date(getMonday(fortnightlyB[0].event_date) + 'T00:00:00');
-    }
+    if (fortnightlyA.length) refAMonday = localDate(getMonday(fortnightlyA[0].event_date));
+    if (fortnightlyB.length) refBMonday = localDate(getMonday(fortnightlyB[0].event_date));
 
     function isWeekA(mondayDate) {
-      if (refAMonday) {
-        const diff = Math.round((mondayDate - refAMonday) / (7 * 24 * 60 * 60 * 1000));
-        return diff % 2 === 0;
-      }
-      if (refBMonday) {
-        const diff = Math.round((mondayDate - refBMonday) / (7 * 24 * 60 * 60 * 1000));
-        return diff % 2 !== 0;
-      }
+      if (refAMonday) return Math.round((mondayDate - refAMonday) / (7 * 86400000)) % 2 === 0;
+      if (refBMonday) return Math.round((mondayDate - refBMonday) / (7 * 86400000)) % 2 !== 0;
       return true;
     }
 
-    // Build session templates (day of week + time pattern) from actual sessions
-    function buildTemplates(sessionList) {
-      return sessionList.map(s => ({
-        dayOfWeek: new Date(s.event_date + 'T00:00:00').getDay(),
-        name: s.name,
-        slug: s.slug,
-        event_mode: s.event_mode,
-        location_id: s.location_id,
-        start_datetime: s.start_datetime,
-        end_datetime: s.end_datetime,
-        description: s.description,
-        id: s.id,
-        occurrence_id: s.id,
-        recurrence_pattern: s.recurrence_pattern,
-      }));
-    }
-
-    const weeklyTemplates = buildTemplates(weeklySessions);
-    const fortnightlyATemplates = buildTemplates(fortnightlyA);
-    const fortnightlyBTemplates = buildTemplates(fortnightlyB);
-
-    // Group actual sessions by their week monday
-    const actualSessionsByWeek = {};
-    for (const s of sessions) {
-      const monday = getMonday(s.event_date);
-      if (!actualSessionsByWeek[monday]) actualSessionsByWeek[monday] = [];
-      actualSessionsByWeek[monday].push(s);
-    }
-
-    // De-duplicate templates by day of week — keep one template per (dayOfWeek + name)
-    function dedupeTemplates(templates) {
+    function buildTemplates(list) {
       const seen = new Set();
-      return templates.filter(t => {
-        const key = `${t.dayOfWeek}-${t.name}`;
+      return list.filter(s => {
+        const key = `${localDate(s.event_date).getDay()}-${s.name}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
-      });
+      }).map(s => ({
+        dayOfWeek: localDate(s.event_date).getDay(),
+        name: s.name, slug: s.slug, event_mode: s.event_mode,
+        location_id: s.location_id, start_datetime: s.start_datetime,
+        end_datetime: s.end_datetime, description: s.description,
+        id: s.id, occurrence_id: s.id, recurrence_pattern: s.recurrence_pattern,
+      }));
     }
 
-    const dedupedWeekly = dedupeTemplates(weeklyTemplates);
-    const dedupedA = dedupeTemplates(fortnightlyATemplates);
-    const dedupedB = dedupeTemplates(fortnightlyBTemplates);
+    const weeklyT = buildTemplates(weeklySessions);
+    const aT = buildTemplates(fortnightlyA);
+    const bT = buildTemplates(fortnightlyB);
+
+    const actualByWeek = {};
+    for (const s of sessions) {
+      const m = getMonday(s.event_date);
+      if (!actualByWeek[m]) actualByWeek[m] = [];
+      actualByWeek[m].push(s);
+    }
 
     function projectTemplate(tmpl, mondayStr) {
       const targetDay = tmpl.dayOfWeek;
-      const mondayDate = new Date(mondayStr + 'T00:00:00');
+      const mondayDate = localDate(mondayStr);
       const dayOffset = targetDay === 0 ? 6 : targetDay - 1;
       const sessionDate = new Date(mondayDate);
       sessionDate.setDate(sessionDate.getDate() + dayOffset);
-      const dateStr = sessionDate.toISOString().slice(0, 10);
-
+      const dateStr = toLocalDateStr(sessionDate);
       const origStart = new Date(tmpl.start_datetime);
       const origEnd = new Date(tmpl.end_datetime);
       const newStart = new Date(sessionDate);
       newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
       const newEnd = new Date(sessionDate);
       newEnd.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
-
       return {
         ...tmpl,
         id: `projected-${tmpl.id}-${dateStr}`,
@@ -161,36 +130,42 @@ export default function SeriesPage() {
       };
     }
 
-    const weeks = [];
+    const todayStr = toLocalDateStr(new Date());
+    const startMonday = localDate(getMonday(todayStr));
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 12);
+
     const current = new Date(startMonday);
 
     while (current < endDate) {
-      const mondayStr = current.toISOString().slice(0, 10);
+      const mondayStr = toLocalDateStr(current);
       const weekIsA = isWeekA(current);
-      const actual = actualSessionsByWeek[mondayStr] || [];
-
-      // Determine which templates apply this week
-      const fortnightlyTemplates = weekIsA ? dedupedA : dedupedB;
-      const allTemplates = [...dedupedWeekly, ...fortnightlyTemplates];
-
-      // Check which templates are already covered by actual sessions (match by name)
+      const actual = actualByWeek[mondayStr] || [];
+      const fortnightlyTemplates = weekIsA ? aT : bT;
+      const allTemplates = [...weeklyT, ...fortnightlyTemplates];
       const actualNames = new Set(actual.map(s => s.name));
-      const missingTemplates = allTemplates.filter(t => !actualNames.has(t.name));
+      const missing = allTemplates.filter(t => !actualNames.has(t.name));
+      const projected = missing.map(t => projectTemplate(t, mondayStr));
 
-      // Project missing templates into this week
-      const projected = missingTemplates.map(t => projectTemplate(t, mondayStr));
-
+      // Filter out past sessions and sort: online first, then alphabetical
       const weekSessions = [...actual, ...projected]
-        .sort((a, b) => new Date(a.event_date + 'T00:00:00') - new Date(b.event_date + 'T00:00:00') || new Date(a.start_datetime) - new Date(b.start_datetime));
+        .filter(s => s.event_date >= todayStr)
+        .sort((a, b) => {
+          const aOnline = a.event_mode === 'online_stream' ? 0 : 1;
+          const bOnline = b.event_mode === 'online_stream' ? 0 : 1;
+          if (aOnline !== bOnline) return aOnline - bOnline;
+          return a.name.localeCompare(b.name);
+        });
 
+      // Return only the first week that has future sessions
       if (weekSessions.length > 0) {
-        weeks.push({ weekStart: mondayStr, sessions: weekSessions });
+        return [{ weekStart: mondayStr, sessions: weekSessions }];
       }
 
       current.setDate(current.getDate() + 7);
     }
 
-    return weeks;
+    return [];
   }, [sessions]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;

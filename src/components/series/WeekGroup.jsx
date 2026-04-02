@@ -3,8 +3,13 @@ import { Calendar, Clock, MapPin, Monitor } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+function localDate(dateStr) {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
+}
+
 function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  return localDate(dateStr).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function formatTime(dateStr) {
@@ -12,7 +17,7 @@ function formatTime(dateStr) {
 }
 
 function formatWeekLabel(mondayDate) {
-  const d = new Date(mondayDate);
+  const d = localDate(mondayDate);
   const day = d.getDate();
   const month = d.toLocaleDateString('en-AU', { month: 'long' });
   const year = d.getFullYear();
@@ -53,10 +58,10 @@ export default function WeekGroup({ weekStart, sessions, locations, ticketTypes 
               {/* Date pill */}
               <div className="hidden sm:flex flex-col items-center justify-center bg-secondary rounded-lg px-3 py-2 min-w-[70px]">
                 <span className="text-xs font-medium text-muted-foreground uppercase">
-                  {new Date(session.event_date).toLocaleDateString('en-AU', { weekday: 'short' })}
+                  {localDate(session.event_date).toLocaleDateString('en-AU', { weekday: 'short' })}
                 </span>
                 <span className="text-xl font-bold text-foreground leading-tight">
-                  {new Date(session.event_date).getDate()}
+                  {localDate(session.event_date).getDate()}
                 </span>
               </div>
 
