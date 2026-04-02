@@ -4,8 +4,12 @@ import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star } fro
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+function dateOnly(d) {
+  return typeof d === 'string' ? d.slice(0, 10) : d;
+}
+
 function getMonday(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = new Date(dateOnly(dateStr) + 'T12:00:00');
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d);
@@ -50,12 +54,12 @@ function buildProjectedTimeline(sessions, months) {
   function buildTemplates(list) {
     const seen = new Set();
     return list.filter(s => {
-      const key = `${new Date(s.event_date + 'T00:00:00').getDay()}-${s.name}`;
+      const key = `${new Date(dateOnly(s.event_date) + 'T12:00:00').getDay()}-${s.name}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     }).map(s => ({
-      dayOfWeek: new Date(s.event_date + 'T00:00:00').getDay(),
+      dayOfWeek: new Date(dateOnly(s.event_date) + 'T12:00:00').getDay(),
       name: s.name,
       slug: s.slug,
       event_mode: s.event_mode,
@@ -73,14 +77,14 @@ function buildProjectedTimeline(sessions, months) {
 
   const actualByWeek = {};
   for (const s of sessions) {
-    const m = getMonday(s.event_date);
+    const m = getMonday(dateOnly(s.event_date));
     if (!actualByWeek[m]) actualByWeek[m] = [];
     actualByWeek[m].push(s);
   }
 
   function projectTemplate(tmpl, mondayStr) {
     const targetDay = tmpl.dayOfWeek;
-    const mondayDate = new Date(mondayStr + 'T00:00:00');
+    const mondayDate = new Date(mondayStr + 'T12:00:00');
     const dayOffset = targetDay === 0 ? 6 : targetDay - 1;
     const sessionDate = new Date(mondayDate);
     sessionDate.setDate(sessionDate.getDate() + dayOffset);
@@ -120,7 +124,7 @@ function buildProjectedTimeline(sessions, months) {
     const missing = allTemplates.filter(t => !actualNames.has(t.name));
     const projected = missing.map(t => projectTemplate(t, mondayStr));
     const all = [...actual, ...projected].sort((a, b) =>
-      new Date(a.event_date + 'T00:00:00') - new Date(b.event_date + 'T00:00:00') || new Date(a.start_datetime) - new Date(b.start_datetime)
+      new Date(dateOnly(a.event_date) + 'T12:00:00') - new Date(dateOnly(b.event_date) + 'T12:00:00') || new Date(a.start_datetime) - new Date(b.start_datetime)
     );
     if (all.length > 0) weeks.push({ weekStart: mondayStr, sessions: all });
     current.setDate(current.getDate() + 7);
@@ -162,7 +166,7 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
     }
     // Add standalone events
     for (const ev of standalone) {
-      const m = getMonday(ev.event_date);
+      const m = getMonday(dateOnly(ev.event_date));
       if (!weekMap[m]) weekMap[m] = [];
       weekMap[m].push(ev);
     }
@@ -172,7 +176,7 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
       .map(([weekStart, sessions]) => ({
         weekStart,
         sessions: sessions.sort((a, b) =>
-          new Date(a.event_date + 'T00:00:00') - new Date(b.event_date + 'T00:00:00') || new Date(a.start_datetime) - new Date(b.start_datetime)
+          new Date(dateOnly(a.event_date) + 'T12:00:00') - new Date(dateOnly(b.event_date) + 'T12:00:00') || new Date(a.start_datetime) - new Date(b.start_datetime)
         )
       }));
   }, [events]);
@@ -211,7 +215,7 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
               const sourceId = session._sourceId || session.id;
               const seriesName = seriesMap[session._seriesId || session.series_id]?.name;
               const count = ticketCounts[session.id] || 0;
-              const sessionPast = session.event_date < todayStr;
+              const sessionPast = dateOnly(session.event_date) < todayStr;
 
               return (
                 <div key={session.id + '-' + idx} className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${
@@ -228,10 +232,10 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                     sessionPast ? 'bg-muted/50' : isCurrentWeek && !isProjected ? 'bg-primary/20' : 'bg-secondary'
                   }`}>
                     <span className="text-xs font-medium text-muted-foreground uppercase">
-                      {new Date(session.event_date + 'T00:00:00').toLocaleDateString('en-AU', { weekday: 'short' })}
+                      {new Date(dateOnly(session.event_date) + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short' })}
                     </span>
                     <span className={`text-xl font-bold leading-tight ${sessionPast ? 'text-muted-foreground' : 'text-foreground'}`}>
-                      {new Date(session.event_date + 'T00:00:00').getDate()}
+                      {new Date(dateOnly(session.event_date) + 'T12:00:00').getDate()}
                     </span>
                   </div>
 
