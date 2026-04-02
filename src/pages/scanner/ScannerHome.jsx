@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Clock, MapPin, Loader2, ScanLine, LogOut, ChevronRight, Ticket } from 'lucide-react';
 
 export default function ScannerHome() {
-  const { user, assignments } = useOutletContext();
+  const { user } = useOutletContext();
   const [upcoming, setUpcoming] = useState([]);
   const [past, setPast] = useState([]);
   const [locations, setLocations] = useState({});
@@ -21,12 +21,7 @@ export default function ScannerHome() {
         base44.entities.Location.filter({})
       ]);
 
-      let filtered = allEvents;
-      if (user.role === 'scanner') {
-        const occIds = new Set(assignments.filter(a => a.occurrence_id).map(a => a.occurrence_id));
-        const locIds = new Set(assignments.filter(a => a.location_id).map(a => a.location_id));
-        filtered = allEvents.filter(e => occIds.has(e.id) || locIds.has(e.location_id));
-      }
+      const filtered = allEvents;
 
       const locMap = {};
       locs.forEach(l => { locMap[l.id] = l; });
@@ -47,7 +42,7 @@ export default function ScannerHome() {
       setLoading(false);
     }
     load();
-  }, [user, assignments]);
+  }, [user]);
 
   const formatTime = (dt) => {
     if (!dt) return '';

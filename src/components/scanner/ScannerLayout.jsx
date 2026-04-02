@@ -25,11 +25,6 @@ export default function ScannerLayout() {
         return;
       }
       setUser(me);
-
-      if (me.role === 'scanner') {
-        const assigns = await base44.entities.ScannerAssignment.filter({ user_id: me.id, is_active: true });
-        setAssignments(assigns);
-      }
       setLoading(false);
     }
     load();
