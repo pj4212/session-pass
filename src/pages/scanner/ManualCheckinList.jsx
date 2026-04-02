@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, CheckCircle2, Circle } from 'lucide-react';
+import { Users, Search, Loader2, CheckCircle2, Circle } from 'lucide-react';
 
 export default function ManualCheckinList() {
   const { occurrenceId } = useParams();
