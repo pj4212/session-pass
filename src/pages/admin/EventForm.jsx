@@ -1,0 +1,349 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Trash2, Loader2, Save } from 'lucide-react';
+
+function slugify(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+export default function EventForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEdit = !!id;
+  const urlParams = new URLSearchParams(window.location.search);
+  const duplicateId = urlParams.get('duplicate');
+
+  const [form, setForm] = useState({
+    template_id: '', name: '', slug: '', description: '',
+    event_date: '', start_datetime: '', end_datetime: '',
+    timezone: 'Australia/Brisbane', event_mode: 'in_person',
+    location_id: '', zoom_link: '', zoom_meeting_id: '',
+    venue_details: '', is_published: false,
+    sales_open_date: '', sales_close_date: '', status: 'draft'
+  });
+  const [ticketTypes, setTicketTypes] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const [locs, tmps] = await Promise.all([
+        base44.entities.Location.filter({}),
+        base44.entities.EventTemplate.filter({ is_active: true })
+      ]);
+      setLocations(locs);
+      setTemplates(tmps);
+
+      const sourceId = isEdit ? id : duplicateId;
+      if (sourceId) {
+        const evs = await base44.entities.EventOccurrence.filter({ id: sourceId });
+        if (evs.length) {
+          const ev = evs[0];
+          const tts = await base44.entities.TicketType.filter({ occurrence_id: sourceId });
+          
+          if (isEdit) {
+            setForm({
+              template_id: ev.template_id || '', name: ev.name, slug: ev.slug,
+              description: ev.description || '',
+              event_date: ev.event_date || '',
+              start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
+              end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
+              timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
+              location_id: ev.location_id || '', zoom_link: ev.zoom_link || '',
+              zoom_meeting_id: ev.zoom_meeting_id || '', venue_details: ev.venue_details || '',
+              is_published: ev.is_published, sales_open_date: ev.sales_open_date ? ev.sales_open_date.slice(0, 16) : '',
+              sales_close_date: ev.sales_close_date ? ev.sales_close_date.slice(0, 16) : '',
+              status: ev.status || 'draft'
+            });
+            setTicketTypes(tts.map(tt => ({ ...tt, _existing: true })));
+          } else {
+            // Duplicate
+            setForm({
+              template_id: ev.template_id || '', name: ev.name + ' (Copy)',
+              slug: ev.slug + '-copy', description: ev.description || '',
+              event_date: '', start_datetime: '', end_datetime: '',
+              timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
+              location_id: ev.location_id || '', zoom_link: '',
+              zoom_meeting_id: '', venue_details: ev.venue_details || '',
+              is_published: false, sales_open_date: '', sales_close_date: '', status: 'draft'
+            });
+            setTicketTypes(tts.map(tt => ({
+              name: tt.name, attendance_mode: tt.attendance_mode, price: tt.price,
+              capacity_limit: tt.capacity_limit, is_active: tt.is_active,
+              sort_order: tt.sort_order, description: tt.description || ''
+            })));
+          }
+        }
+      }
+      setLoading(false);
+    }
+    load();
+  }, [id, duplicateId]);
+
+  const updateForm = (field, value) => {
+    setForm(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'name' && !isEdit) {
+        next.slug = slugify(value);
+      }
+      if (field === 'location_id') {
+        const loc = locations.find(l => l.id === value);
+        if (loc) next.timezone = loc.timezone;
+      }
+      return next;
+    });
+  };
+
+  const applyTemplate = (templateId) => {
+    const t = templates.find(tt => tt.id === templateId);
+    if (!t) return;
+    updateForm('template_id', templateId);
+    setForm(prev => ({
+      ...prev, template_id: templateId, name: t.name,
+      slug: slugify(t.name), event_mode: t.event_mode,
+      location_id: t.default_location_id || prev.location_id,
+      timezone: locations.find(l => l.id === t.default_location_id)?.timezone || prev.timezone
+    }));
+    if (t.default_ticket_type_configs) {
+      try {
+        const configs = JSON.parse(t.default_ticket_type_configs);
+        if (Array.isArray(configs)) setTicketTypes(configs);
+      } catch (_) {}
+    }
+  };
+
+  const addTicketType = () => {
+    setTicketTypes(prev => [...prev, {
+      name: '', attendance_mode: 'in_person', price: 0,
+      capacity_limit: '', is_active: true, sort_order: prev.length, description: ''
+    }]);
+  };
+
+  const updateTicketType = (index, field, value) => {
+    setTicketTypes(prev => prev.map((tt, i) => i === index ? { ...tt, [field]: value } : tt));
+  };
+
+  const removeTicketType = (index) => {
+    setTicketTypes(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const eventData = {
+      ...form,
+      start_datetime: form.start_datetime ? new Date(form.start_datetime).toISOString() : '',
+      end_datetime: form.end_datetime ? new Date(form.end_datetime).toISOString() : '',
+      sales_open_date: form.sales_open_date ? new Date(form.sales_open_date).toISOString() : '',
+      sales_close_date: form.sales_close_date ? new Date(form.sales_close_date).toISOString() : ''
+    };
+
+    let eventId;
+    if (isEdit) {
+      await base44.entities.EventOccurrence.update(id, eventData);
+      eventId = id;
+    } else {
+      const created = await base44.entities.EventOccurrence.create(eventData);
+      eventId = created.id;
+    }
+
+    // Handle ticket types
+    for (const tt of ticketTypes) {
+      const ttData = {
+        occurrence_id: eventId, name: tt.name, attendance_mode: tt.attendance_mode,
+        price: Number(tt.price) || 0, capacity_limit: tt.capacity_limit ? Number(tt.capacity_limit) : null,
+        is_active: tt.is_active !== false, sort_order: Number(tt.sort_order) || 0,
+        description: tt.description || '', requires_payment: (Number(tt.price) || 0) > 0,
+        quantity_sold: tt.quantity_sold || 0
+      };
+      if (tt._existing && tt.id) {
+        await base44.entities.TicketType.update(tt.id, ttData);
+      } else if (!tt._existing || !tt.id) {
+        await base44.entities.TicketType.create(ttData);
+      }
+    }
+
+    setSaving(false);
+    navigate('/admin/events');
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+
+  const showZoom = form.event_mode === 'online_stream' || form.event_mode === 'hybrid';
+  const showVenue = form.event_mode === 'in_person' || form.event_mode === 'hybrid';
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <h1 className="text-2xl font-bold">{isEdit ? 'Edit Event' : duplicateId ? 'Duplicate Event' : 'Create Event'}</h1>
+
+      {!isEdit && templates.length > 0 && (
+        <div>
+          <Label>Start from Template</Label>
+          <Select value={form.template_id} onValueChange={applyTemplate}>
+            <SelectTrigger className="max-w-sm"><SelectValue placeholder="Select template..." /></SelectTrigger>
+            <SelectContent>
+              {templates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Name *</Label>
+          <Input value={form.name} onChange={e => updateForm('name', e.target.value)} />
+        </div>
+        <div>
+          <Label>Slug *</Label>
+          <Input value={form.slug} onChange={e => updateForm('slug', e.target.value)} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Description</Label>
+        <Textarea value={form.description} onChange={e => updateForm('description', e.target.value)} rows={3} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label>Event Date *</Label>
+          <Input type="date" value={form.event_date} onChange={e => updateForm('event_date', e.target.value)} />
+        </div>
+        <div>
+          <Label>Start Time *</Label>
+          <Input type="datetime-local" value={form.start_datetime} onChange={e => updateForm('start_datetime', e.target.value)} />
+        </div>
+        <div>
+          <Label>End Time *</Label>
+          <Input type="datetime-local" value={form.end_datetime} onChange={e => updateForm('end_datetime', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label>Event Mode *</Label>
+          <Select value={form.event_mode} onValueChange={v => updateForm('event_mode', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="online_stream">Online Stream</SelectItem>
+              <SelectItem value="in_person">In-Person</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Location</Label>
+          <Select value={form.location_id} onValueChange={v => updateForm('location_id', v)}>
+            <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent>
+              {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Timezone</Label>
+          <Input value={form.timezone} onChange={e => updateForm('timezone', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Status</Label>
+          <Select value={form.status} onValueChange={v => updateForm('status', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-end gap-3 pb-1">
+          <Switch checked={form.is_published} onCheckedChange={v => updateForm('is_published', v)} />
+          <Label>Published</Label>
+        </div>
+      </div>
+
+      {showZoom && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><Label>Zoom Link</Label><Input value={form.zoom_link} onChange={e => updateForm('zoom_link', e.target.value)} /></div>
+          <div><Label>Zoom Meeting ID</Label><Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value)} /></div>
+        </div>
+      )}
+
+      {showVenue && (
+        <div>
+          <Label>Venue Details</Label>
+          <Textarea value={form.venue_details} onChange={e => updateForm('venue_details', e.target.value)} rows={2} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><Label>Sales Open Date</Label><Input type="datetime-local" value={form.sales_open_date} onChange={e => updateForm('sales_open_date', e.target.value)} /></div>
+        <div><Label>Sales Close Date</Label><Input type="datetime-local" value={form.sales_close_date} onChange={e => updateForm('sales_close_date', e.target.value)} /></div>
+      </div>
+
+      {/* Ticket Types */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Ticket Types</CardTitle>
+          <Button variant="outline" size="sm" onClick={addTicketType}><Plus className="h-4 w-4 mr-1" />Add</Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {ticketTypes.map((tt, i) => (
+            <div key={i} className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Ticket Type {i + 1}</span>
+                <Button variant="ghost" size="icon" onClick={() => removeTicketType(i)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div><Label>Name</Label><Input value={tt.name} onChange={e => updateTicketType(i, 'name', e.target.value)} /></div>
+                <div>
+                  <Label>Mode</Label>
+                  <Select value={tt.attendance_mode} onValueChange={v => updateTicketType(i, 'attendance_mode', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="online">Online</SelectItem>
+                      <SelectItem value="in_person">In-Person</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Price (AUD)</Label><Input type="number" min="0" step="0.01" value={tt.price} onChange={e => updateTicketType(i, 'price', e.target.value)} /></div>
+                <div><Label>Capacity</Label><Input type="number" min="0" value={tt.capacity_limit || ''} onChange={e => updateTicketType(i, 'capacity_limit', e.target.value)} placeholder="Unlimited" /></div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch checked={tt.is_active !== false} onCheckedChange={v => updateTicketType(i, 'is_active', v)} />
+                  <Label className="text-sm">Active</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Sort</Label>
+                  <Input type="number" className="w-16" value={tt.sort_order || 0} onChange={e => updateTicketType(i, 'sort_order', e.target.value)} />
+                </div>
+              </div>
+            </div>
+          ))}
+          {ticketTypes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No ticket types added yet</p>}
+        </CardContent>
+      </Card>
+
+      <div className="flex gap-3">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+          {isEdit ? 'Save Changes' : 'Create Event'}
+        </Button>
+        <Button variant="outline" onClick={() => navigate('/admin/events')}>Cancel</Button>
+      </div>
+    </div>
+  );
+}

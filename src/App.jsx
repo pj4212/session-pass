@@ -7,6 +7,15 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import EventPage from './pages/EventPage';
 import OrderConfirmation from './pages/OrderConfirmation';
+import AdminLayout from './components/admin/AdminLayout';
+import Dashboard from './pages/admin/Dashboard';
+import EventList from './pages/admin/EventList';
+import EventForm from './pages/admin/EventForm';
+import AttendeeList from './pages/admin/AttendeeList';
+import MentorManagement from './pages/admin/MentorManagement';
+import PlatinumLeaderManagement from './pages/admin/PlatinumLeaderManagement';
+import UserManagement from './pages/admin/UserManagement';
+import Reports from './pages/admin/Reports';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -36,6 +45,17 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/event/:slug" element={<EventPage />} />
       <Route path="/order/:orderNumber" element={<OrderConfirmation />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="events" element={<EventList />} />
+        <Route path="events/new" element={<EventForm />} />
+        <Route path="events/:id/edit" element={<EventForm />} />
+        <Route path="events/:id/attendees" element={<AttendeeList />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="settings/mentors" element={<MentorManagement />} />
+        <Route path="settings/platinum-leaders" element={<PlatinumLeaderManagement />} />
+        <Route path="settings/users" element={<UserManagement />} />
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
