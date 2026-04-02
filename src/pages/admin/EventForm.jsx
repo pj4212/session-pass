@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Loader2, Save, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import VenueSelector from '../../components/admin/VenueSelector';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -40,6 +41,7 @@ export default function EventForm() {
     event_date: '', start_datetime: '', end_datetime: '',
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
+    venue_id: '', venue_name: '', venue_link: '', parking_link: '',
     venue_details: '', is_published: false,
     status: 'draft'
   });
@@ -79,7 +81,10 @@ export default function EventForm() {
               end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
               location_id: ev.location_id || '', zoom_link: ev.zoom_link || '',
-              zoom_meeting_id: ev.zoom_meeting_id || '', venue_details: ev.venue_details || '',
+              zoom_meeting_id: ev.zoom_meeting_id || '',
+              venue_id: ev.venue_id || '', venue_name: ev.venue_name || '',
+              venue_link: ev.venue_link || '', parking_link: ev.parking_link || '',
+              venue_details: ev.venue_details || '',
               is_published: ev.is_published,
               status: ev.status || 'draft'
             });
@@ -94,7 +99,10 @@ export default function EventForm() {
               end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
               location_id: ev.location_id || '', zoom_link: '',
-              zoom_meeting_id: '', venue_details: ev.venue_details || '',
+              zoom_meeting_id: '',
+              venue_id: ev.venue_id || '', venue_name: ev.venue_name || '',
+              venue_link: ev.venue_link || '', parking_link: ev.parking_link || '',
+              venue_details: ev.venue_details || '',
               is_published: false, status: 'draft'
             });
             setTicketTypes(tts.map(tt => ({
@@ -326,10 +334,23 @@ export default function EventForm() {
       )}
 
       {showVenue && (
-        <div>
-          <Label>Venue Details</Label>
-          <Textarea value={form.venue_details} onChange={e => updateForm('venue_details', e.target.value)} rows={2} />
-        </div>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Venue Information</CardTitle></CardHeader>
+          <CardContent>
+            <VenueSelector
+              locationId={form.location_id}
+              locations={locations}
+              venueData={{
+                venue_id: form.venue_id,
+                venue_name: form.venue_name,
+                venue_link: form.venue_link,
+                parking_link: form.parking_link,
+                venue_details: form.venue_details
+              }}
+              onChange={(data) => setForm(prev => ({ ...prev, ...data }))}
+            />
+          </CardContent>
+        </Card>
       )}
 
 

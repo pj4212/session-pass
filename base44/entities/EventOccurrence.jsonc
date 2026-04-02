@@ -57,6 +57,23 @@
       "title": "Location",
       "relationType": "Location"
     },
+    "venue_id": {
+      "type": "string",
+      "title": "Venue",
+      "relationType": "Venue"
+    },
+    "venue_name": {
+      "type": "string",
+      "title": "Venue Name"
+    },
+    "venue_link": {
+      "type": "string",
+      "title": "Venue Link"
+    },
+    "parking_link": {
+      "type": "string",
+      "title": "Parking Link"
+    },
     "zoom_link": {
       "type": "string",
       "title": "Zoom Link"

@@ -1,0 +1,35 @@
+{
+  "name": "Venue",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Venue Name"
+    },
+    "location_id": {
+      "type": "string",
+      "title": "Location",
+      "relationType": "Location"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "venue_link": {
+      "type": "string",
+      "title": "Venue Link"
+    },
+    "parking_link": {
+      "type": "string",
+      "title": "Parking Link"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
