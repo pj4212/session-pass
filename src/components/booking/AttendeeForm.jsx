@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AttendeeForm({ 
@@ -10,28 +9,13 @@ export default function AttendeeForm({
   attendanceMode, 
   attendee, 
   onChange, 
-  buyer, 
-  mentors, 
-  leaders,
-  sameAsBuyer,
-  onSameAsBuyerChange
+  leaders
 }) {
   const update = (field, value) => {
     onChange({ ...attendee, [field]: value });
   };
 
-  const handleSameAsBuyer = (checked) => {
-    onSameAsBuyerChange(checked);
-    if (checked) {
-      onChange({
-        ...attendee,
-        first_name: buyer.first_name,
-        last_name: buyer.last_name,
-        email: buyer.email
-      });
-    }
-  };
-
+  const isFirstTicket = index === 0;
   const modeLabel = attendanceMode === 'online' ? 'Online' : 'In-Person';
 
   return (
@@ -42,17 +26,8 @@ export default function AttendeeForm({
         </h4>
       </div>
 
-      {index === 0 && (
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={`same-as-buyer-${index}`}
-            checked={sameAsBuyer}
-            onCheckedChange={handleSameAsBuyer}
-          />
-          <Label htmlFor={`same-as-buyer-${index}`} className="text-sm">
-            Same as buyer details
-          </Label>
-        </div>
+      {isFirstTicket && (
+        <p className="text-sm text-muted-foreground">Auto-filled from buyer details</p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -62,7 +37,7 @@ export default function AttendeeForm({
             value={attendee.first_name}
             onChange={e => update('first_name', e.target.value)}
             placeholder="First name"
-            disabled={index === 0 && sameAsBuyer}
+            disabled={isFirstTicket}
           />
         </div>
         <div>
@@ -71,7 +46,7 @@ export default function AttendeeForm({
             value={attendee.last_name}
             onChange={e => update('last_name', e.target.value)}
             placeholder="Last name"
-            disabled={index === 0 && sameAsBuyer}
+            disabled={isFirstTicket}
           />
         </div>
       </div>
@@ -83,25 +58,11 @@ export default function AttendeeForm({
           value={attendee.email}
           onChange={e => update('email', e.target.value)}
           placeholder="attendee@example.com"
-          disabled={index === 0 && sameAsBuyer}
+          disabled={isFirstTicket}
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Upline Mentor</Label>
-          <Select value={attendee.upline_mentor_id || ''} onValueChange={v => update('upline_mentor_id', v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select mentor..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>None</SelectItem>
-              {mentors.map(m => (
-                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
         <div>
           <Label>Platinum Leader</Label>
           <Select value={attendee.platinum_leader_id || ''} onValueChange={v => update('platinum_leader_id', v)}>

@@ -23,7 +23,6 @@ export default function EventPage() {
   const [location, setLocation] = useState(null);
   const [seriesSlug, setSeriesSlug] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
-  const [mentors, setMentors] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +30,6 @@ export default function EventPage() {
   const [selections, setSelections] = useState({});
   const [buyer, setBuyer] = useState(loadSavedBuyer());
   const [attendees, setAttendees] = useState([]);
-  const [sameAsBuyer, setSameAsBuyer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -55,15 +53,13 @@ export default function EventPage() {
         });
       }
 
-      const [tts, locs, m, l] = await Promise.all([
+      const [tts, locs, l] = await Promise.all([
         base44.entities.TicketType.filter({ occurrence_id: occ.id }),
         occ.location_id ? base44.entities.Location.filter({ id: occ.location_id }) : Promise.resolve([]),
-        base44.entities.UplineMentor.filter({ is_active: true }),
         base44.entities.PlatinumLeader.filter({ is_active: true })
       ]);
       setTicketTypes(tts.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
       if (locs.length) setLocation(locs[0]);
-      setMentors(m.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
       setLeaders(l.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
 
       // Try prefill from logged-in user
@@ -113,25 +109,23 @@ export default function EventPage() {
     setAttendees(prev => {
       const next = attendeeSlots.map((slot, i) => ({
         ...slot,
-        first_name: prev[i]?.first_name || '',
-        last_name: prev[i]?.last_name || '',
-        email: prev[i]?.email || '',
-        upline_mentor_id: prev[i]?.upline_mentor_id || '',
+        first_name: i === 0 ? buyer.first_name : (prev[i]?.first_name || ''),
+        last_name: i === 0 ? buyer.last_name : (prev[i]?.last_name || ''),
+        email: i === 0 ? buyer.email : (prev[i]?.email || ''),
         platinum_leader_id: prev[i]?.platinum_leader_id || ''
       }));
       return next;
     });
-    if (attendeeSlots.length === 0) setSameAsBuyer(false);
   }, [attendeeSlots.length]);
 
-  // Sync same-as-buyer
+  // Always sync ticket 1 with buyer details
   useEffect(() => {
-    if (sameAsBuyer && attendees.length > 0) {
+    if (attendees.length > 0) {
       const updated = [...attendees];
       updated[0] = { ...updated[0], first_name: buyer.first_name, last_name: buyer.last_name, email: buyer.email };
       setAttendees(updated);
     }
-  }, [buyer.first_name, buyer.last_name, buyer.email, sameAsBuyer]);
+  }, [buyer.first_name, buyer.last_name, buyer.email]);
 
   const updateAttendee = (index, data) => {
     const updated = [...attendees];
@@ -216,7 +210,6 @@ export default function EventPage() {
         last_name: a.last_name,
         email: a.email,
         ticket_type_id: a.ticket_type_id,
-        upline_mentor_id: a.upline_mentor_id,
         platinum_leader_id: a.platinum_leader_id
       })),
       occurrence_id: occurrence.id,
@@ -348,11 +341,7 @@ export default function EventPage() {
                       attendanceMode={att.attendance_mode}
                       attendee={att}
                       onChange={(data) => updateAttendee(i, data)}
-                      buyer={buyer}
-                      mentors={mentors}
                       leaders={leaders}
-                      sameAsBuyer={i === 0 && sameAsBuyer}
-                      onSameAsBuyerChange={i === 0 ? setSameAsBuyer : () => {}}
                     />
                   ))}
                 </div>
