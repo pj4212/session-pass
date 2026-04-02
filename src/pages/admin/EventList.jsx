@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Eye, Copy, Edit, Users, Loader2 } from 'lucide-react';
+import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen } from 'lucide-react';
 
 const STATUS_COLORS = {
   draft: 'secondary', published: 'default', cancelled: 'destructive', completed: 'outline'
@@ -17,22 +17,26 @@ export default function EventList() {
   const [locations, setLocations] = useState({});
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [seriesList, setSeriesList] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
+  const [seriesFilter, setSeriesFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     async function load() {
-      const [evs, locs, tix] = await Promise.all([
+      const [evs, locs, tix, series] = await Promise.all([
         base44.entities.EventOccurrence.filter({}),
         base44.entities.Location.filter({}),
-        base44.entities.Ticket.filter({ ticket_status: 'active' })
+        base44.entities.Ticket.filter({ ticket_status: 'active' }),
+        base44.entities.EventSeries.filter({})
       ]);
       const locMap = {};
       locs.forEach(l => { locMap[l.id] = l; });
       setEvents(evs.sort((a, b) => new Date(b.event_date) - new Date(a.event_date)));
       setLocations(locMap);
       setTickets(tix);
+      setSeriesList(series);
       setLoading(false);
     }
     load();
@@ -46,9 +50,23 @@ export default function EventList() {
 
   const ticketCount = (evId) => tickets.filter(t => t.occurrence_id === evId).length;
 
+  // Check URL for series filter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sf = urlParams.get('series');
+    if (sf) setSeriesFilter(sf);
+  }, []);
+
+  const seriesMap = {};
+  seriesList.forEach(s => { seriesMap[s.id] = s; });
+
   const filtered = events.filter(e => {
     if (statusFilter !== 'all' && e.status !== statusFilter) return false;
     if (modeFilter !== 'all' && e.event_mode !== modeFilter) return false;
+    if (seriesFilter !== 'all') {
+      if (seriesFilter === 'standalone' && e.series_id) return false;
+      if (seriesFilter !== 'standalone' && e.series_id !== seriesFilter) return false;
+    }
     if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -83,6 +101,14 @@ export default function EventList() {
             <SelectItem value="hybrid">Hybrid</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={seriesFilter} onValueChange={setSeriesFilter}>
+          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Series</SelectItem>
+            <SelectItem value="standalone">Standalone Only</SelectItem>
+            {seriesList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="border rounded-lg overflow-auto">
@@ -90,6 +116,7 @@ export default function EventList() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Series</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Mode</TableHead>
@@ -102,6 +129,7 @@ export default function EventList() {
             {filtered.map(ev => (
               <TableRow key={ev.id}>
                 <TableCell className="font-medium">{ev.name}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{seriesMap[ev.series_id]?.name || '—'}</TableCell>
                 <TableCell>{new Date(ev.event_date).toLocaleDateString('en-AU')}</TableCell>
                 <TableCell>{locations[ev.location_id]?.name || '—'}</TableCell>
                 <TableCell className="capitalize">{ev.event_mode?.replace('_', ' ')}</TableCell>
@@ -129,7 +157,7 @@ export default function EventList() {
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No events found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No events found</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

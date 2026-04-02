@@ -7,6 +7,11 @@
       "title": "Event Template",
       "relationType": "EventTemplate"
     },
+    "series_id": {
+      "type": "string",
+      "title": "Event Series",
+      "relationType": "EventSeries"
+    },
     "name": {
       "type": "string",
       "title": "Name"
@@ -68,11 +73,6 @@
       "type": "boolean",
       "title": "Is Published",
       "default": false
-    },
-    "sales_open_date": {
-      "type": "string",
-      "title": "Sales Open Date",
-      "format": "date-time"
     },
     "sales_close_date": {
       "type": "string",

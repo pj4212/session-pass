@@ -1,0 +1,38 @@
+{
+  "name": "EventSeries",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "slug": {
+      "type": "string",
+      "title": "Slug"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "is_published": {
+      "type": "boolean",
+      "title": "Is Published",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "draft",
+        "published",
+        "cancelled",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "name",
+    "slug"
+  ]
+}

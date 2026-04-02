@@ -20,6 +20,8 @@ import MentorManagement from './pages/admin/MentorManagement';
 import PlatinumLeaderManagement from './pages/admin/PlatinumLeaderManagement';
 import UserManagement from './pages/admin/UserManagement';
 import Reports from './pages/admin/Reports';
+import SeriesManagement from './pages/admin/SeriesManagement';
+import SeriesPage from './pages/SeriesPage';
 import Home from './pages/Home';
 
 const AuthenticatedApp = () => {
@@ -50,9 +52,11 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/event/:slug" element={<EventPage />} />
+      <Route path="/series/:slug" element={<SeriesPage />} />
       <Route path="/order/:orderNumber" element={<OrderConfirmation />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
+        <Route path="series" element={<SeriesManagement />} />
         <Route path="events" element={<EventList />} />
         <Route path="events/new" element={<EventForm />} />
         <Route path="events/:id/edit" element={<EventForm />} />

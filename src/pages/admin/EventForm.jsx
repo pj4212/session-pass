@@ -22,7 +22,7 @@ export default function EventForm() {
   const duplicateId = urlParams.get('duplicate');
 
   const [form, setForm] = useState({
-    template_id: '', name: '', slug: '', description: '',
+    template_id: '', series_id: '', name: '', slug: '', description: '',
     event_date: '', start_datetime: '', end_datetime: '',
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
@@ -32,17 +32,20 @@ export default function EventForm() {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [locations, setLocations] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [seriesList, setSeriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const [locs, tmps] = await Promise.all([
+      const [locs, tmps, series] = await Promise.all([
         base44.entities.Location.filter({}),
-        base44.entities.EventTemplate.filter({ is_active: true })
+        base44.entities.EventTemplate.filter({ is_active: true }),
+        base44.entities.EventSeries.filter({})
       ]);
       setLocations(locs);
       setTemplates(tmps);
+      setSeriesList(series);
 
       const sourceId = isEdit ? id : duplicateId;
       if (sourceId) {
@@ -53,7 +56,7 @@ export default function EventForm() {
           
           if (isEdit) {
             setForm({
-              template_id: ev.template_id || '', name: ev.name, slug: ev.slug,
+              template_id: ev.template_id || '', series_id: ev.series_id || '', name: ev.name, slug: ev.slug,
               description: ev.description || '',
               event_date: ev.event_date || '',
               start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
@@ -69,7 +72,7 @@ export default function EventForm() {
           } else {
             // Duplicate
             setForm({
-              template_id: ev.template_id || '', name: ev.name + ' (Copy)',
+              template_id: ev.template_id || '', series_id: ev.series_id || '', name: ev.name + ' (Copy)',
               slug: ev.slug + '-copy', description: ev.description || '',
               event_date: '', start_datetime: '', end_datetime: '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
@@ -144,6 +147,7 @@ export default function EventForm() {
     const toISO = (val) => val ? val + ':00' : '';
     const eventData = {
       ...form,
+      series_id: form.series_id === 'none' ? '' : form.series_id,
       start_datetime: toISO(form.start_datetime),
       end_datetime: toISO(form.end_datetime),
       sales_close_date: toISO(form.sales_close_date)
@@ -186,6 +190,19 @@ export default function EventForm() {
   return (
     <div className="space-y-6 max-w-4xl">
       <h1 className="text-2xl font-bold">{isEdit ? 'Edit Event' : duplicateId ? 'Duplicate Event' : 'Create Event'}</h1>
+
+      {seriesList.length > 0 && (
+        <div>
+          <Label>Event Series (Parent)</Label>
+          <Select value={form.series_id} onValueChange={v => updateForm('series_id', v)}>
+            <SelectTrigger className="max-w-sm"><SelectValue placeholder="No series (standalone)" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No series (standalone)</SelectItem>
+              {seriesList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {!isEdit && templates.length > 0 && (
         <div>

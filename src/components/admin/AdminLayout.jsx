@@ -4,12 +4,13 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, Calendar, Users, Settings, BarChart3, 
-  ChevronLeft, ChevronRight, Menu, LogOut, X
+  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'event_admin', 'report_viewer'] },
-  { path: '/admin/events', label: 'Events', icon: Calendar, roles: ['super_admin', 'event_admin'] },
+  { path: '/admin/series', label: 'Event Series', icon: FolderOpen, roles: ['super_admin', 'event_admin'] },
+  { path: '/admin/events', label: 'Sessions', icon: Calendar, roles: ['super_admin', 'event_admin'] },
   { path: '/admin/reports', label: 'Reports', icon: BarChart3, roles: ['super_admin', 'event_admin', 'report_viewer'] },
   { path: '/admin/settings/users', label: 'Users', icon: Users, roles: ['super_admin'] },
   { path: '/admin/settings/mentors', label: 'Mentors', icon: Settings, roles: ['super_admin'] },
