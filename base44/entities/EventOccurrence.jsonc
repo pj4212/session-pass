@@ -95,6 +95,11 @@
       "type": "string",
       "title": "Venue Details"
     },
+    "venue_confirmed": {
+      "type": "boolean",
+      "title": "Venue Confirmed",
+      "default": false
+    },
     "is_published": {
       "type": "boolean",
       "title": "Is Published",

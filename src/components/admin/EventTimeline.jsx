@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -150,7 +150,7 @@ function buildProjectedTimeline(sessions, months) {
   return weeks;
 }
 
-export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap }) {
+export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap, onVerifyVenue }) {
   // Group events by series for projection
   const timeline = useMemo(() => {
     const bySeries = {};
@@ -271,6 +271,20 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                       {sessionPast && <Badge variant="secondary" className="text-xs py-0 gap-1"><CheckCircle2 className="h-3 w-3" />Completed</Badge>}
                       {isProjected && !sessionPast && <Badge variant="outline" className="text-xs py-0 text-muted-foreground">Projected</Badge>}
                       {seriesName && <span className="text-xs text-muted-foreground">· {seriesName}</span>}
+                      {!isProjected && !sessionPast && session.event_mode !== 'online_stream' && (
+                        session.venue_confirmed ? (
+                          <Badge variant="outline" className="text-xs py-0 gap-1 text-green-400 border-green-500/30">
+                            <CheckCircle2 className="h-3 w-3" />Venue Confirmed
+                          </Badge>
+                        ) : (
+                          <button
+                            onClick={() => onVerifyVenue?.(session)}
+                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+                          >
+                            <AlertTriangle className="h-3 w-3" />Venue Not Confirmed
+                          </button>
+                        )
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1 sm:hidden">

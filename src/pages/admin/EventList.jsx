@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon } from 'lucide-react';
 import EventTimeline from '@/components/admin/EventTimeline';
+import VenueConfirmDialog from '@/components/admin/VenueConfirmDialog';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -28,6 +29,7 @@ export default function EventList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [viewMode, setViewMode] = useState('timeline');
+  const [venueTarget, setVenueTarget] = useState(null);
 
   const [ticketTypesList, setTicketTypesList] = useState([]);
 
@@ -71,6 +73,10 @@ export default function EventList() {
   };
 
   const ticketCount = (evId) => tickets.filter(t => t.occurrence_id === evId).length;
+
+  const handleVenueConfirmed = (eventId, updates) => {
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...updates } : e));
+  };
 
   // Check URL for series filter
   useEffect(() => {
@@ -176,6 +182,7 @@ export default function EventList() {
             return m;
           })()}
           seriesMap={seriesMap}
+          onVerifyVenue={(session) => setVenueTarget(session)}
         />
       ) : (
       <div className="border rounded-lg overflow-auto">
@@ -257,6 +264,13 @@ export default function EventList() {
           </div>
         </DialogContent>
       </Dialog>
+      <VenueConfirmDialog
+        open={!!venueTarget}
+        onOpenChange={(open) => !open && setVenueTarget(null)}
+        event={venueTarget}
+        locations={locations}
+        onConfirmed={handleVenueConfirmed}
+      />
     </div>
   );
 }
