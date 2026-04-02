@@ -32,7 +32,16 @@ Deno.serve(async (req) => {
 
       // Validate occurrence match
       if (occurrence_id && ticket.occurrence_id !== occurrence_id) {
-        return Response.json({ status: 'error', reason: 'Wrong event' });
+        let ticketEventName = 'Unknown event';
+        try {
+          const evts = await base44.asServiceRole.entities.EventOccurrence.filter({ id: ticket.occurrence_id });
+          if (evts.length) ticketEventName = evts[0].name;
+        } catch (e) { /* ignore */ }
+        return Response.json({ 
+          status: 'error', 
+          reason: `Wrong event — this ticket is for: ${ticketEventName}`,
+          ticket
+        });
       }
 
       // Check ticket status

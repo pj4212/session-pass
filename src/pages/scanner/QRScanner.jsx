@@ -141,7 +141,8 @@ export default function QRScanner() {
       const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;
       setResult({ type: 'warning', title: name || 'Warning', subtitle: data.reason });
     } else {
-      setResult({ type: 'error', title: 'Error', subtitle: data.reason || 'Check-in failed' });
+      const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;
+      setResult({ type: 'error', title: name || 'Error', subtitle: data.reason || 'Check-in failed' });
     }
   }, []);
 
