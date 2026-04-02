@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useOutletContext } from 'react-router-dom';
+import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ScanLine, Users, Search, Loader2, CheckCircle2, Circle } from 'lucide-react';
+import { Users, Search, Loader2, CheckCircle2, Circle } from 'lucide-react';
 
 export default function ManualCheckinList() {
   const { occurrenceId } = useParams();
@@ -113,20 +113,14 @@ export default function ManualCheckinList() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
       <div className="shrink-0 border-b bg-card">
-        <div className="flex items-center justify-between px-4 py-2">
-          <Link to="/scanner">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
-          </Link>
+        <div className="flex items-center justify-center px-4 py-2">
           <div className="flex items-center gap-2 text-lg font-bold">
             <Users className="h-5 w-5" />
             <span>{checkedInCount} / {tickets.length}</span>
           </div>
-          <Link to={`/scanner/${occurrenceId}/scan`}>
-            <Button variant="ghost" size="icon"><ScanLine className="h-5 w-5" /></Button>
-          </Link>
         </div>
 
         {/* Search */}

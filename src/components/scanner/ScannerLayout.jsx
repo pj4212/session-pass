@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import { ScanLine, LogOut, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
+import ScannerBottomNav from './ScannerBottomNav';
 
-const SCANNER_ROLES = ['scanner', 'super_admin', 'event_admin'];
+const SCANNER_ROLES = ['scanner', 'super_admin', 'event_admin', 'admin'];
 
 export default function ScannerLayout() {
   const [user, setUser] = useState(null);
@@ -12,6 +12,11 @@ export default function ScannerLayout() {
   const [loading, setLoading] = useState(true);
   const [online, setOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Extract occurrenceId from URL if present
+  const match = location.pathname.match(/\/scanner\/([^/]+)/);
+  const occurrenceId = match ? match[1] : null;
 
   useEffect(() => {
     async function load() {
@@ -22,7 +27,6 @@ export default function ScannerLayout() {
       }
       setUser(me);
 
-      // super_admin/event_admin see all events, scanners see only assigned
       if (me.role === 'scanner') {
         const assigns = await base44.entities.ScannerAssignment.filter({ user_id: me.id, is_active: true });
         setAssignments(assigns);
@@ -57,18 +61,10 @@ export default function ScannerLayout() {
           Offline — reconnect to continue scanning
         </div>
       )}
-      <header className="h-14 border-b flex items-center justify-between px-4 shrink-0">
-        <Link to="/scanner" className="flex items-center gap-2 font-bold">
-          <ScanLine className="h-5 w-5" />
-          Scanner
-        </Link>
-        <Button variant="ghost" size="icon" onClick={() => base44.auth.logout()}>
-          <LogOut className="h-5 w-5" />
-        </Button>
-      </header>
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pb-16">
         <Outlet context={{ user, assignments }} />
       </main>
+      <ScannerBottomNav occurrenceId={occurrenceId} />
     </div>
   );
 }

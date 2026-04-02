@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link, useOutletContext } from 'react-router-dom';
+import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import ScanResultOverlay from '@/components/scanner/ScanResultOverlay';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -133,19 +133,13 @@ export default function QRScanner() {
   }, [occurrenceId]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-card border-b shrink-0">
-        <Link to="/scanner">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
-        </Link>
+      <div className="flex items-center justify-center px-4 py-2 bg-card border-b shrink-0">
         <div className="flex items-center gap-2 text-lg font-bold">
           <Users className="h-5 w-5" />
           <span>{checkedIn} / {total}</span>
         </div>
-        <Link to={`/scanner/${occurrenceId}/list`}>
-          <Button variant="ghost" size="sm">List</Button>
-        </Link>
       </div>
 
       {/* Camera viewport */}

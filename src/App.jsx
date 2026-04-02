@@ -10,6 +10,7 @@ import OrderConfirmation from './pages/OrderConfirmation';
 import AdminLayout from './components/admin/AdminLayout';
 import ScannerLayout from './components/scanner/ScannerLayout';
 import ScannerHome from './pages/scanner/ScannerHome';
+import ScannerDashboard from './pages/scanner/ScannerDashboard';
 import QRScanner from './pages/scanner/QRScanner';
 import ManualCheckinList from './pages/scanner/ManualCheckinList';
 import Dashboard from './pages/admin/Dashboard';
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
       </Route>
       <Route path="/scanner" element={<ScannerLayout />}>
         <Route index element={<ScannerHome />} />
+        <Route path=":occurrenceId/dashboard" element={<ScannerDashboard />} />
         <Route path=":occurrenceId/scan" element={<QRScanner />} />
         <Route path=":occurrenceId/list" element={<ManualCheckinList />} />
       </Route>
