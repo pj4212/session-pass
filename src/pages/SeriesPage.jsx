@@ -9,11 +9,12 @@ import WeekGroup from '@/components/series/WeekGroup';
 
 export default function SeriesPage() {
   const { slug } = useParams();
-  const [series, setSeries] = useState(null);
-  const [sessions, setSessions] = useState([]);
-  const [locations, setLocations] = useState({});
-  const [ticketTypes, setTicketTypes] = useState([]);
-  const [loading, setLoading] = useState(!pageCache[slug]);
+  const cached = pageCache[slug];
+  const [series, setSeries] = useState(cached?.series || null);
+  const [sessions, setSessions] = useState(cached?.sessions || []);
+  const [locations, setLocations] = useState(cached?.locations || {});
+  const [ticketTypes, setTicketTypes] = useState(cached?.ticketTypes || []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(null);
 
   // Set page title
