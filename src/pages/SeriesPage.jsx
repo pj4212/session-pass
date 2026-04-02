@@ -121,61 +121,70 @@ export default function SeriesPage() {
       actualSessionsByWeek[monday].push(s);
     }
 
+    // De-duplicate templates by day of week — keep one template per (dayOfWeek + name)
+    function dedupeTemplates(templates) {
+      const seen = new Set();
+      return templates.filter(t => {
+        const key = `${t.dayOfWeek}-${t.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    const dedupedWeekly = dedupeTemplates(weeklyTemplates);
+    const dedupedA = dedupeTemplates(fortnightlyATemplates);
+    const dedupedB = dedupeTemplates(fortnightlyBTemplates);
+
+    function projectTemplate(tmpl, mondayStr) {
+      const targetDay = tmpl.dayOfWeek;
+      const mondayDate = new Date(mondayStr + 'T00:00:00');
+      const dayOffset = targetDay === 0 ? 6 : targetDay - 1;
+      const sessionDate = new Date(mondayDate);
+      sessionDate.setDate(sessionDate.getDate() + dayOffset);
+      const dateStr = sessionDate.toISOString().slice(0, 10);
+
+      const origStart = new Date(tmpl.start_datetime);
+      const origEnd = new Date(tmpl.end_datetime);
+      const newStart = new Date(sessionDate);
+      newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
+      const newEnd = new Date(sessionDate);
+      newEnd.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
+
+      return {
+        ...tmpl,
+        id: `projected-${tmpl.id}-${dateStr}`,
+        event_date: dateStr,
+        start_datetime: newStart.toISOString(),
+        end_datetime: newEnd.toISOString(),
+        _projected: true
+      };
+    }
+
     const weeks = [];
     const current = new Date(startMonday);
 
     while (current < endDate) {
       const mondayStr = current.toISOString().slice(0, 10);
       const weekIsA = isWeekA(current);
+      const actual = actualSessionsByWeek[mondayStr] || [];
 
-      // Use actual sessions if they exist for this week
-      if (actualSessionsByWeek[mondayStr]) {
-        weeks.push({
-          weekStart: mondayStr,
-          sessions: actualSessionsByWeek[mondayStr].sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
-        });
-      } else {
-        // Project future sessions based on templates
-        const applicableTemplates = [
-          ...weeklyTemplates,
-          ...(weekIsA ? fortnightlyATemplates : fortnightlyBTemplates)
-        ];
+      // Determine which templates apply this week
+      const fortnightlyTemplates = weekIsA ? dedupedA : dedupedB;
+      const allTemplates = [...dedupedWeekly, ...fortnightlyTemplates];
 
-        if (applicableTemplates.length > 0) {
-          const projectedSessions = applicableTemplates.map(tmpl => {
-            // Calculate the actual date for this week
-            const targetDay = tmpl.dayOfWeek;
-            const mondayDate = new Date(mondayStr + 'T00:00:00');
-            const dayOffset = targetDay === 0 ? 6 : targetDay - 1; // Mon=0 offset
-            const sessionDate = new Date(mondayDate);
-            sessionDate.setDate(sessionDate.getDate() + dayOffset);
-            const dateStr = sessionDate.toISOString().slice(0, 10);
+      // Check which templates are already covered by actual sessions (match by name)
+      const actualNames = new Set(actual.map(s => s.name));
+      const missingTemplates = allTemplates.filter(t => !actualNames.has(t.name));
 
-            // Rebuild start/end times with the new date
-            const origStart = new Date(tmpl.start_datetime);
-            const origEnd = new Date(tmpl.end_datetime);
-            const newStart = new Date(sessionDate);
-            newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
-            const newEnd = new Date(sessionDate);
-            newEnd.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
+      // Project missing templates into this week
+      const projected = missingTemplates.map(t => projectTemplate(t, mondayStr));
 
-            return {
-              ...tmpl,
-              id: `projected-${tmpl.id}-${dateStr}`,
-              event_date: dateStr,
-              start_datetime: newStart.toISOString(),
-              end_datetime: newEnd.toISOString(),
-              _projected: true // Flag so we know it's not a real record
-            };
-          }).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+      const weekSessions = [...actual, ...projected]
+        .sort((a, b) => new Date(a.event_date + 'T00:00:00') - new Date(b.event_date + 'T00:00:00') || new Date(a.start_datetime) - new Date(b.start_datetime));
 
-          if (projectedSessions.length > 0) {
-            weeks.push({
-              weekStart: mondayStr,
-              sessions: projectedSessions
-            });
-          }
-        }
+      if (weekSessions.length > 0) {
+        weeks.push({ weekStart: mondayStr, sessions: weekSessions });
       }
 
       current.setDate(current.getDate() + 7);
