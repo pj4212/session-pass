@@ -148,8 +148,8 @@ export default function QRScanner() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="flex items-center justify-center px-4 py-2 bg-card border-b shrink-0">
-        <div className="flex items-center gap-2 text-lg font-bold">
+      <div className="flex items-center justify-center px-4 py-2 bg-slate-900/80 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-2 text-lg font-bold text-white">
           <Users className="h-5 w-5" />
           <span>{checkedIn} / {total}</span>
         </div>
@@ -157,7 +157,7 @@ export default function QRScanner() {
 
       {/* Camera viewport — square aspect ratio */}
       <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        <div className="w-full max-w-[100vmin] aspect-square relative">
+        <div className="w-full max-w-[100vmin] aspect-square relative qr-square-container">
           <div id="qr-reader" className="w-full h-full" />
         </div>
         {!cameraReady && (

@@ -73,11 +73,7 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
 
-
-
-@layer base {
   * {
     @apply border-border outline-ring/50;
   }
@@ -85,4 +81,15 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Force QR scanner video to square */
+.qr-square-container video {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.qr-square-container #qr-shaded-region {
+  border-width: 0 !important;
 }
