@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_COLORS = {
@@ -143,7 +144,14 @@ export default function EventList() {
           <TableBody>
             {filtered.map(ev => (
               <TableRow key={ev.id}>
-                <TableCell className="font-medium">{ev.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div>{ev.name}</div>
+                  {ev.recurrence_pattern && (
+                    <span className="text-xs text-muted-foreground">
+                      {ev.recurrence_pattern === 'weekly' ? 'Weekly' : ev.recurrence_pattern === 'fortnightly_A' ? 'Fortnight A' : ev.recurrence_pattern === 'fortnightly_B' ? 'Fortnight B' : ''}
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground text-xs">{seriesMap[ev.series_id]?.name || '—'}</TableCell>
                 <TableCell>{new Date(ev.event_date).toLocaleDateString('en-AU')}</TableCell>
                 <TableCell>{locations[ev.location_id]?.name || '—'}</TableCell>
@@ -164,9 +172,11 @@ export default function EventList() {
                     <Button variant="ghost" size="icon" asChild title="View Public">
                       <a href={`https://sessionpass.com/event/${ev.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => togglePublish(ev)}>
-                      {ev.is_published ? 'Unpublish' : 'Publish'}
-                    </Button>
+                    <Switch
+                      checked={ev.is_published}
+                      onCheckedChange={() => togglePublish(ev)}
+                      title={ev.is_published ? 'Unpublish' : 'Publish'}
+                    />
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(ev)} title="Delete">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

@@ -40,6 +40,7 @@ export default function EventForm() {
     template_id: '', series_id: '', name: '', slug: '', description: '',
     event_date: '', start_datetime: '', end_datetime: '',
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
+    recurrence_pattern: '',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
     venue_id: '', venue_name: '', venue_link: '', parking_link: '',
     venue_details: '', is_published: false,
@@ -80,6 +81,7 @@ export default function EventForm() {
               start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
               end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
+              recurrence_pattern: ev.recurrence_pattern || '',
               location_id: ev.location_id || '', zoom_link: ev.zoom_link || '',
               zoom_meeting_id: ev.zoom_meeting_id || '',
               venue_id: ev.venue_id || '', venue_name: ev.venue_name || '',
@@ -98,6 +100,7 @@ export default function EventForm() {
               start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
               end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
+              recurrence_pattern: ev.recurrence_pattern || '',
               location_id: ev.location_id || '', zoom_link: '',
               zoom_meeting_id: '',
               venue_id: ev.venue_id || '', venue_name: ev.venue_name || '',
@@ -307,20 +310,34 @@ export default function EventForm() {
         </div>
       </div>
 
-      <div className="max-w-xs">
-        <Label>Status</Label>
-        <Select value={form.status} onValueChange={v => {
-          updateForm('status', v);
-          updateForm('is_published', v === 'published');
-        }}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Status</Label>
+          <Select value={form.status} onValueChange={v => {
+            updateForm('status', v);
+            updateForm('is_published', v === 'published');
+          }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Recurrence Pattern</Label>
+          <Select value={form.recurrence_pattern || 'none'} onValueChange={v => updateForm('recurrence_pattern', v === 'none' ? '' : v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No recurrence</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="fortnightly_A">Fortnightly (Week A)</SelectItem>
+              <SelectItem value="fortnightly_B">Fortnightly (Week B)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {showZoom && (

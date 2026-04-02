@@ -52,6 +52,15 @@
         "hybrid"
       ]
     },
+    "recurrence_pattern": {
+      "type": "string",
+      "title": "Recurrence Pattern",
+      "enum": [
+        "weekly",
+        "fortnightly_A",
+        "fortnightly_B"
+      ]
+    },
     "location_id": {
       "type": "string",
       "title": "Location",
