@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon } from 'lucide-react';
+import EventTimeline from '@/components/admin/EventTimeline';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -26,6 +27,7 @@ export default function EventList() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [viewMode, setViewMode] = useState('timeline');
 
   useEffect(() => {
     async function load() {
@@ -92,7 +94,23 @@ export default function EventList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Events</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Sessions</h1>
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'timeline' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />Timeline
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
+            >
+              <TableIcon className="h-3.5 w-3.5" />Table
+            </button>
+          </div>
+        </div>
         <Button asChild><Link to="/admin/events/new"><Plus className="h-4 w-4 mr-1.5" />Create Event</Link></Button>
       </div>
 
@@ -127,6 +145,14 @@ export default function EventList() {
         </Select>
       </div>
 
+      {viewMode === 'timeline' ? (
+        <EventTimeline
+          events={events}
+          locations={locations}
+          ticketCounts={(() => { const m = {}; tickets.forEach(t => { m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1; }); return m; })()}
+          seriesMap={seriesMap}
+        />
+      ) : (
       <div className="border rounded-lg overflow-auto">
         <Table>
           <TableHeader>
@@ -170,7 +196,7 @@ export default function EventList() {
                       <Link to={`/admin/events/new?duplicate=${ev.id}`}><Copy className="h-4 w-4" /></Link>
                     </Button>
                     <Button variant="ghost" size="icon" asChild title="View Public">
-                      <a href={`https://sessionpass.com/event/${ev.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                      <a href={`/event/${ev.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
                     <Switch
                       checked={ev.is_published}
@@ -190,6 +216,7 @@ export default function EventList() {
           </TableBody>
         </Table>
       </div>
+      )}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>

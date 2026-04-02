@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Ticket, Shield, ScanLine, LogIn } from 'lucide-react';
@@ -7,12 +7,21 @@ import { Ticket, Shield, ScanLine, LogIn } from 'lucide-react';
 export default function Home() {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.isAuthenticated().then(async (authed) => {
       if (authed) {
         const me = await base44.auth.me();
         setUser(me);
+        if (['super_admin', 'event_admin', 'admin'].includes(me.role)) {
+          navigate('/admin', { replace: true });
+          return;
+        }
+        if (me.role === 'scanner') {
+          navigate('/scanner', { replace: true });
+          return;
+        }
       }
       setChecking(false);
     }).catch(() => setChecking(false));

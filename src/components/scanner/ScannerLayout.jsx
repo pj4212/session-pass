@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import ScannerBottomNav from './ScannerBottomNav';
 
 const SCANNER_ROLES = ['scanner', 'super_admin', 'event_admin', 'admin'];
@@ -47,8 +49,17 @@ export default function ScannerLayout() {
     );
   }
 
+  const isAdmin = user && ['super_admin', 'event_admin', 'admin'].includes(user.role);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {isAdmin && (
+        <div className="bg-card border-b border-border px-4 py-2 flex items-center">
+          <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
+            <Link to="/admin"><Shield className="h-4 w-4" />Back to Admin</Link>
+          </Button>
+        </div>
+      )}
       {!online && (
         <div className="bg-destructive text-destructive-foreground px-4 py-3 flex items-center gap-2 text-sm font-medium">
           <WifiOff className="h-4 w-4" />
