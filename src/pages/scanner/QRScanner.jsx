@@ -127,15 +127,16 @@ export default function QRScanner() {
 
     if (data.status === 'success') {
       const t = data.ticket;
-      if (t.attendance_mode === 'online') {
-        setResult({ type: 'warning', title: 'Online Ticket Only', subtitle: `${t.attendee_first_name} ${t.attendee_last_name} — Not valid for in-person entry` });
-      } else {
-        setResult({ 
-          type: 'success', 
-          title: `${t.attendee_first_name} ${t.attendee_last_name}`,
-          subtitle: 'Checked In ✓'
-        });
-      }
+      setResult({ 
+        type: 'success', 
+        title: `${t.attendee_first_name} ${t.attendee_last_name}`,
+        subtitle: 'Checked In ✓'
+      });
+      setCheckedIn(prev => prev + 1);
+    } else if (data.status === 'warning_checked_in') {
+      const t = data.ticket;
+      const name = t ? `${t.attendee_first_name} ${t.attendee_last_name}` : 'Attendee';
+      setResult({ type: 'warning', title: `${name} — Checked In`, subtitle: data.reason });
       setCheckedIn(prev => prev + 1);
     } else if (data.status === 'warning') {
       const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;

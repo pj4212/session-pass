@@ -30,18 +30,30 @@ Deno.serve(async (req) => {
         return Response.json({ status: 'error', reason: 'Invalid ticket' });
       }
 
-      // Validate occurrence match
+      // Check occurrence match and date
+      let crossEventWarning = null;
       if (occurrence_id && ticket.occurrence_id !== occurrence_id) {
-        let ticketEventName = 'Unknown event';
+        // Ticket is for a different event — check if it's at least today's date
+        let ticketEvent = null;
         try {
           const evts = await base44.asServiceRole.entities.EventOccurrence.filter({ id: ticket.occurrence_id });
-          if (evts.length) ticketEventName = evts[0].name;
+          if (evts.length) ticketEvent = evts[0];
         } catch (e) { /* ignore */ }
-        return Response.json({ 
-          status: 'error', 
-          reason: `Wrong event — this ticket is for: ${ticketEventName}`,
-          ticket
-        });
+
+        const today = new Date().toISOString().slice(0, 10);
+        const ticketDate = ticketEvent?.event_date || '';
+
+        if (ticketDate !== today) {
+          const eventName = ticketEvent?.name || 'Unknown event';
+          return Response.json({ 
+            status: 'error', 
+            reason: `Wrong date — ticket is for ${eventName} on ${ticketDate || 'unknown date'}`,
+            ticket
+          });
+        }
+
+        // Same date but different event — allow with warning
+        crossEventWarning = ticketEvent?.name || 'a different event';
       }
 
       // Check ticket status
@@ -51,10 +63,6 @@ Deno.serve(async (req) => {
       if (ticket.ticket_status === 'refunded') {
         return Response.json({ status: 'error', reason: 'Ticket refunded' });
       }
-
-      // Check if online ticket (warn but don't block from manual override)
-      // The frontend QR scanner should show a warning for online tickets
-      // but manual check-in can still proceed
 
       // Check if already checked in (atomic guard)
       if (ticket.check_in_status === 'checked_in') {
@@ -80,6 +88,23 @@ Deno.serve(async (req) => {
         action: 'check_in',
         performed_by: user.id
       });
+
+      // Build warnings list
+      const warnings = [];
+      if (crossEventWarning) {
+        warnings.push(`Different event: ${crossEventWarning}`);
+      }
+      if (ticket.attendance_mode === 'online') {
+        warnings.push('Online ticket — not for in-person entry');
+      }
+
+      if (warnings.length > 0) {
+        return Response.json({ 
+          status: 'warning_checked_in',
+          reason: warnings.join(' | '),
+          ticket: { ...ticket, check_in_status: 'checked_in', checked_in_at: now }
+        });
+      }
 
       return Response.json({ 
         status: 'success',
