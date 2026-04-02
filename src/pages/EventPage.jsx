@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, Clock, MapPin, Monitor, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Loader2, ArrowLeft } from 'lucide-react';
 import TicketSelector from '@/components/booking/TicketSelector';
 import BuyerForm from '@/components/booking/BuyerForm';
 import AttendeeForm from '@/components/booking/AttendeeForm';
@@ -21,6 +21,7 @@ export default function EventPage() {
   const { slug } = useParams();
   const [occurrence, setOccurrence] = useState(null);
   const [location, setLocation] = useState(null);
+  const [seriesSlug, setSeriesSlug] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
   const [mentors, setMentors] = useState([]);
   const [leaders, setLeaders] = useState([]);
@@ -46,6 +47,13 @@ export default function EventPage() {
       }
       const occ = allOccurrences[0];
       setOccurrence(occ);
+
+      // If part of a series, fetch series slug for back link
+      if (occ.series_id) {
+        base44.entities.EventSeries.filter({ id: occ.series_id }).then(s => {
+          if (s.length) setSeriesSlug(s[0].slug);
+        });
+      }
 
       const [tts, locs, m, l] = await Promise.all([
         base44.entities.TicketType.filter({ occurrence_id: occ.id }),
@@ -265,6 +273,14 @@ export default function EventPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-8">
+        {/* Back to Series */}
+        {seriesSlug && (
+          <Link to={`/series/${seriesSlug}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Back to all sessions
+          </Link>
+        )}
+
         {/* Event Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{occurrence.name}</h1>
