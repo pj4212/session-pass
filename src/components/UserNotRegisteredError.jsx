@@ -1,31 +1,56 @@
-import React from 'react';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { ShieldAlert, LogOut, Ticket } from 'lucide-react';
 
-const UserNotRegisteredError = () => {
+export default function UserNotRegisteredError() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-slate-50">
-      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg border border-slate-100">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-full bg-orange-100">
-            <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="flex justify-center">
+          <div className="h-16 w-16 rounded-2xl bg-amber-500/15 flex items-center justify-center">
+            <ShieldAlert className="h-8 w-8 text-amber-400" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">Access Restricted</h1>
-          <p className="text-slate-600 mb-8">
-            You are not registered to use this application. Please contact the app administrator to request access.
+        </div>
+
+        <div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Invitation Required</h1>
+          <p className="text-muted-foreground">
+            Your account hasn't been invited to this app yet. An administrator needs to send you an invitation before you can access the platform.
           </p>
-          <div className="p-4 bg-slate-50 rounded-md text-sm text-slate-600">
-            <p>If you believe this is an error, you can:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Verify you are logged in with the correct account</li>
-              <li>Contact the app administrator for access</li>
-              <li>Try logging out and back in again</li>
-            </ul>
-          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-5 text-left space-y-3">
+          <p className="text-sm font-medium text-foreground">What you can do:</p>
+          <ul className="text-sm text-muted-foreground space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              Contact your team administrator to request an invitation
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              Make sure you're signed in with the correct email address
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              Try logging out and signing in with a different account
+            </li>
+          </ul>
+        </div>
+
+        <Button
+          variant="secondary"
+          className="gap-2"
+          onClick={() => base44.auth.logout()}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out & Try Again
+        </Button>
+
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-4">
+          <Ticket className="h-3.5 w-3.5" />
+          <span>Session Pass</span>
         </div>
       </div>
     </div>
   );
-};
-
-export default UserNotRegisteredError;
+}
