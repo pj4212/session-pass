@@ -27,7 +27,7 @@ export default function AdminLayout() {
   useEffect(() => {
     async function loadUser() {
       const me = await base44.auth.me();
-      if (!me || !['super_admin', 'event_admin', 'report_viewer'].includes(me.role)) {
+      if (!me || !['super_admin', 'event_admin', 'report_viewer', 'admin'].includes(me.role)) {
         navigate('/');
         return;
       }
@@ -45,7 +45,8 @@ export default function AdminLayout() {
     );
   }
 
-  const filteredNav = NAV_ITEMS.filter(item => item.roles.includes(user?.role));
+  const effectiveRole = user?.role === 'admin' ? 'super_admin' : user?.role;
+  const filteredNav = NAV_ITEMS.filter(item => item.roles.includes(effectiveRole));
   const isActive = (path) => location.pathname === path || (path !== '/admin' && location.pathname.startsWith(path));
 
   const sidebar = (
