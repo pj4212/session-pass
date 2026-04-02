@@ -76,7 +76,9 @@ export default function EventForm() {
             setForm({
               template_id: ev.template_id || '', series_id: ev.series_id || '', name: ev.name + ' (Copy)',
               slug: ev.slug + '-copy', description: ev.description || '',
-              event_date: '', start_datetime: '', end_datetime: '',
+              event_date: ev.event_date || '',
+              start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
+              end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
               location_id: ev.location_id || '', zoom_link: '',
               zoom_meeting_id: '', venue_details: ev.venue_details || '',
