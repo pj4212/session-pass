@@ -139,12 +139,15 @@ export default function EventForm() {
 
   const handleSave = async () => {
     setSaving(true);
+    // Store datetime values as-entered (no timezone conversion)
+    // Append :00 for seconds if needed, treat as literal time
+    const toISO = (val) => val ? val + ':00' : '';
     const eventData = {
       ...form,
-      start_datetime: form.start_datetime ? new Date(form.start_datetime).toISOString() : '',
-      end_datetime: form.end_datetime ? new Date(form.end_datetime).toISOString() : '',
-      sales_open_date: form.sales_open_date ? new Date(form.sales_open_date).toISOString() : '',
-      sales_close_date: form.sales_close_date ? new Date(form.sales_close_date).toISOString() : ''
+      start_datetime: toISO(form.start_datetime),
+      end_datetime: toISO(form.end_datetime),
+      sales_open_date: toISO(form.sales_open_date),
+      sales_close_date: toISO(form.sales_close_date)
     };
 
     let eventId;
