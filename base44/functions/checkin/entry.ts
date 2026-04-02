@@ -13,11 +13,17 @@ Deno.serve(async (req) => {
 
     if (action === 'checkin') {
       // Fetch ticket
-      const tickets = await base44.asServiceRole.entities.Ticket.filter({ id: ticket_id });
-      if (!tickets.length) {
-        return Response.json({ status: 'error', reason: 'Invalid ticket' });
+      let ticket;
+      try {
+        const tickets = await base44.asServiceRole.entities.Ticket.filter({ id: ticket_id });
+        if (!tickets.length) {
+          return Response.json({ status: 'error', reason: 'Ticket not found' });
+        }
+        ticket = tickets[0];
+      } catch (e) {
+        console.error('Ticket lookup failed:', e.message);
+        return Response.json({ status: 'error', reason: 'Ticket not found' });
       }
-      const ticket = tickets[0];
 
       // Validate QR hash if provided
       if (qr_hash && ticket.qr_code_hash !== qr_hash) {

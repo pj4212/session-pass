@@ -115,13 +115,7 @@ export default function QRScanner() {
       return;
     }
 
-    // Check occurrence match
-    if (eventId && eventId !== currentOccurrenceId) {
-      setResult({ type: 'error', title: 'Wrong Event', subtitle: 'This ticket is for a different event' });
-      return;
-    }
-
-    // Call backend check-in
+    // Call backend check-in (backend validates occurrence match)
     const res = await base44.functions.invoke('checkin', {
       action: 'checkin',
       ticket_id: ticketId,

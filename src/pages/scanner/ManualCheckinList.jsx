@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, Loader2, CheckCircle2, Circle } from 'lucide-react';
+import { Users, Search, CheckCircle2, Circle } from 'lucide-react';
 
 export default function ManualCheckinList() {
   const { occurrenceId } = useParams();
@@ -14,14 +14,10 @@ export default function ManualCheckinList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [processing, setProcessing] = useState(null);
+
   const mountedRef = useRef(true);
 
-  // Check if this scanner can undo
-  const canUndo = user.role === 'super_admin' || user.role === 'event_admin' ||
-    assignments.some(a => 
-      a.can_undo_checkin && (a.occurrence_id === occurrenceId || !a.occurrence_id)
-    );
+  // All staff can undo from the door list to correct mistakes
 
   useEffect(() => {
     mountedRef.current = true;
@@ -68,10 +64,7 @@ export default function ManualCheckinList() {
   const handleToggle = async (ticket) => {
     const isCheckedIn = ticket.check_in_status === 'checked_in';
 
-    if (isCheckedIn && !canUndo) return;
-
-    // Optimistic update
-    setProcessing(ticket.id);
+    // Optimistic update — instant visual feedback
     setTickets(prev => prev.map(t => 
       t.id === ticket.id 
         ? { ...t, check_in_status: isCheckedIn ? 'not_checked_in' : 'checked_in', checked_in_at: isCheckedIn ? '' : new Date().toISOString() }
@@ -85,14 +78,13 @@ export default function ManualCheckinList() {
     });
 
     if (res.data.status !== 'success') {
-      // Revert
+      // Revert on failure
       setTickets(prev => prev.map(t =>
         t.id === ticket.id
           ? { ...t, check_in_status: isCheckedIn ? 'checked_in' : 'not_checked_in', checked_in_at: isCheckedIn ? ticket.checked_in_at : '' }
           : t
       ));
     }
-    setProcessing(null);
   };
 
   const checkedInCount = tickets.filter(t => t.check_in_status === 'checked_in').length;
@@ -161,7 +153,7 @@ export default function ManualCheckinList() {
         {filtered.map(t => {
           const isChecked = t.check_in_status === 'checked_in';
           const tt = ticketTypes[t.ticket_type_id];
-          const isProcessing = processing === t.id;
+
 
           return (
             <button
@@ -170,12 +162,9 @@ export default function ManualCheckinList() {
                 isChecked ? 'bg-green-50 dark:bg-green-950/30' : ''
               }`}
               onClick={() => handleToggle(t)}
-              disabled={isProcessing || (isChecked && !canUndo)}
             >
               <div className="shrink-0">
-                {isProcessing ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                ) : isChecked ? (
+                {isChecked ? (
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
                 ) : (
                   <Circle className="h-6 w-6 text-muted-foreground" />
