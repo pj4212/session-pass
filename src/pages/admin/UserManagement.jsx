@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Edit, Shield, Loader2 } from 'lucide-react';
 
-const ROLES = ['super_admin', 'event_admin', 'scanner', 'report_viewer', 'user'];
+const ROLES = ['super_admin', 'event_admin', 'scanner', 'user'];
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);

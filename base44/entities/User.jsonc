@@ -9,7 +9,6 @@
         "super_admin",
         "event_admin",
         "scanner",
-        "report_viewer",
         "user"
       ],
       "default": "user"
@@ -19,5 +18,6 @@
       "title": "Is Active",
       "default": true
     }
-  }
+  },
+  "required": []
 }
