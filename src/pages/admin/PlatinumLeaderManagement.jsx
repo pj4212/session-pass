@@ -18,7 +18,7 @@ export default function PlatinumLeaderManagement() {
   useEffect(() => {
     async function load() {
       const l = await base44.entities.PlatinumLeader.filter({});
-      setLeaders(l.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
+      setLeaders(l.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       setLoading(false);
     }
     load();
@@ -38,7 +38,7 @@ export default function PlatinumLeaderManagement() {
     setSaving(true);
     if (editing === 'new') {
       const created = await base44.entities.PlatinumLeader.create(form);
-      setLeaders(prev => [...prev, created].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
+      setLeaders(prev => [...prev, created].sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     } else {
       await base44.entities.PlatinumLeader.update(editing, form);
       setLeaders(prev => prev.map(l => l.id === editing ? { ...l, ...form } : l));
@@ -61,7 +61,6 @@ export default function PlatinumLeaderManagement() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Sort</TableHead>
               <TableHead>Active</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -70,7 +69,6 @@ export default function PlatinumLeaderManagement() {
             {leaders.map(l => (
               <TableRow key={l.id}>
                 <TableCell className="font-medium">{l.name}</TableCell>
-                <TableCell>{l.sort_order || 0}</TableCell>
                 <TableCell>{l.is_active !== false ? '✓' : '✗'}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Edit className="h-4 w-4" /></Button>
@@ -86,7 +84,7 @@ export default function PlatinumLeaderManagement() {
           <DialogHeader><DialogTitle>{editing === 'new' ? 'Add Leader' : 'Edit Leader'}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Sort Order</Label><Input type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
+
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label>
             </div>
