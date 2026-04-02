@@ -11,10 +11,20 @@ import OrderSummary from '@/components/booking/OrderSummary';
 
 const BUYER_STORAGE_KEY = 'uv_buyer_details';
 
+const LEADER_STORAGE_KEY = 'uv_platinum_leader';
+
 function loadSavedBuyer() {
   const saved = localStorage.getItem(BUYER_STORAGE_KEY);
-  if (saved) return JSON.parse(saved);
-  return { first_name: '', last_name: '', email: '', phone: '' };
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    delete parsed.phone;
+    return parsed;
+  }
+  return { first_name: '', last_name: '', email: '' };
+}
+
+function loadSavedLeader() {
+  return localStorage.getItem(LEADER_STORAGE_KEY) || '';
 }
 
 export default function EventPage() {
@@ -72,8 +82,7 @@ export default function EventPage() {
               setBuyer({
                 first_name: parts[0] || '',
                 last_name: parts.slice(1).join(' ') || '',
-                email: user.email || '',
-                phone: user.phone || ''
+                email: user.email || ''
               });
             }
           }
@@ -105,12 +114,13 @@ export default function EventPage() {
 
   useEffect(() => {
     setAttendees(prev => {
+      const savedLeader = loadSavedLeader();
       const next = attendeeSlots.map((slot, i) => ({
         ...slot,
         first_name: i === 0 ? buyer.first_name : (prev[i]?.first_name || ''),
         last_name: i === 0 ? buyer.last_name : (prev[i]?.last_name || ''),
         email: i === 0 ? buyer.email : (prev[i]?.email || ''),
-        platinum_leader_id: prev[i]?.platinum_leader_id || ''
+        platinum_leader_id: prev[i]?.platinum_leader_id || savedLeader
       }));
       return next;
     });
@@ -220,8 +230,10 @@ export default function EventPage() {
       return;
     }
 
-    // Save buyer to localStorage
+    // Save buyer and leader to localStorage
     localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify(buyer));
+    const lastLeader = attendees.find(a => a.platinum_leader_id)?.platinum_leader_id || '';
+    if (lastLeader) localStorage.setItem(LEADER_STORAGE_KEY, lastLeader);
 
     if (result.data.payment_required) {
       window.location.href = result.data.checkout_url;

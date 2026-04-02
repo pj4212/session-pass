@@ -31,27 +31,16 @@ export default function BuyerForm({ buyer, onChange }) {
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="buyer-email">Email *</Label>
-          <Input
-            id="buyer-email"
-            type="email"
-            value={buyer.email}
-            onChange={e => update('email', e.target.value)}
-            placeholder="email@example.com"
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="buyer-phone">Phone</Label>
-          <Input
-            id="buyer-phone"
-            value={buyer.phone}
-            onChange={e => update('phone', e.target.value)}
-            placeholder="Phone number"
-          />
-        </div>
+      <div>
+        <Label htmlFor="buyer-email">Email *</Label>
+        <Input
+          id="buyer-email"
+          type="email"
+          value={buyer.email}
+          onChange={e => update('email', e.target.value)}
+          placeholder="email@example.com"
+          required
+        />
       </div>
     </div>
   );
