@@ -7,8 +7,8 @@ export default function Home() {
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="max-w-md w-full px-6 text-center space-y-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Event Ticketing</h1>
-          <p className="text-muted-foreground">Welcome to the event management platform.</p>
+          <h1 className="text-3xl font-bold mb-2">Session Pass</h1>
+          <p className="text-muted-foreground">Event ticketing & management platform.</p>
         </div>
 
         <div className="space-y-3">
@@ -27,7 +27,7 @@ export default function Home() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Event booking pages are accessed via direct event links.
+          Event booking pages are accessed via direct event links at session-pass.com.
         </p>
       </div>
     </div>

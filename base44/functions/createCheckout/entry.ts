@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const baseUrl = origin_url || 'https://app.base44.com';
+      const baseUrl = origin_url || 'https://session-pass.com';
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: lineItems,
@@ -266,7 +266,7 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
   const endTime = formatTime(occurrence.end_datetime);
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
   const totalText = order.total_amount > 0 ? `$${order.total_amount.toFixed(2)} AUD` : 'Free';
-  const orderUrl = `${Deno.env.get("BASE44_APP_URL") || ''}/order/${order.order_number}`;
+  const orderUrl = `https://session-pass.com/order/${order.order_number}`;
 
   const ticketRows = tickets.map(t => {
     const tt = ticketTypeMap[t.ticket_type_id];
@@ -506,6 +506,7 @@ async function sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketT
   const html = buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap);
 
   await base44.asServiceRole.integrations.Core.SendEmail({
+    from_name: 'Session Pass',
     to: order.buyer_email,
     subject: `Booking Confirmed — ${occurrence.name} | Order #${order.order_number}`,
     body: html
@@ -517,6 +518,7 @@ async function sendTicketEmail(base44, ticket, occurrence, ticketType) {
   const html = buildTicketEmailHtml(ticket, occurrence, ticketType);
 
   await base44.asServiceRole.integrations.Core.SendEmail({
+    from_name: 'Session Pass',
     to: ticket.attendee_email,
     subject: `Your ${isOnline ? 'Online' : 'In-Person'} Ticket — ${occurrence.name}`,
     body: html
