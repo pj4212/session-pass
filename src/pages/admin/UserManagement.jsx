@@ -22,12 +22,11 @@ export default function UserManagement() {
   const [inviteRole, setInviteRole] = useState('user');
   const [saving, setSaving] = useState(false);
 
-  // Scanner assignments
+  // Scanner location restrictions
   const [scannerDialogUser, setScannerDialogUser] = useState(null);
   const [assignments, setAssignments] = useState([]);
-  const [occurrences, setOccurrences] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [newAssignment, setNewAssignment] = useState({ occurrence_id: '', location_id: '', can_undo_checkin: false });
+  const [selectedLocationId, setSelectedLocationId] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -64,27 +63,24 @@ export default function UserManagement() {
 
   const openScannerAssignments = async (user) => {
     setScannerDialogUser(user);
-    const [assigns, occs, locs] = await Promise.all([
+    const [assigns, locs] = await Promise.all([
       base44.entities.ScannerAssignment.filter({ user_id: user.id }),
-      base44.entities.EventOccurrence.filter({ status: 'published' }),
       base44.entities.Location.filter({})
     ]);
     setAssignments(assigns);
-    setOccurrences(occs);
     setLocations(locs);
   };
 
-  const addAssignment = async () => {
+  const addLocationRestriction = async () => {
+    if (!selectedLocationId) return;
     setSaving(true);
     const created = await base44.entities.ScannerAssignment.create({
       user_id: scannerDialogUser.id,
-      occurrence_id: newAssignment.occurrence_id || '',
-      location_id: newAssignment.location_id || '',
-      can_undo_checkin: newAssignment.can_undo_checkin,
+      location_id: selectedLocationId,
       is_active: true
     });
     setAssignments(prev => [...prev, created]);
-    setNewAssignment({ occurrence_id: '', location_id: '', can_undo_checkin: false });
+    setSelectedLocationId('');
     setSaving(false);
   };
 
@@ -187,40 +183,40 @@ export default function UserManagement() {
       {/* Scanner Assignments Dialog */}
       <Dialog open={!!scannerDialogUser} onOpenChange={() => setScannerDialogUser(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Scanner Assignments — {scannerDialogUser?.full_name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Scanner Access — {scannerDialogUser?.full_name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            {assignments.map(a => (
-              <div key={a.id} className="flex items-center justify-between border rounded p-2 text-sm">
-                <span>
-                  {a.occurrence_id ? occurrences.find(o => o.id === a.occurrence_id)?.name || 'Event' : ''}
-                  {a.location_id ? locations.find(l => l.id === a.location_id)?.name || 'Location' : ''}
-                </span>
-                <Button variant="ghost" size="sm" onClick={() => deleteAssignment(a.id)}>Remove</Button>
+            <div className="bg-secondary/50 border border-border rounded-lg p-3">
+              <p className="text-sm font-medium text-foreground">Access: All events & all locations by default</p>
+              <p className="text-xs text-muted-foreground mt-1">Add location restrictions below to limit which locations this scanner can access.</p>
+            </div>
+
+            {assignments.filter(a => a.location_id).length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Restricted to these locations only</Label>
+                {assignments.filter(a => a.location_id).map(a => (
+                  <div key={a.id} className="flex items-center justify-between border border-border rounded-lg p-2.5 text-sm">
+                    <span className="text-foreground">{locations.find(l => l.id === a.location_id)?.name || 'Unknown location'}</span>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteAssignment(a.id)}>Remove</Button>
+                  </div>
+                ))}
               </div>
-            ))}
-            <div className="border-t pt-3 space-y-2">
-              <Label>Add Assignment</Label>
-              <Select value={newAssignment.occurrence_id} onValueChange={v => setNewAssignment({ ...newAssignment, occurrence_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select event (optional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={null}>None</SelectItem>
-                  {occurrences.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={newAssignment.location_id} onValueChange={v => setNewAssignment({ ...newAssignment, location_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select location (optional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={null}>None</SelectItem>
-                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <div className="flex items-center gap-2">
-                <Switch checked={newAssignment.can_undo_checkin} onCheckedChange={v => setNewAssignment({ ...newAssignment, can_undo_checkin: v })} />
-                <Label className="text-sm">Can undo check-in</Label>
+            )}
+
+            <div className="border-t border-border pt-3 space-y-2">
+              <Label>Add Location Restriction</Label>
+              <div className="flex gap-2">
+                <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select location..." /></SelectTrigger>
+                  <SelectContent>
+                    {locations.filter(l => !assignments.some(a => a.location_id === l.id)).map(l => (
+                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={addLocationRestriction} disabled={saving || !selectedLocationId}>
+                  {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}Add
+                </Button>
               </div>
-              <Button size="sm" onClick={addAssignment} disabled={saving || (!newAssignment.occurrence_id && !newAssignment.location_id)}>
-                Add Assignment
-              </Button>
             </div>
           </div>
         </DialogContent>
