@@ -137,8 +137,12 @@ function buildProjectedTimeline(sessions, months) {
     const actualNames = new Set(actual.map(s => s.name));
     const missing = allTemplates.filter(t => !actualNames.has(t.name));
     const projected = missing.map(t => projectTemplate(t, mondayStr));
-    const all = [...actual, ...projected].sort((a, b) =>
-      localDate(a.event_date) - localDate(b.event_date) || new Date(a.start_datetime) - new Date(b.start_datetime)
+    const all = [...actual, ...projected].sort((a, b) => {
+      const aOnline = a.event_mode === 'online_stream' ? 0 : 1;
+      const bOnline = b.event_mode === 'online_stream' ? 0 : 1;
+      if (aOnline !== bOnline) return aOnline - bOnline;
+      return a.name.localeCompare(b.name);
+    }
     );
     if (all.length > 0) weeks.push({ weekStart: mondayStr, sessions: all });
     current.setDate(current.getDate() + 7);
@@ -189,8 +193,12 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([weekStart, sessions]) => ({
         weekStart,
-        sessions: sessions.sort((a, b) =>
-          localDate(a.event_date) - localDate(b.event_date) || new Date(a.start_datetime) - new Date(b.start_datetime)
+        sessions: sessions.sort((a, b) => {
+          const aOnline = a.event_mode === 'online_stream' ? 0 : 1;
+          const bOnline = b.event_mode === 'online_stream' ? 0 : 1;
+          if (aOnline !== bOnline) return aOnline - bOnline;
+          return a.name.localeCompare(b.name);
+        }
         )
       }));
   }, [events]);
