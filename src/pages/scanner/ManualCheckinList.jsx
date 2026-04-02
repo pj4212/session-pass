@@ -101,15 +101,15 @@ export default function ManualCheckinList() {
   });
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-white" /></div>;
   }
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="shrink-0 border-b bg-card">
+      <div className="shrink-0 border-b border-white/10 bg-slate-900/80">
         <div className="flex items-center justify-center px-4 py-2">
-          <div className="flex items-center gap-2 text-lg font-bold">
+          <div className="flex items-center gap-2 text-lg font-bold text-white">
             <Users className="h-5 w-5" />
             <span>{checkedInCount} / {tickets.length}</span>
           </div>
@@ -118,12 +118,12 @@ export default function ManualCheckinList() {
         {/* Search */}
         <div className="px-4 pb-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
               placeholder="Search name or email..." 
               value={search} 
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 h-10"
+              className="pl-9 h-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -137,9 +137,8 @@ export default function ManualCheckinList() {
           ].map(tab => (
             <Button
               key={tab.value}
-              variant={filter === tab.value ? 'default' : 'outline'}
               size="sm"
-              className="text-xs"
+              className={`text-xs ${filter === tab.value ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10'}`}
               onClick={() => setFilter(tab.value)}
             >
               {tab.label}
@@ -154,33 +153,32 @@ export default function ManualCheckinList() {
           const isChecked = t.check_in_status === 'checked_in';
           const tt = ticketTypes[t.ticket_type_id];
 
-
           return (
             <button
               key={t.id}
-              className={`w-full flex items-center gap-3 px-4 py-3 border-b text-left transition-colors active:bg-muted ${
-                isChecked ? 'bg-green-50 dark:bg-green-950/30' : ''
+              className={`w-full flex items-center gap-4 px-4 py-4 min-h-[72px] border-b border-white/5 text-left transition-colors active:bg-white/10 ${
+                isChecked ? 'bg-emerald-500/10' : ''
               }`}
               onClick={() => handleToggle(t)}
             >
-              <div className="shrink-0">
+              <div className="shrink-0 flex items-center justify-center w-12 h-12">
                 {isChecked ? (
-                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  <CheckCircle2 className="h-8 w-8 text-emerald-400" />
                 ) : (
-                  <Circle className="h-6 w-6 text-muted-foreground" />
+                  <Circle className="h-8 w-8 text-slate-500" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">
+                <p className="font-medium text-base truncate text-white">
                   {t.attendee_first_name} {t.attendee_last_name}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{t.attendee_email}</p>
+                <p className="text-xs text-slate-400 truncate">{t.attendee_email}</p>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-1">
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs border-white/20 text-slate-300">
                   {tt?.name || 'Ticket'}
                 </Badge>
-                <Badge variant={t.attendance_mode === 'online' ? 'secondary' : 'default'} className="text-xs">
+                <Badge className={`text-xs ${t.attendance_mode === 'online' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>
                   {t.attendance_mode === 'online' ? 'Online' : 'In-Person'}
                 </Badge>
               </div>
@@ -188,7 +186,7 @@ export default function ManualCheckinList() {
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-center text-muted-foreground py-12">No attendees found</p>
+          <p className="text-center text-slate-400 py-12">No attendees found</p>
         )}
       </div>
     </div>
