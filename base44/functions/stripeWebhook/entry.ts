@@ -1,5 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import Stripe from 'npm:stripe@14.14.0';
+import { Resend } from 'npm:resend@3.2.0';
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
@@ -376,11 +379,11 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
 async function sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap) {
   const html = buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap);
 
-  await base44.asServiceRole.integrations.Core.SendEmail({
-    from_name: 'Session Pass',
+  await resend.emails.send({
+    from: 'Session Pass <noreply@session-pass.com>',
     to: order.buyer_email,
     subject: `Booking Confirmed — ${occurrence.name} | Order #${order.order_number}`,
-    body: html
+    html: html
   });
 }
 
@@ -388,10 +391,10 @@ async function sendTicketEmail(base44, ticket, occurrence, ticketType) {
   const isOnline = ticket.attendance_mode === 'online';
   const html = buildTicketEmailHtml(ticket, occurrence, ticketType);
 
-  await base44.asServiceRole.integrations.Core.SendEmail({
-    from_name: 'Session Pass',
+  await resend.emails.send({
+    from: 'Session Pass <noreply@session-pass.com>',
     to: ticket.attendee_email,
     subject: `Your ${isOnline ? 'Online' : 'In-Person'} Ticket — ${occurrence.name}`,
-    body: html
+    html: html
   });
 }
