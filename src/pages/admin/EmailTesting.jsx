@@ -31,11 +31,21 @@ export default function EmailTesting() {
     setResult(null);
     setError(null);
 
-    const res = await base44.functions.invoke('sendTestEmail', {
-      email_type: emailType,
-      attendance_mode: attendanceMode,
-      recipient_email: recipientEmail
-    });
+    let res;
+    if (emailType.startsWith('reminder_')) {
+      const reminderType = emailType === 'reminder_1hour' ? '1hour' : '5min';
+      res = await base44.functions.invoke('sendSessionReminders', {
+        test_mode: true,
+        reminder_type: reminderType,
+        recipient_email: recipientEmail
+      });
+    } else {
+      res = await base44.functions.invoke('sendTestEmail', {
+        email_type: emailType,
+        attendance_mode: attendanceMode,
+        recipient_email: recipientEmail
+      });
+    }
 
     if (res.data.error) {
       setError(res.data.error);
@@ -84,22 +94,26 @@ export default function EmailTesting() {
                   <SelectItem value="both">Order Receipt + Ticket</SelectItem>
                   <SelectItem value="order">Order Receipt Only</SelectItem>
                   <SelectItem value="ticket">Ticket Only</SelectItem>
+                  <SelectItem value="reminder_1hour">1-Hour Reminder (Online)</SelectItem>
+                  <SelectItem value="reminder_5min">5-Minute Reminder (Online)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Attendance Mode</Label>
-              <Select value={attendanceMode} onValueChange={setAttendanceMode}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in_person">In-Person</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!emailType.startsWith('reminder_') && (
+              <div className="space-y-2">
+                <Label>Attendance Mode</Label>
+                <Select value={attendanceMode} onValueChange={setAttendanceMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_person">In-Person</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
@@ -109,6 +123,12 @@ export default function EmailTesting() {
             )}
             {(emailType === 'ticket' || emailType === 'both') && (
               <p>• {attendanceMode === 'online' ? 'Online ticket with webinar registration link' : 'In-person ticket with QR code for check-in'}</p>
+            )}
+            {emailType === 'reminder_1hour' && (
+              <p>• 1-hour reminder email with Zoom/webinar join link (sent automatically 1 hour before online sessions)</p>
+            )}
+            {emailType === 'reminder_5min' && (
+              <p>• 5-minute urgent reminder email with Zoom/webinar join link (sent automatically 5 minutes before online sessions)</p>
             )}
           </div>
 
