@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Calendar, Clock, MapPin, Monitor, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import WeekGroup from '@/components/series/WeekGroup';
 
 export default function SeriesPage() {
   const { slug } = useParams();
@@ -41,41 +39,149 @@ export default function SeriesPage() {
     load();
   }, [slug]);
 
-  const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
-  const formatTime = (dateStr) => new Date(dateStr).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
 
-  const getLowestPrice = (occId) => {
-    const tts = ticketTypes.filter(t => t.occurrence_id === occId && t.is_active);
-    if (!tts.length) return null;
-    return Math.min(...tts.map(t => t.price));
-  };
 
-  const isSoldOut = (occId) => {
-    const tts = ticketTypes.filter(t => t.occurrence_id === occId && t.is_active);
-    return tts.length > 0 && tts.every(t => t.capacity_limit && t.quantity_sold >= t.capacity_limit);
-  };
-
-  const isSalesClosed = (occ) => {
-    return occ.sales_close_date && new Date().toISOString() > occ.sales_close_date;
-  };
-
-  const groupedSessions = useMemo(() => {
+  // Build a week-by-week timeline for the next 12 months
+  const weeklyTimeline = useMemo(() => {
     if (!sessions.length) return [];
 
-    const hasFortnightly = sessions.some(s => s.recurrence_pattern?.startsWith('fortnightly'));
-
-    if (hasFortnightly) {
-      const weekA = sessions.filter(s => s.recurrence_pattern === 'fortnightly_A');
-      const weekB = sessions.filter(s => s.recurrence_pattern === 'fortnightly_B');
-      const weekly = sessions.filter(s => s.recurrence_pattern === 'weekly' || !s.recurrence_pattern);
-      const groups = [];
-      if (weekly.length) groups.push({ label: 'Every Week', sessions: weekly });
-      if (weekA.length) groups.push({ label: 'Week A (Fortnightly)', sessions: weekA });
-      if (weekB.length) groups.push({ label: 'Week B (Fortnightly)', sessions: weekB });
-      return groups;
+    // Get Monday of a given date's week
+    function getMonday(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d);
+      monday.setDate(diff);
+      return monday.toISOString().slice(0, 10);
     }
 
-    return [{ label: null, sessions }];
+    // Determine the fortnightly pattern from existing sessions
+    const fortnightlyA = sessions.filter(s => s.recurrence_pattern === 'fortnightly_A');
+    const fortnightlyB = sessions.filter(s => s.recurrence_pattern === 'fortnightly_B');
+    const weeklySessions = sessions.filter(s => s.recurrence_pattern === 'weekly' || !s.recurrence_pattern);
+
+    // Figure out which weeks are A and which are B from existing data
+    const weekAMondays = new Set(fortnightlyA.map(s => getMonday(s.event_date)));
+    const weekBMondays = new Set(fortnightlyB.map(s => getMonday(s.event_date)));
+
+    // Generate weeks for next 12 months
+    const today = new Date();
+    const startMonday = new Date(getMonday(today.toISOString().slice(0, 10)) + 'T00:00:00');
+    const endDate = new Date(today);
+    endDate.setMonth(endDate.getMonth() + 12);
+
+    // Find a reference A and B monday to establish the fortnightly cadence
+    let refAMonday = null;
+    let refBMonday = null;
+    if (fortnightlyA.length) {
+      refAMonday = new Date(getMonday(fortnightlyA[0].event_date) + 'T00:00:00');
+    }
+    if (fortnightlyB.length) {
+      refBMonday = new Date(getMonday(fortnightlyB[0].event_date) + 'T00:00:00');
+    }
+
+    function isWeekA(mondayDate) {
+      if (refAMonday) {
+        const diff = Math.round((mondayDate - refAMonday) / (7 * 24 * 60 * 60 * 1000));
+        return diff % 2 === 0;
+      }
+      if (refBMonday) {
+        const diff = Math.round((mondayDate - refBMonday) / (7 * 24 * 60 * 60 * 1000));
+        return diff % 2 !== 0;
+      }
+      return true;
+    }
+
+    // Build session templates (day of week + time pattern) from actual sessions
+    function buildTemplates(sessionList) {
+      return sessionList.map(s => ({
+        dayOfWeek: new Date(s.event_date + 'T00:00:00').getDay(),
+        name: s.name,
+        slug: s.slug,
+        event_mode: s.event_mode,
+        location_id: s.location_id,
+        start_datetime: s.start_datetime,
+        end_datetime: s.end_datetime,
+        description: s.description,
+        id: s.id,
+        occurrence_id: s.id,
+        recurrence_pattern: s.recurrence_pattern,
+      }));
+    }
+
+    const weeklyTemplates = buildTemplates(weeklySessions);
+    const fortnightlyATemplates = buildTemplates(fortnightlyA);
+    const fortnightlyBTemplates = buildTemplates(fortnightlyB);
+
+    // Group actual sessions by their week monday
+    const actualSessionsByWeek = {};
+    for (const s of sessions) {
+      const monday = getMonday(s.event_date);
+      if (!actualSessionsByWeek[monday]) actualSessionsByWeek[monday] = [];
+      actualSessionsByWeek[monday].push(s);
+    }
+
+    const weeks = [];
+    const current = new Date(startMonday);
+
+    while (current < endDate) {
+      const mondayStr = current.toISOString().slice(0, 10);
+      const weekIsA = isWeekA(current);
+
+      // Use actual sessions if they exist for this week
+      if (actualSessionsByWeek[mondayStr]) {
+        weeks.push({
+          weekStart: mondayStr,
+          sessions: actualSessionsByWeek[mondayStr].sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+        });
+      } else {
+        // Project future sessions based on templates
+        const applicableTemplates = [
+          ...weeklyTemplates,
+          ...(weekIsA ? fortnightlyATemplates : fortnightlyBTemplates)
+        ];
+
+        if (applicableTemplates.length > 0) {
+          const projectedSessions = applicableTemplates.map(tmpl => {
+            // Calculate the actual date for this week
+            const targetDay = tmpl.dayOfWeek;
+            const mondayDate = new Date(mondayStr + 'T00:00:00');
+            const dayOffset = targetDay === 0 ? 6 : targetDay - 1; // Mon=0 offset
+            const sessionDate = new Date(mondayDate);
+            sessionDate.setDate(sessionDate.getDate() + dayOffset);
+            const dateStr = sessionDate.toISOString().slice(0, 10);
+
+            // Rebuild start/end times with the new date
+            const origStart = new Date(tmpl.start_datetime);
+            const origEnd = new Date(tmpl.end_datetime);
+            const newStart = new Date(sessionDate);
+            newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
+            const newEnd = new Date(sessionDate);
+            newEnd.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
+
+            return {
+              ...tmpl,
+              id: `projected-${tmpl.id}-${dateStr}`,
+              event_date: dateStr,
+              start_datetime: newStart.toISOString(),
+              end_datetime: newEnd.toISOString(),
+              _projected: true // Flag so we know it's not a real record
+            };
+          }).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+
+          if (projectedSessions.length > 0) {
+            weeks.push({
+              weekStart: mondayStr,
+              sessions: projectedSessions
+            });
+          }
+        }
+      }
+
+      current.setDate(current.getDate() + 7);
+    }
+
+    return weeks;
   }, [sessions]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -89,73 +195,19 @@ export default function SeriesPage() {
           {series.description && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{series.description}</p>}
         </div>
 
-        {sessions.length === 0 ? (
+        {weeklyTimeline.length === 0 ? (
           <p className="text-center text-muted-foreground py-12">No sessions available at this time.</p>
         ) : (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Choose a Session</h2>
-            {groupedSessions.map((group, gi) => (
-              <div key={gi} className="space-y-3">
-                {group.label && (
-                  <h3 className="text-base font-semibold text-primary border-b border-border pb-2">{group.label}</h3>
-                )}
-                {group.sessions.map(session => {
-                  const loc = locations[session.location_id];
-                  const price = getLowestPrice(session.id);
-                  const soldOut = isSoldOut(session.id);
-                  const closed = isSalesClosed(session);
-                  const isOnlineOnly = session.event_mode === 'online_stream';
-
-                  return (
-                    <Card key={session.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                      <CardContent className="p-5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-lg font-semibold">{session.name}</h3>
-                              {isOnlineOnly && <Badge variant="outline">Online Only</Badge>}
-                              {!isOnlineOnly && session.event_mode === 'hybrid' && <Badge variant="outline">Hybrid</Badge>}
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {formatDate(session.event_date)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3.5 w-3.5" />
-                                {formatTime(session.start_datetime)} – {formatTime(session.end_datetime)}
-                              </span>
-                              {loc && (
-                                <span className="flex items-center gap-1">
-                                  {isOnlineOnly ? <Monitor className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
-                                  {isOnlineOnly ? 'Online via Zoom' : loc.name}
-                                </span>
-                              )}
-                            </div>
-                            {session.description && <p className="text-sm text-muted-foreground">{session.description}</p>}
-                          </div>
-                          <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                            {price !== null && (
-                              <span className="text-lg font-bold">
-                                {price === 0 ? 'Free' : `From $${price.toFixed(2)}`}
-                              </span>
-                            )}
-                            {soldOut ? (
-                              <Badge variant="destructive">Sold Out</Badge>
-                            ) : closed ? (
-                              <Badge variant="secondary">Sales Closed</Badge>
-                            ) : (
-                              <Button asChild>
-                                <Link to={`/event/${session.slug}`}>Book Now</Link>
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+          <div>
+            <h2 className="text-xl font-semibold mb-6">Upcoming Sessions</h2>
+            {weeklyTimeline.map(week => (
+              <WeekGroup
+                key={week.weekStart}
+                weekStart={week.weekStart}
+                sessions={week.sessions}
+                locations={locations}
+                ticketTypes={ticketTypes}
+              />
             ))}
           </div>
         )}
