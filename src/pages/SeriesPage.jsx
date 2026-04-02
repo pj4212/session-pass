@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
+
+// Module-level cache survives navigation
+const pageCache = {};
 import WeekGroup from '@/components/series/WeekGroup';
 
 export default function SeriesPage() {
@@ -10,11 +13,30 @@ export default function SeriesPage() {
   const [sessions, setSessions] = useState([]);
   const [locations, setLocations] = useState({});
   const [ticketTypes, setTicketTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!pageCache[slug]);
   const [error, setError] = useState(null);
+
+  // Set page title
+  useEffect(() => {
+    if (series) {
+      document.title = `Series / ${series.name} – Session Pass`;
+    }
+    return () => { document.title = 'Session Pass'; };
+  }, [series]);
 
   useEffect(() => {
     async function load() {
+      // Use cache if available (instant back navigation)
+      if (pageCache[slug]) {
+        const c = pageCache[slug];
+        setSeries(c.series);
+        setLocations(c.locations);
+        setSessions(c.sessions);
+        setTicketTypes(c.ticketTypes);
+        setLoading(false);
+        return;
+      }
+
       const allSeries = await base44.entities.EventSeries.filter({ slug });
       if (!allSeries.length) { setError('Event not found'); setLoading(false); return; }
       const s = allSeries[0];
@@ -34,6 +56,8 @@ export default function SeriesPage() {
         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
       setSessions(published);
       setTicketTypes(tts);
+
+      pageCache[slug] = { series: s, locations: locMap, sessions: published, ticketTypes: tts };
       setLoading(false);
     }
     load();

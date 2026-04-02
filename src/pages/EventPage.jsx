@@ -46,7 +46,6 @@ export default function EventPage() {
       const occ = allOccurrences[0];
       setOccurrence(occ);
 
-      // If part of a series, fetch series slug for back link
       if (occ.series_id) {
         base44.entities.EventSeries.filter({ id: occ.series_id }).then(s => {
           if (s.length) setSeriesSlug(s[0].slug);
@@ -62,7 +61,6 @@ export default function EventPage() {
       if (locs.length) setLocation(locs[0]);
       setLeaders(l.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
 
-      // Try prefill from logged-in user
       try {
         const isAuth = await base44.auth.isAuthenticated();
         if (isAuth) {
@@ -234,8 +232,16 @@ export default function EventPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          <div className="h-6 w-40 bg-muted rounded animate-pulse mb-4" />
+          <div className="h-10 w-3/4 bg-muted rounded animate-pulse mb-3" />
+          <div className="h-5 w-1/2 bg-muted rounded animate-pulse mb-8" />
+          <div className="space-y-3">
+            <div className="h-20 bg-card border border-border rounded-lg animate-pulse" />
+            <div className="h-20 bg-card border border-border rounded-lg animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
