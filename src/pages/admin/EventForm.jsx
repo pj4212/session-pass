@@ -27,7 +27,7 @@ export default function EventForm() {
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
     venue_details: '', is_published: false,
-    sales_open_date: '', sales_close_date: '', status: 'draft'
+    sales_close_date: '', status: 'draft'
   });
   const [ticketTypes, setTicketTypes] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -61,7 +61,7 @@ export default function EventForm() {
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
               location_id: ev.location_id || '', zoom_link: ev.zoom_link || '',
               zoom_meeting_id: ev.zoom_meeting_id || '', venue_details: ev.venue_details || '',
-              is_published: ev.is_published, sales_open_date: ev.sales_open_date ? ev.sales_open_date.slice(0, 16) : '',
+              is_published: ev.is_published,
               sales_close_date: ev.sales_close_date ? ev.sales_close_date.slice(0, 16) : '',
               status: ev.status || 'draft'
             });
@@ -75,7 +75,7 @@ export default function EventForm() {
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
               location_id: ev.location_id || '', zoom_link: '',
               zoom_meeting_id: '', venue_details: ev.venue_details || '',
-              is_published: false, sales_open_date: '', sales_close_date: '', status: 'draft'
+              is_published: false, sales_close_date: '', status: 'draft'
             });
             setTicketTypes(tts.map(tt => ({
               name: tt.name, attendance_mode: tt.attendance_mode, price: tt.price,
@@ -146,7 +146,6 @@ export default function EventForm() {
       ...form,
       start_datetime: toISO(form.start_datetime),
       end_datetime: toISO(form.end_datetime),
-      sales_open_date: toISO(form.sales_open_date),
       sales_close_date: toISO(form.sales_close_date)
     };
 
@@ -291,9 +290,9 @@ export default function EventForm() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div><Label>Sales Open Date</Label><Input type="datetime-local" value={form.sales_open_date} onChange={e => updateForm('sales_open_date', e.target.value)} /></div>
-        <div><Label>Sales Close Date</Label><Input type="datetime-local" value={form.sales_close_date} onChange={e => updateForm('sales_close_date', e.target.value)} /></div>
+      <div className="max-w-sm">
+        <Label>Sales Close Date</Label>
+        <Input type="datetime-local" value={form.sales_close_date} onChange={e => updateForm('sales_close_date', e.target.value)} />
       </div>
 
       {/* Ticket Types */}

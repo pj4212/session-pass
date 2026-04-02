@@ -135,7 +135,6 @@ export default function EventPage() {
     if (!occurrence) return false;
     if (occurrence.status !== 'published' || !occurrence.is_published) return false;
     const now = new Date().toISOString();
-    if (occurrence.sales_open_date && now < occurrence.sales_open_date) return false;
     if (occurrence.sales_close_date && now > occurrence.sales_close_date) return false;
     return true;
   };
