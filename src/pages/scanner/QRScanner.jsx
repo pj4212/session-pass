@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import ScanResultOverlay from '@/components/scanner/ScanResultOverlay';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -16,6 +15,12 @@ export default function QRScanner() {
   const lastScanRef = useRef({});
   const scannerRef = useRef(null);
   const mountedRef = useRef(true);
+  const occurrenceIdRef = useRef(occurrenceId);
+
+  // Keep ref in sync so the scan callback always has the latest value
+  useEffect(() => {
+    occurrenceIdRef.current = occurrenceId;
+  }, [occurrenceId]);
 
   // Load initial counts and start polling
   useEffect(() => {
@@ -37,10 +42,21 @@ export default function QRScanner() {
       scannerRef.current = html5QrCode;
 
       try {
+        const containerEl = document.getElementById("qr-reader");
+        if (!containerEl) return;
+
+        // Calculate a square qrbox that fits the container
+        const size = Math.min(containerEl.clientWidth, containerEl.clientHeight);
+        const qrboxSize = Math.floor(size * 0.7);
+
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          handleScan,
+          {
+            fps: 10,
+            qrbox: { width: qrboxSize, height: qrboxSize },
+            aspectRatio: 1.0,
+          },
+          handleScanRef,
           () => {} // ignore scan failures
         );
         if (mountedRef.current) setCameraReady(true);
@@ -75,7 +91,10 @@ export default function QRScanner() {
     }
   };
 
-  const handleScan = useCallback(async (decodedText) => {
+  // Use a ref-based handler so the closure captured by html5-qrcode always calls current logic
+  const handleScanRef = useCallback(async (decodedText) => {
+    const currentOccurrenceId = occurrenceIdRef.current;
+
     // Debounce: ignore same QR within 5 seconds
     const now = Date.now();
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 5000) return;
@@ -97,7 +116,7 @@ export default function QRScanner() {
     }
 
     // Check occurrence match
-    if (eventId && eventId !== occurrenceId) {
+    if (eventId && eventId !== currentOccurrenceId) {
       setResult({ type: 'error', title: 'Wrong Event', subtitle: 'This ticket is for a different event' });
       return;
     }
@@ -106,7 +125,7 @@ export default function QRScanner() {
     const res = await base44.functions.invoke('checkin', {
       action: 'checkin',
       ticket_id: ticketId,
-      occurrence_id: occurrenceId,
+      occurrence_id: currentOccurrenceId,
       qr_hash: hash
     });
 
@@ -114,7 +133,6 @@ export default function QRScanner() {
 
     if (data.status === 'success') {
       const t = data.ticket;
-      // Check if online ticket — show warning
       if (t.attendance_mode === 'online') {
         setResult({ type: 'warning', title: 'Online Ticket Only', subtitle: `${t.attendee_first_name} ${t.attendee_last_name} — Not valid for in-person entry` });
       } else {
@@ -130,7 +148,7 @@ export default function QRScanner() {
     } else {
       setResult({ type: 'error', title: 'Error', subtitle: data.reason || 'Check-in failed' });
     }
-  }, [occurrenceId]);
+  }, []);
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -142,9 +160,11 @@ export default function QRScanner() {
         </div>
       </div>
 
-      {/* Camera viewport */}
-      <div className="flex-1 relative bg-black flex items-center justify-center">
-        <div id="qr-reader" className="w-full h-full" />
+      {/* Camera viewport — square aspect ratio */}
+      <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+        <div className="w-full max-w-[100vmin] aspect-square relative">
+          <div id="qr-reader" className="w-full h-full" />
+        </div>
         {!cameraReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-black text-white">
             <p>Starting camera...</p>
