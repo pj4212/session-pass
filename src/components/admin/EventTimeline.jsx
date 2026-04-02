@@ -146,7 +146,7 @@ function buildProjectedTimeline(sessions, months) {
   return weeks;
 }
 
-export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, seriesMap }) {
+export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap }) {
   // Group events by series for projection
   const timeline = useMemo(() => {
     const bySeries = {};
@@ -230,6 +230,8 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
               const seriesName = seriesMap[session._seriesId || session.series_id]?.name;
               const count = ticketCounts[session.id] || 0;
               const checkins = checkinCounts[session.id] || 0;
+              const candidates = candidateCounts?.[session.id] || 0;
+              const bos = businessOwnerCounts?.[session.id] || 0;
               const sessionPast = dateOnly(session.event_date) < todayStr;
 
               return (
@@ -280,7 +282,11 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                       {!isProjected && (
                         <span className="flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" />
-                          {count} sold{session.event_mode !== 'online_stream' && checkins > 0 ? ` · ${checkins} checked in` : ''}
+                          {count} sold
+                          {(candidates > 0 || bos > 0) && (
+                            <span className="text-xs">({candidates}C · {bos}BO)</span>
+                          )}
+                          {session.event_mode !== 'online_stream' && checkins > 0 ? ` · ${checkins} checked in` : ''}
                         </span>
                       )}
                     </div>

@@ -29,13 +29,16 @@ export default function EventList() {
   const [deleting, setDeleting] = useState(false);
   const [viewMode, setViewMode] = useState('timeline');
 
+  const [ticketTypesList, setTicketTypesList] = useState([]);
+
   useEffect(() => {
     async function load() {
-      const [evs, locs, tix, series] = await Promise.all([
+      const [evs, locs, tix, series, tts] = await Promise.all([
         base44.entities.EventOccurrence.filter({}),
         base44.entities.Location.filter({}),
         base44.entities.Ticket.filter({ ticket_status: 'active' }),
-        base44.entities.EventSeries.filter({})
+        base44.entities.EventSeries.filter({}),
+        base44.entities.TicketType.filter({})
       ]);
       const locMap = {};
       locs.forEach(l => { locMap[l.id] = l; });
@@ -43,6 +46,7 @@ export default function EventList() {
       setLocations(locMap);
       setTickets(tix);
       setSeriesList(series);
+      setTicketTypesList(tts);
       setLoading(false);
     }
     load();
@@ -151,6 +155,26 @@ export default function EventList() {
           locations={locations}
           ticketCounts={(() => { const m = {}; tickets.forEach(t => { m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1; }); return m; })()}
           checkinCounts={(() => { const m = {}; tickets.filter(t => t.check_in_status === 'checked_in').forEach(t => { m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1; }); return m; })()}
+          candidateCounts={(() => {
+            const ttMap = {};
+            ticketTypesList.forEach(tt => { ttMap[tt.id] = tt; });
+            const m = {};
+            tickets.forEach(t => {
+              const cat = ttMap[t.ticket_type_id]?.ticket_category || 'candidate';
+              if (cat === 'candidate') m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1;
+            });
+            return m;
+          })()}
+          businessOwnerCounts={(() => {
+            const ttMap = {};
+            ticketTypesList.forEach(tt => { ttMap[tt.id] = tt; });
+            const m = {};
+            tickets.forEach(t => {
+              const cat = ttMap[t.ticket_type_id]?.ticket_category;
+              if (cat === 'business_owner') m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1;
+            });
+            return m;
+          })()}
           seriesMap={seriesMap}
         />
       ) : (

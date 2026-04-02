@@ -87,11 +87,13 @@ export default function Reports() {
   const occurrenceReport = filteredOccurrences.map(o => {
     const oTickets = activeTickets.filter(t => t.occurrence_id === o.id);
     const checkedIn = oTickets.filter(t => t.check_in_status === 'checked_in').length;
+    const candidates = oTickets.filter(t => (ttMap[t.ticket_type_id]?.ticket_category || 'candidate') === 'candidate').length;
+    const businessOwners = oTickets.filter(t => ttMap[t.ticket_type_id]?.ticket_category === 'business_owner').length;
     const oOrders = orders.filter(ord => ord.occurrence_id === o.id && (ord.payment_status === 'completed' || ord.payment_status === 'free'));
     const revenue = oOrders.reduce((sum, ord) => sum + (ord.total_amount || 0), 0);
     return {
       name: o.name, date: o.event_date, location: locations[o.location_id]?.name || '—',
-      sold: oTickets.length, checkedIn, rate: oTickets.length > 0 ? Math.round(checkedIn / oTickets.length * 100) : 0,
+      sold: oTickets.length, candidates, businessOwners, checkedIn, rate: oTickets.length > 0 ? Math.round(checkedIn / oTickets.length * 100) : 0,
       revenue
     };
   });
@@ -101,7 +103,7 @@ export default function Reports() {
     const oTTs = ticketTypes.filter(tt => tt.occurrence_id === o.id);
     return oTTs.map(tt => {
       const count = activeTickets.filter(t => t.ticket_type_id === tt.id).length;
-      return { occurrence: o.name, date: o.event_date, type: tt.name, mode: tt.attendance_mode, count };
+      return { occurrence: o.name, date: o.event_date, type: tt.name, category: tt.ticket_category === 'business_owner' ? 'Business Owner' : 'Candidate', mode: tt.attendance_mode, count };
     });
   });
 
@@ -154,8 +156,8 @@ export default function Reports() {
         <TabsContent value="occurrence" className="space-y-3">
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => exportCsv(
-              ['Name', 'Date', 'Location', 'Sold', 'Checked In', 'Rate %', 'Revenue'],
-              occurrenceReport.map(r => [r.name, r.date, r.location, r.sold, r.checkedIn, r.rate, r.revenue.toFixed(2)]),
+              ['Name', 'Date', 'Location', 'Sold', 'Candidates', 'Business Owners', 'Checked In', 'Rate %', 'Revenue'],
+              occurrenceReport.map(r => [r.name, r.date, r.location, r.sold, r.candidates, r.businessOwners, r.checkedIn, r.rate, r.revenue.toFixed(2)]),
               'tickets-by-occurrence.csv'
             )}><Download className="h-4 w-4 mr-1" />CSV</Button>
           </div>
@@ -163,13 +165,13 @@ export default function Reports() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Event</TableHead><TableHead>Date</TableHead><TableHead>Location</TableHead>
-                <TableHead>Sold</TableHead><TableHead>Checked In</TableHead><TableHead>Rate</TableHead><TableHead>Revenue</TableHead>
+                <TableHead>Sold</TableHead><TableHead>Candidates</TableHead><TableHead>Business Owners</TableHead><TableHead>Checked In</TableHead><TableHead>Rate</TableHead><TableHead>Revenue</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {occurrenceReport.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell>{r.name}</TableCell><TableCell>{r.date}</TableCell><TableCell>{r.location}</TableCell>
-                    <TableCell>{r.sold}</TableCell><TableCell>{r.checkedIn}</TableCell><TableCell>{r.rate}%</TableCell>
+                    <TableCell>{r.sold}</TableCell><TableCell>{r.candidates}</TableCell><TableCell>{r.businessOwners}</TableCell><TableCell>{r.checkedIn}</TableCell><TableCell>{r.rate}%</TableCell>
                     <TableCell>${r.revenue.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
@@ -181,21 +183,21 @@ export default function Reports() {
         <TabsContent value="type" className="space-y-3">
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => exportCsv(
-              ['Occurrence', 'Date', 'Type', 'Mode', 'Count'],
-              typeReport.map(r => [r.occurrence, r.date, r.type, r.mode, r.count]),
+              ['Occurrence', 'Date', 'Type', 'Category', 'Mode', 'Count'],
+              typeReport.map(r => [r.occurrence, r.date, r.type, r.category, r.mode, r.count]),
               'tickets-by-type.csv'
             )}><Download className="h-4 w-4 mr-1" />CSV</Button>
           </div>
           <div className="border rounded-lg overflow-auto">
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Occurrence</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Mode</TableHead><TableHead>Count</TableHead>
+                <TableHead>Occurrence</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Category</TableHead><TableHead>Mode</TableHead><TableHead>Count</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {typeReport.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell>{r.occurrence}</TableCell><TableCell>{r.date}</TableCell><TableCell>{r.type}</TableCell>
-                    <TableCell className="capitalize">{r.mode?.replace('_', ' ')}</TableCell><TableCell>{r.count}</TableCell>
+                    <TableCell>{r.category}</TableCell><TableCell className="capitalize">{r.mode?.replace('_', ' ')}</TableCell><TableCell>{r.count}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

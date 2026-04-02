@@ -109,8 +109,8 @@ export default function EventForm() {
               is_published: false, status: 'draft'
             });
             setTicketTypes(tts.map(tt => ({
-              name: tt.name, attendance_mode: tt.attendance_mode, price: tt.price,
-              capacity_limit: tt.capacity_limit, is_active: tt.is_active,
+              name: tt.name, attendance_mode: tt.attendance_mode, ticket_category: tt.ticket_category || 'candidate',
+              price: tt.price, capacity_limit: tt.capacity_limit, is_active: tt.is_active,
               sort_order: tt.sort_order, description: tt.description || ''
             })));
           }
@@ -155,7 +155,7 @@ export default function EventForm() {
 
   const addTicketType = () => {
     setTicketTypes(prev => [...prev, {
-      name: '', attendance_mode: 'in_person', price: 0,
+      name: '', attendance_mode: 'in_person', ticket_category: 'candidate', price: 0,
       capacity_limit: '', is_active: true, sort_order: prev.length, description: ''
     }]);
   };
@@ -197,6 +197,7 @@ export default function EventForm() {
     for (const tt of ticketTypes) {
       const ttData = {
         occurrence_id: eventId, name: tt.name, attendance_mode: tt.attendance_mode,
+        ticket_category: tt.ticket_category || 'candidate',
         price: Number(tt.price) || 0, capacity_limit: tt.capacity_limit ? Number(tt.capacity_limit) : null,
         is_active: tt.is_active !== false, sort_order: Number(tt.sort_order) || 0,
         description: tt.description || '', requires_payment: (Number(tt.price) || 0) > 0,
@@ -382,8 +383,18 @@ export default function EventForm() {
                 <span className="text-sm font-medium">Ticket Type {i + 1}</span>
                 <Button variant="ghost" size="icon" onClick={() => removeTicketType(i)}><Trash2 className="h-4 w-4" /></Button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div><Label>Name</Label><Input value={tt.name} onChange={e => updateTicketType(i, 'name', e.target.value)} /></div>
+                <div>
+                  <Label>Category</Label>
+                  <Select value={tt.ticket_category || 'candidate'} onValueChange={v => updateTicketType(i, 'ticket_category', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="candidate">Candidate</SelectItem>
+                      <SelectItem value="business_owner">Business Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label>Mode</Label>
                   <Select value={tt.attendance_mode} onValueChange={v => updateTicketType(i, 'attendance_mode', v)}>

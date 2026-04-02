@@ -22,6 +22,7 @@ export default function AttendeeList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [orders, setOrders] = useState({});
   const [rescheduleTicket, setRescheduleTicket] = useState(null);
@@ -62,6 +63,10 @@ export default function AttendeeList() {
   const filtered = tickets.filter(t => {
     if (statusFilter !== 'all' && t.ticket_status !== statusFilter) return false;
     if (modeFilter !== 'all' && t.attendance_mode !== modeFilter) return false;
+    if (categoryFilter !== 'all') {
+      const cat = ticketTypes[t.ticket_type_id]?.ticket_category || 'candidate';
+      if (cat !== categoryFilter) return false;
+    }
     if (search) {
       const s = search.toLowerCase();
       const name = `${t.attendee_first_name} ${t.attendee_last_name}`.toLowerCase();
@@ -145,11 +150,12 @@ export default function AttendeeList() {
   };
 
   const exportCSV = () => {
-    const headers = ['Name', 'Email', 'Ticket Type', 'Mode', 'Mentor', 'Platinum Leader', 'Check-In', 'Status', 'Order Number'];
+    const headers = ['Name', 'Email', 'Ticket Type', 'Category', 'Mode', 'Mentor', 'Platinum Leader', 'Check-In', 'Status', 'Order Number'];
     const rows = filtered.map(t => [
       `${t.attendee_first_name} ${t.attendee_last_name}`,
       t.attendee_email,
       ticketTypes[t.ticket_type_id]?.name || '',
+      ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'Business Owner' : 'Candidate',
       t.attendance_mode,
       mentors[t.upline_mentor_id]?.name || '',
       leaders[t.platinum_leader_id]?.name || '',
@@ -199,9 +205,21 @@ export default function AttendeeList() {
             <SelectItem value="in_person">In-Person</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="candidate">Candidates</SelectItem>
+            <SelectItem value="business_owner">Business Owners</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="text-sm text-muted-foreground">{filtered.length} attendees</div>
+      <div className="text-sm text-muted-foreground flex flex-wrap gap-4">
+        <span>{filtered.length} attendees</span>
+        <span>Candidates: {filtered.filter(t => (ticketTypes[t.ticket_type_id]?.ticket_category || 'candidate') === 'candidate').length}</span>
+        <span>Business Owners: {filtered.filter(t => ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner').length}</span>
+      </div>
 
       <div className="border rounded-lg overflow-auto">
         <Table>
@@ -210,6 +228,7 @@ export default function AttendeeList() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Mode</TableHead>
               <TableHead>Mentor</TableHead>
               <TableHead>Leader</TableHead>
@@ -225,6 +244,11 @@ export default function AttendeeList() {
                 <TableCell>{t.attendee_first_name} {t.attendee_last_name}</TableCell>
                 <TableCell className="text-sm">{t.attendee_email}</TableCell>
                 <TableCell>{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
+                <TableCell>
+                  <Badge variant={ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'default' : 'secondary'}>
+                    {ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'Business Owner' : 'Candidate'}
+                  </Badge>
+                </TableCell>
                 <TableCell><Badge variant="outline" className="capitalize">{t.attendance_mode?.replace('_', ' ')}</Badge></TableCell>
                 <TableCell className="text-sm">{mentors[t.upline_mentor_id]?.name || '—'}</TableCell>
                 <TableCell className="text-sm">{leaders[t.platinum_leader_id]?.name || '—'}</TableCell>
@@ -257,7 +281,7 @@ export default function AttendeeList() {
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
