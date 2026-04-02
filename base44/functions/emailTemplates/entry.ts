@@ -1,0 +1,2 @@
+// Shared email HTML builders — imported inline (copy-paste since no local imports in Deno functions)
+// This file exists as reference only. The actual HTML builders are embedded in createCheckout.js and stripeWebhook.js.
