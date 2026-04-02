@@ -307,29 +307,26 @@ export default function EventForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Status</Label>
-          <Select value={form.status} onValueChange={v => updateForm('status', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-end gap-3 pb-1">
-          <Switch checked={form.is_published} onCheckedChange={v => updateForm('is_published', v)} />
-          <Label>Published</Label>
-        </div>
+      <div className="max-w-xs">
+        <Label>Status</Label>
+        <Select value={form.status} onValueChange={v => {
+          updateForm('status', v);
+          updateForm('is_published', v === 'published');
+        }}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="published">Published</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {showZoom && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><Label>Zoom Link</Label><Input value={form.zoom_link} onChange={e => updateForm('zoom_link', e.target.value)} /></div>
-          <div><Label>Zoom Meeting ID</Label><Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value)} /></div>
+        <div className="max-w-lg">
+          <Label>Zoom Link</Label>
+          <Input value={form.zoom_link} onChange={e => updateForm('zoom_link', e.target.value)} placeholder="https://zoom.us/j/..." />
         </div>
       )}
 
