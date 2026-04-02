@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Loader2, Eye, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2 } from 'lucide-react';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -127,7 +127,7 @@ export default function SeriesManagement() {
                       <Link to={`/admin/events?series=${s.id}`}><Calendar className="h-4 w-4" /></Link>
                     </Button>
                     <Button variant="ghost" size="icon" asChild title="View Public">
-                      <Link to={`/series/${s.slug}`} target="_blank"><Eye className="h-4 w-4" /></Link>
+                      <a href={`https://sessionpass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete">
                       <Trash2 className="h-4 w-4 text-destructive" />

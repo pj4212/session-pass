@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2 } from 'lucide-react';
+import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_COLORS = {
@@ -162,7 +162,7 @@ export default function EventList() {
                       <Link to={`/admin/events/new?duplicate=${ev.id}`}><Copy className="h-4 w-4" /></Link>
                     </Button>
                     <Button variant="ghost" size="icon" asChild title="View Public">
-                      <Link to={`/event/${ev.slug}`} target="_blank"><Eye className="h-4 w-4" /></Link>
+                      <a href={`https://sessionpass.com/event/${ev.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => togglePublish(ev)}>
                       {ev.is_published ? 'Unpublish' : 'Publish'}
