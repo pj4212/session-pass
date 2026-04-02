@@ -150,6 +150,7 @@ export default function EventList() {
           events={events}
           locations={locations}
           ticketCounts={(() => { const m = {}; tickets.forEach(t => { m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1; }); return m; })()}
+          checkinCounts={(() => { const m = {}; tickets.filter(t => t.check_in_status === 'checked_in').forEach(t => { m[t.occurrence_id] = (m[t.occurrence_id] || 0) + 1; }); return m; })()}
           seriesMap={seriesMap}
         />
       ) : (
