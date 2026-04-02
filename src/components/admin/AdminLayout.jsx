@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, Calendar, Users, Settings, BarChart3, 
-  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen
+  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { path: '/admin/settings/users', label: 'Users', icon: Users, roles: ['super_admin'] },
   { path: '/admin/settings/mentors', label: 'Mentors', icon: Settings, roles: ['super_admin'] },
   { path: '/admin/settings/platinum-leaders', label: 'Platinum Leaders', icon: Settings, roles: ['super_admin'] },
+  { path: '/admin/settings/email-testing', label: 'Email Testing', icon: Mail, roles: ['super_admin'] },
 ];
 
 export default function AdminLayout() {

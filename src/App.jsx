@@ -23,6 +23,7 @@ import Reports from './pages/admin/Reports';
 import SeriesManagement from './pages/admin/SeriesManagement';
 import SeriesPage from './pages/SeriesPage';
 import Home from './pages/Home';
+import EmailTesting from './pages/admin/EmailTesting';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -65,6 +66,7 @@ const AuthenticatedApp = () => {
         <Route path="settings/mentors" element={<MentorManagement />} />
         <Route path="settings/platinum-leaders" element={<PlatinumLeaderManagement />} />
         <Route path="settings/users" element={<UserManagement />} />
+        <Route path="settings/email-testing" element={<EmailTesting />} />
       </Route>
       <Route path="/scanner" element={<ScannerLayout />}>
         <Route index element={<ScannerHome />} />
