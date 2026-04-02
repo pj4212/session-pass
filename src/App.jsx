@@ -20,6 +20,7 @@ import MentorManagement from './pages/admin/MentorManagement';
 import PlatinumLeaderManagement from './pages/admin/PlatinumLeaderManagement';
 import UserManagement from './pages/admin/UserManagement';
 import Reports from './pages/admin/Reports';
+import Home from './pages/Home';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -47,6 +48,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
       <Route path="/event/:slug" element={<EventPage />} />
       <Route path="/order/:orderNumber" element={<OrderConfirmation />} />
       <Route path="/admin" element={<AdminLayout />}>
