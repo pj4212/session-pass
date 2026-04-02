@@ -90,19 +90,14 @@ export default function WeekGroup({ weekStart, sessions, locations, ticketTypes 
                 </div>
               </div>
 
-              {/* Price + Action */}
-              <div className="flex items-center gap-3 shrink-0">
-                {price !== null && (
-                  <span className="text-sm font-semibold text-foreground hidden sm:inline">
-                    {price === 0 ? 'Free' : `$${price.toFixed(2)}`}
-                  </span>
-                )}
+              {/* Action */}
+              <div className="flex items-center shrink-0">
                 {soldOut ? (
                   <Badge variant="destructive">Sold Out</Badge>
                 ) : closed ? (
                   <Badge variant="secondary">Closed</Badge>
                 ) : (
-                  <Button size="sm" asChild>
+                  <Button size="lg" className="text-base px-6" asChild>
                     <Link to={`/event/${session.slug}`}>Book</Link>
                   </Button>
                 )}
