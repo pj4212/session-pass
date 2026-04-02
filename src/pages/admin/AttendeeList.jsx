@@ -23,6 +23,7 @@ export default function AttendeeList() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
 
+  const [orders, setOrders] = useState({});
   const [rescheduleTicket, setRescheduleTicket] = useState(null);
   const [targetOccurrenceId, setTargetOccurrenceId] = useState('');
   const [allOccurrences, setAllOccurrences] = useState([]);
@@ -33,12 +34,13 @@ export default function AttendeeList() {
   }, [id]);
 
   async function loadData() {
-    const [occs, tix, tts, mList, lList] = await Promise.all([
+    const [occs, tix, tts, mList, lList, ords] = await Promise.all([
       base44.entities.EventOccurrence.filter({ id }),
       base44.entities.Ticket.filter({ occurrence_id: id }),
       base44.entities.TicketType.filter({ occurrence_id: id }),
       base44.entities.UplineMentor.filter({}),
-      base44.entities.PlatinumLeader.filter({})
+      base44.entities.PlatinumLeader.filter({}),
+      base44.entities.Order.filter({})
     ]);
     if (occs.length) setOccurrence(occs[0]);
     setTickets(tix);
@@ -51,6 +53,9 @@ export default function AttendeeList() {
     const lMap = {};
     lList.forEach(l => { lMap[l.id] = l; });
     setLeaders(lMap);
+    const oMap = {};
+    ords.forEach(o => { oMap[o.id] = o; });
+    setOrders(oMap);
     setLoading(false);
   }
 
@@ -91,6 +96,20 @@ export default function AttendeeList() {
     if (!targetOccurrenceId) return;
     setActionLoading(true);
 
+    // Validate uniqueness on target occurrence
+    const validation = await base44.functions.invoke('validateTickets', {
+      occurrence_id: targetOccurrenceId,
+      attendees: [{
+        email: rescheduleTicket.attendee_email,
+        attendance_mode: rescheduleTicket.attendance_mode
+      }]
+    });
+    if (!validation.data.valid) {
+      alert(validation.data.errors[0]?.message || 'Cannot reschedule: duplicate ticket on target event');
+      setActionLoading(false);
+      return;
+    }
+
     // Cancel old ticket
     await base44.entities.Ticket.update(rescheduleTicket.id, { ticket_status: 'cancelled' });
 
@@ -126,7 +145,7 @@ export default function AttendeeList() {
   };
 
   const exportCSV = () => {
-    const headers = ['Name', 'Email', 'Ticket Type', 'Mode', 'Mentor', 'Platinum Leader', 'Check-In', 'Status'];
+    const headers = ['Name', 'Email', 'Ticket Type', 'Mode', 'Mentor', 'Platinum Leader', 'Check-In', 'Status', 'Order Number'];
     const rows = filtered.map(t => [
       `${t.attendee_first_name} ${t.attendee_last_name}`,
       t.attendee_email,
@@ -135,7 +154,8 @@ export default function AttendeeList() {
       mentors[t.upline_mentor_id]?.name || '',
       leaders[t.platinum_leader_id]?.name || '',
       t.check_in_status,
-      t.ticket_status
+      t.ticket_status,
+      orders[t.order_id]?.order_number || ''
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -192,8 +212,10 @@ export default function AttendeeList() {
               <TableHead>Type</TableHead>
               <TableHead>Mode</TableHead>
               <TableHead>Mentor</TableHead>
+              <TableHead>Leader</TableHead>
               <TableHead>Check-In</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Order</TableHead>
               {isSuperAdmin && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
@@ -205,6 +227,7 @@ export default function AttendeeList() {
                 <TableCell>{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
                 <TableCell><Badge variant="outline" className="capitalize">{t.attendance_mode?.replace('_', ' ')}</Badge></TableCell>
                 <TableCell className="text-sm">{mentors[t.upline_mentor_id]?.name || '—'}</TableCell>
+                <TableCell className="text-sm">{leaders[t.platinum_leader_id]?.name || '—'}</TableCell>
                 <TableCell>
                   <Badge variant={t.check_in_status === 'checked_in' ? 'default' : 'secondary'}>
                     {t.check_in_status === 'checked_in' ? 'Checked In' : 'Not Checked In'}
@@ -213,6 +236,7 @@ export default function AttendeeList() {
                 <TableCell>
                   <Badge variant={t.ticket_status === 'active' ? 'default' : 'destructive'}>{t.ticket_status}</Badge>
                 </TableCell>
+                <TableCell className="text-xs">{orders[t.order_id]?.order_number || '—'}</TableCell>
                 {isSuperAdmin && (
                   <TableCell>
                     {t.ticket_status === 'active' && (
@@ -233,7 +257,7 @@ export default function AttendeeList() {
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

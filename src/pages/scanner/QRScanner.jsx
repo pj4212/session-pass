@@ -102,7 +102,7 @@ export default function QRScanner() {
       return;
     }
 
-    // Call backend
+    // Call backend check-in
     const res = await base44.functions.invoke('checkin', {
       action: 'checkin',
       ticket_id: ticketId,
@@ -114,11 +114,16 @@ export default function QRScanner() {
 
     if (data.status === 'success') {
       const t = data.ticket;
-      setResult({ 
-        type: 'success', 
-        title: `${t.attendee_first_name} ${t.attendee_last_name}`,
-        subtitle: 'Checked In ✓'
-      });
+      // Check if online ticket — show warning
+      if (t.attendance_mode === 'online') {
+        setResult({ type: 'warning', title: 'Online Ticket Only', subtitle: `${t.attendee_first_name} ${t.attendee_last_name} — Not valid for in-person entry` });
+      } else {
+        setResult({ 
+          type: 'success', 
+          title: `${t.attendee_first_name} ${t.attendee_last_name}`,
+          subtitle: 'Checked In ✓'
+        });
+      }
       setCheckedIn(prev => prev + 1);
     } else if (data.status === 'warning') {
       setResult({ type: 'warning', title: 'Warning', subtitle: data.reason });

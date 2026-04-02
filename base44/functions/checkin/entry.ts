@@ -37,6 +37,10 @@ Deno.serve(async (req) => {
         return Response.json({ status: 'error', reason: 'Ticket refunded' });
       }
 
+      // Check if online ticket (warn but don't block from manual override)
+      // The frontend QR scanner should show a warning for online tickets
+      // but manual check-in can still proceed
+
       // Check if already checked in (atomic guard)
       if (ticket.check_in_status === 'checked_in') {
         return Response.json({ 
