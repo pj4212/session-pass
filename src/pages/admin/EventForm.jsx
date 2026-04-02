@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Loader2, Save, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Loader2, Save, AlertTriangle, Video } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import VenueSelector from '../../components/admin/VenueSelector';
 
@@ -54,6 +55,8 @@ export default function EventForm() {
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
+  const [creatingWebinar, setCreatingWebinar] = useState(false);
+  const [webinarResult, setWebinarResult] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -214,6 +217,21 @@ export default function EventForm() {
     navigate('/admin/events');
   };
 
+  const handleCreateZoomWebinar = async () => {
+    setCreatingWebinar(true);
+    setWebinarResult(null);
+    try {
+      const response = await base44.functions.invoke('createZoomWebinar', { occurrence_id: id });
+      const data = response.data;
+      setWebinarResult({ success: true, url: data.registration_url });
+      setForm(prev => ({ ...prev, zoom_link: data.registration_url, zoom_meeting_id: String(data.webinar_id) }));
+    } catch (err) {
+      const msg = err?.response?.data?.error || err.message || 'Failed to create webinar';
+      setWebinarResult({ success: false, error: msg });
+    }
+    setCreatingWebinar(false);
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
   const showZoom = form.event_mode === 'online_stream' || form.event_mode === 'hybrid';
@@ -342,10 +360,47 @@ export default function EventForm() {
       </div>
 
       {showZoom && (
-        <div className="max-w-lg">
-          <Label>Zoom Link</Label>
-          <Input value={form.zoom_link} onChange={e => updateForm('zoom_link', e.target.value)} placeholder="https://zoom.us/j/..." />
-        </div>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Zoom / Online Access</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Zoom Registration Link</Label>
+              <Input value={form.zoom_link} onChange={e => updateForm('zoom_link', e.target.value)} placeholder="https://zoom.us/webinar/register/..." />
+              <p className="text-xs text-muted-foreground mt-1">This link is sent to online ticket holders in their confirmation email.</p>
+            </div>
+            {isEdit && (
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCreateZoomWebinar}
+                  disabled={creatingWebinar}
+                  className="gap-2"
+                >
+                  {creatingWebinar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                  {form.zoom_link ? 'Re-create Zoom Webinar' : 'Create Zoom Webinar'}
+                </Button>
+                <p className="text-xs text-muted-foreground">Automatically creates a Zoom webinar and sets the registration link. Requires Zoom API credentials to be configured.</p>
+                {webinarResult && webinarResult.success && (
+                  <Alert>
+                    <AlertDescription>
+                      Webinar created! Registration URL: <a href={webinarResult.url} target="_blank" rel="noopener noreferrer" className="underline break-all">{webinarResult.url}</a>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {webinarResult && !webinarResult.success && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{webinarResult.error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+            <div>
+              <Label>Zoom Meeting ID</Label>
+              <Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value)} placeholder="Auto-filled when creating webinar" />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {showVenue && (
