@@ -15,6 +15,38 @@ async function generateQrHash(ticketId, occurrenceId) {
   return hashHex.substring(0, 12);
 }
 
+// ── Shared email brand constants ──
+const BRAND = {
+  headerBg: '#0f172a',
+  accentColor: '#818cf8',
+  buttonBg: '#6366f1',
+  headingColor: '#0f172a',
+  cardBg: '#f8fafc',
+  cardBorder: '#e2e8f0',
+  tableBorder: '#e2e8f0',
+  tableHeaderBg: '#f1f5f9',
+  footerBg: '#f8fafc',
+  footerBorder: '#e2e8f0',
+  bodyBg: '#f1f5f9',
+};
+
+function brandHeader(title, subtitle) {
+  return `
+    <tr><td style="background:${BRAND.headerBg};padding:32px 40px;text-align:center;">
+      <p style="margin:0 0 16px;font-size:14px;color:${BRAND.accentColor};font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Session Pass</p>
+      <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${title}</h1>
+      ${subtitle ? `<p style="margin:8px 0 0;color:rgba(255,255,255,0.6);font-size:14px;">${subtitle}</p>` : ''}
+    </td></tr>`;
+}
+
+function brandFooter() {
+  return `
+    <tr><td style="background:${BRAND.footerBg};padding:24px 40px;border-top:1px solid ${BRAND.footerBorder};text-align:center;">
+      <p style="margin:0 0 4px;font-size:13px;color:${BRAND.accentColor};font-weight:600;">Session Pass</p>
+      <p style="margin:0;font-size:12px;color:#94a3b8;">This is an automated email. Please do not reply directly.</p>
+    </td></tr>`;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -41,7 +73,6 @@ Deno.serve(async (req) => {
         return Response.json({ received: true });
       }
 
-      // Look up the order
       const orders = await base44.asServiceRole.entities.Order.filter({ id: orderId });
       if (!orders.length) {
         console.error("Order not found:", orderId);
@@ -50,47 +81,39 @@ Deno.serve(async (req) => {
 
       const order = orders[0];
 
-      // Idempotency check
       if (order.payment_status === 'completed') {
         console.log("Order already completed, skipping:", orderNumber);
         return Response.json({ received: true });
       }
 
-      // Update order payment status
       await base44.asServiceRole.entities.Order.update(order.id, {
         payment_status: 'completed',
         stripe_payment_intent_id: session.payment_intent || ''
       });
 
-      // Get occurrence
       const occurrences = await base44.asServiceRole.entities.EventOccurrence.filter({ id: order.occurrence_id });
       const occurrence = occurrences[0];
 
-      // Get tickets for this order (created during checkout with 'pending' hash)
       const tickets = await base44.asServiceRole.entities.Ticket.filter({ order_id: order.id });
       
-      // Get ticket types
       const ticketTypes = await base44.asServiceRole.entities.TicketType.filter({ occurrence_id: order.occurrence_id });
       const ticketTypeMap = {};
       for (const tt of ticketTypes) {
         ticketTypeMap[tt.id] = tt;
       }
 
-      // Generate QR codes and update quantity sold
       const quantityUpdates = {};
       for (const ticket of tickets) {
         const qrHash = await generateQrHash(ticket.id, ticket.occurrence_id);
         await base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash });
         ticket.qr_code_hash = qrHash;
 
-        // Track quantity updates
         if (!quantityUpdates[ticket.ticket_type_id]) {
           quantityUpdates[ticket.ticket_type_id] = 0;
         }
         quantityUpdates[ticket.ticket_type_id]++;
       }
 
-      // Update quantity sold on each ticket type
       for (const [ttId, count] of Object.entries(quantityUpdates)) {
         const tt = ticketTypeMap[ttId];
         if (tt) {
@@ -100,7 +123,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Send emails
       if (occurrence) {
         await sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap);
         for (const ticket of tickets) {
@@ -120,7 +142,6 @@ Deno.serve(async (req) => {
           await base44.asServiceRole.entities.Order.update(orders[0].id, {
             payment_status: 'failed'
           });
-          // Delete pending tickets
           const pendingTickets = await base44.asServiceRole.entities.Ticket.filter({ order_id: orderId });
           for (const t of pendingTickets) {
             await base44.asServiceRole.entities.Ticket.delete(t.id);
@@ -163,10 +184,10 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
     const price = tt?.price > 0 ? `$${tt.price.toFixed(2)}` : 'Free';
     return `
       <tr>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:14px;color:#333;">${t.attendee_first_name} ${t.attendee_last_name}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:14px;color:#333;">${tt?.name || 'Ticket'}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:14px;color:#555;">${mode}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right;">${price}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${BRAND.tableBorder};font-size:14px;color:#334155;">${t.attendee_first_name} ${t.attendee_last_name}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${BRAND.tableBorder};font-size:14px;color:#334155;">${tt?.name || 'Ticket'}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${BRAND.tableBorder};font-size:14px;color:#64748b;">${mode}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${BRAND.tableBorder};font-size:14px;color:#334155;text-align:right;">${price}</td>
       </tr>`;
   }).join('');
 
@@ -174,8 +195,8 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
   if (occurrence.venue_details) {
     venueBlock = `
       <tr>
-        <td style="padding:6px 0;color:#888;font-size:13px;width:100px;">Venue</td>
-        <td style="padding:6px 0;font-size:14px;color:#333;">${occurrence.venue_details}</td>
+        <td style="padding:6px 0;color:#94a3b8;font-size:13px;width:100px;">Venue</td>
+        <td style="padding:6px 0;font-size:14px;color:#334155;">${occurrence.venue_details}</td>
       </tr>`;
   }
 
@@ -183,33 +204,30 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 16px;">
+<body style="margin:0;padding:0;background:${BRAND.bodyBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bodyBg};padding:32px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,0.08);">
         
-        <tr><td style="background:#1a1a2e;padding:32px 40px;text-align:center;">
-          <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Booking Confirmed ✓</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">Order #${order.order_number}</p>
-        </td></tr>
+        ${brandHeader('Booking Confirmed ✓', `Order #${order.order_number}`)}
 
         <tr><td style="padding:32px 40px 16px;">
-          <p style="margin:0;font-size:16px;color:#333;">Hi <strong>${order.buyer_name}</strong>,</p>
-          <p style="margin:8px 0 0;font-size:14px;color:#666;line-height:1.5;">Thank you for your booking. Here are your details:</p>
+          <p style="margin:0;font-size:16px;color:#334155;">Hi <strong>${order.buyer_name}</strong>,</p>
+          <p style="margin:8px 0 0;font-size:14px;color:#64748b;line-height:1.5;">Thank you for your booking. Here are your details:</p>
         </td></tr>
 
         <tr><td style="padding:8px 40px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fc;border-radius:8px;padding:20px;border:1px solid #e8eaf0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.cardBg};border-radius:8px;padding:20px;border:1px solid ${BRAND.cardBorder};">
             <tr><td>
-              <h2 style="margin:0 0 12px;font-size:18px;color:#1a1a2e;">${occurrence.name}</h2>
+              <h2 style="margin:0 0 12px;font-size:18px;color:${BRAND.headingColor};">${occurrence.name}</h2>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;width:100px;">Date</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;font-weight:600;">${eventDate}</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;width:100px;">Date</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;font-weight:600;">${eventDate}</td>
                 </tr>
                 ${timeStr ? `<tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;">Time</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;">${timeStr} (${occurrence.timezone || 'AEST'})</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Time</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;">${timeStr} (${occurrence.timezone || 'AEST'})</td>
                 </tr>` : ''}
                 ${venueBlock}
               </table>
@@ -218,33 +236,31 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
         </td></tr>
 
         <tr><td style="padding:0 40px 24px;">
-          <h3 style="margin:0 0 12px;font-size:15px;color:#1a1a2e;text-transform:uppercase;letter-spacing:0.5px;">Your Tickets</h3>
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8eaf0;border-radius:8px;overflow:hidden;">
-            <tr style="background:#f0f1f5;">
-              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Attendee</th>
-              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Type</th>
-              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Mode</th>
-              <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Price</th>
+          <h3 style="margin:0 0 12px;font-size:15px;color:${BRAND.headingColor};text-transform:uppercase;letter-spacing:0.5px;">Your Tickets</h3>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BRAND.tableBorder};border-radius:8px;overflow:hidden;">
+            <tr style="background:${BRAND.tableHeaderBg};">
+              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Attendee</th>
+              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Type</th>
+              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Mode</th>
+              <th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Price</th>
             </tr>
             ${ticketRows}
-            <tr style="background:#f8f9fc;">
-              <td colspan="3" style="padding:12px;font-size:14px;font-weight:700;color:#1a1a2e;">Total</td>
-              <td style="padding:12px;font-size:14px;font-weight:700;color:#1a1a2e;text-align:right;">${totalText}</td>
+            <tr style="background:${BRAND.cardBg};">
+              <td colspan="3" style="padding:12px;font-size:14px;font-weight:700;color:${BRAND.headingColor};">Total</td>
+              <td style="padding:12px;font-size:14px;font-weight:700;color:${BRAND.headingColor};text-align:right;">${totalText}</td>
             </tr>
           </table>
         </td></tr>
 
         <tr><td style="padding:0 40px 32px;text-align:center;">
-          <a href="${orderUrl}" style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:14px;font-weight:600;letter-spacing:0.3px;">View Your Tickets</a>
+          <a href="${orderUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:14px;font-weight:600;letter-spacing:0.3px;">View Your Tickets</a>
         </td></tr>
 
         <tr><td style="padding:0 40px 24px;">
-          <p style="margin:0;font-size:13px;color:#888;line-height:1.5;">Each attendee will receive a separate email with their individual ticket and QR code for check-in.</p>
+          <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">Each attendee will receive a separate email with their individual ticket and QR code for check-in.</p>
         </td></tr>
 
-        <tr><td style="background:#f8f9fc;padding:24px 40px;border-top:1px solid #e8eaf0;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#aaa;">This is an automated confirmation email. Please do not reply directly.</p>
-        </td></tr>
+        ${brandFooter()}
 
       </table>
     </td></tr>
@@ -267,21 +283,21 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
   if (isOnline && occurrence.zoom_link) {
     accessBlock = `
       <tr><td style="padding:0 40px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef6ff;border-radius:8px;padding:20px;border:1px solid #c5ddf8;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
           <tr><td>
-            <h3 style="margin:0 0 8px;font-size:15px;color:#1a5da6;">🖥 Join Online</h3>
-            <p style="margin:0 0 12px;font-size:13px;color:#555;line-height:1.4;">Click the button below to register for the webinar and receive your unique Zoom link.</p>
-            <a href="${occurrence.zoom_link}" style="display:inline-block;background:#1a5da6;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar →</a>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Join Online</h3>
+            <p style="margin:0 0 12px;font-size:13px;color:#64748b;line-height:1.4;">Click the button below to register for the webinar and receive your unique Zoom link.</p>
+            <a href="${occurrence.zoom_link}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar →</a>
           </td></tr>
         </table>
       </td></tr>`;
   } else if (isOnline) {
     accessBlock = `
       <tr><td style="padding:0 40px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef6ff;border-radius:8px;padding:20px;border:1px solid #c5ddf8;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
           <tr><td>
-            <h3 style="margin:0 0 4px;font-size:15px;color:#1a5da6;">🖥 Online Event</h3>
-            <p style="margin:0;font-size:13px;color:#555;">The webinar link will be sent to you before the event.</p>
+            <h3 style="margin:0 0 4px;font-size:15px;color:#4338ca;">🖥 Online Event</h3>
+            <p style="margin:0;font-size:13px;color:#64748b;">The webinar link will be sent to you before the event.</p>
           </td></tr>
         </table>
       </td></tr>`;
@@ -289,10 +305,10 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
     const venueText = occurrence.venue_details || 'Venue details will be provided closer to the event.';
     accessBlock = `
       <tr><td style="padding:0 40px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0faf0;border-radius:8px;padding:20px;border:1px solid #c5e8c5;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:8px;padding:20px;border:1px solid #bbf7d0;">
           <tr><td>
-            <h3 style="margin:0 0 4px;font-size:15px;color:#2d7a2d;">📍 In-Person Venue</h3>
-            <p style="margin:0;font-size:14px;color:#333;">${venueText}</p>
+            <h3 style="margin:0 0 4px;font-size:15px;color:#166534;">📍 In-Person Venue</h3>
+            <p style="margin:0;font-size:14px;color:#334155;">${venueText}</p>
           </td></tr>
         </table>
       </td></tr>`;
@@ -302,9 +318,9 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
   if (!isOnline) {
     qrBlock = `
       <tr><td style="padding:0 40px 32px;text-align:center;">
-        <h3 style="margin:0 0 12px;font-size:15px;color:#1a1a2e;text-transform:uppercase;letter-spacing:0.5px;">Your Check-In QR Code</h3>
-        <p style="margin:0 0 16px;font-size:13px;color:#888;">Present this at the door for fast entry.</p>
-        <img src="${qrCodeUrl}" alt="QR Code" width="200" height="200" style="border:1px solid #e8eaf0;border-radius:8px;padding:8px;background:#fff;" />
+        <h3 style="margin:0 0 12px;font-size:15px;color:${BRAND.headingColor};text-transform:uppercase;letter-spacing:0.5px;">Your Check-In QR Code</h3>
+        <p style="margin:0 0 16px;font-size:13px;color:#94a3b8;">Present this at the door for fast entry.</p>
+        <img src="${qrCodeUrl}" alt="QR Code" width="200" height="200" style="border:1px solid ${BRAND.cardBorder};border-radius:8px;padding:8px;background:#fff;" />
       </td></tr>`;
   }
 
@@ -312,50 +328,47 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 16px;">
+<body style="margin:0;padding:0;background:${BRAND.bodyBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bodyBg};padding:32px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,0.08);">
         
-        <tr><td style="background:#1a1a2e;padding:32px 40px;text-align:center;">
-          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Your Ticket</h1>
-          <p style="margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">${occurrence.name}</p>
-        </td></tr>
+        ${brandHeader('Your Ticket', occurrence.name)}
 
         <tr><td style="padding:32px 40px 16px;">
-          <p style="margin:0;font-size:16px;color:#333;">Hi <strong>${ticket.attendee_first_name}</strong>,</p>
-          <p style="margin:8px 0 0;font-size:14px;color:#666;line-height:1.5;">Here's your ticket for the upcoming event.</p>
+          <p style="margin:0;font-size:16px;color:#334155;">Hi <strong>${ticket.attendee_first_name}</strong>,</p>
+          <p style="margin:8px 0 0;font-size:14px;color:#64748b;line-height:1.5;">Here's your ticket for the upcoming event.</p>
         </td></tr>
 
         <tr><td style="padding:8px 40px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fc;border-radius:8px;border:1px solid #e8eaf0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.cardBg};border-radius:8px;border:1px solid ${BRAND.cardBorder};">
             <tr><td style="padding:20px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;width:110px;">Event</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;font-weight:600;">${occurrence.name}</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;width:110px;">Event</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;font-weight:600;">${occurrence.name}</td>
                 </tr>
                 <tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;">Date</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;">${eventDate}</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Date</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;">${eventDate}</td>
                 </tr>
                 ${timeStr ? `<tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;">Time</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;">${timeStr} (${occurrence.timezone || 'AEST'})</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Time</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;">${timeStr} (${occurrence.timezone || 'AEST'})</td>
                 </tr>` : ''}
                 <tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;">Ticket Type</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;">${ticketType?.name || 'General'}</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Ticket Type</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;">${ticketType?.name || 'General'}</td>
                 </tr>
                 <tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;">Attendance</td>
-                  <td style="padding:6px 0;font-size:14px;color:#333;">
-                    <span style="display:inline-block;background:${isOnline ? '#eef6ff;color:#1a5da6' : '#f0faf0;color:#2d7a2d'};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">${mode}</span>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Attendance</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;">
+                    <span style="display:inline-block;background:${isOnline ? '#eef2ff;color:#4338ca' : '#f0fdf4;color:#166534'};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">${mode}</span>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:6px 0;color:#888;font-size:13px;">Reference</td>
-                  <td style="padding:6px 0;font-size:13px;color:#aaa;font-family:monospace;">${ticket.id}</td>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Reference</td>
+                  <td style="padding:6px 0;font-size:13px;color:#cbd5e1;font-family:monospace;">${ticket.id}</td>
                 </tr>
               </table>
             </td></tr>
@@ -365,9 +378,7 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType) {
         ${accessBlock}
         ${qrBlock}
 
-        <tr><td style="background:#f8f9fc;padding:24px 40px;border-top:1px solid #e8eaf0;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#aaa;">This is an automated email. Please do not reply directly.</p>
-        </td></tr>
+        ${brandFooter()}
 
       </table>
     </td></tr>
