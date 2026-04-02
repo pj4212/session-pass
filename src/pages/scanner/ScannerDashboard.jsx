@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Users, MapPin, Monitor } from 'lucide-react';
 
 export default function ScannerDashboard() {
@@ -60,7 +59,7 @@ export default function ScannerDashboard() {
   };
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   if (!event) {
@@ -71,7 +70,6 @@ export default function ScannerDashboard() {
   const totalTickets = tickets.length;
   const pct = totalTickets > 0 ? Math.round((totalCheckedIn / totalTickets) * 100) : 0;
 
-  // Group by ticket type
   const byType = ticketTypes.map(tt => {
     const typeTix = tickets.filter(t => t.ticket_type_id === tt.id);
     const checked = typeTix.filter(t => t.check_in_status === 'checked_in').length;
@@ -81,66 +79,63 @@ export default function ScannerDashboard() {
   const locationName = event.location_id ? (locations[event.location_id]?.name || '') : '';
 
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="p-4 space-y-5 pb-24">
       {/* Event name */}
       <div>
-        <h1 className="text-lg font-bold">{event.name}</h1>
+        <h1 className="text-xl font-bold text-foreground">{event.name}</h1>
         {locationName && (
-          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
             <MapPin className="h-3.5 w-3.5" />{locationName}
           </p>
         )}
       </div>
 
       {/* Total stats card */}
-      <Card className="bg-primary text-primary-foreground">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm opacity-80">Total Checked In</p>
-              <p className="text-3xl font-bold mt-1">{totalCheckedIn} <span className="text-lg font-normal opacity-70">/ {totalTickets}</span></p>
-            </div>
-            <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-xl font-bold">{pct}%</span>
-            </div>
+      <div className="bg-primary rounded-xl p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-primary-foreground/70">Total Checked In</p>
+            <p className="text-3xl font-bold text-primary-foreground mt-1">
+              {totalCheckedIn} <span className="text-lg font-normal text-primary-foreground/60">/ {totalTickets}</span>
+            </p>
           </div>
-          {/* Progress bar */}
-          <div className="mt-3 h-2 rounded-full bg-white/20 overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="h-16 w-16 rounded-full bg-white/15 flex items-center justify-center">
+            <span className="text-xl font-bold text-primary-foreground">{pct}%</span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="mt-3 h-2 rounded-full bg-white/20 overflow-hidden">
+          <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
 
       {/* Breakdown by ticket type */}
-      <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">By Ticket Type</h2>
+      <div className="space-y-3">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">By Ticket Type</h2>
         {byType.map(tt => {
           const ttPct = tt.total > 0 ? Math.round((tt.checkedIn / tt.total) * 100) : 0;
           const isOnline = tt.attendance_mode === 'online';
           return (
-            <Card key={tt.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <div className={`mt-0.5 h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      isOnline ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'
-                    }`}>
-                      {isOnline ? <Monitor className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{tt.name}</p>
-                      <p className="text-xs text-muted-foreground">{isOnline ? 'Online' : 'In-Person'}</p>
-                    </div>
+            <div key={tt.id} className="bg-card border border-border rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className={`mt-0.5 h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    isOnline ? 'bg-blue-500/15 text-blue-400' : 'bg-emerald-500/15 text-emerald-400'
+                  }`}>
+                    {isOnline ? <Monitor className="h-4 w-4" /> : <Users className="h-4 w-4" />}
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-lg font-bold">{tt.checkedIn}<span className="text-sm font-normal text-muted-foreground"> / {tt.total}</span></p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm text-foreground truncate">{tt.name}</p>
+                    <p className="text-xs text-muted-foreground">{isOnline ? 'Online' : 'In-Person'}</p>
                   </div>
                 </div>
-                <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${isOnline ? 'bg-blue-500' : 'bg-emerald-500'}`} style={{ width: `${ttPct}%` }} />
+                <div className="text-right shrink-0">
+                  <p className="text-lg font-bold text-foreground">{tt.checkedIn}<span className="text-sm font-normal text-muted-foreground"> / {tt.total}</span></p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="mt-3 h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-500 ${isOnline ? 'bg-blue-500' : 'bg-emerald-500'}`} style={{ width: `${ttPct}%` }} />
+              </div>
+            </div>
           );
         })}
         {byType.length === 0 && (

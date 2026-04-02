@@ -25,7 +25,7 @@ export default function ScannerBottomNav({ occurrenceId }) {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-40 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-area-bottom">
       <div className="flex items-center h-16">
         {tabs.map(tab => {
           const active = isActive(tab);
@@ -35,11 +35,15 @@ export default function ScannerBottomNav({ occurrenceId }) {
             <Link
               key={tab.id}
               to={disabled ? '/scanner' : getPath(tab)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-full transition-colors ${
-                active ? 'text-primary' : disabled ? 'text-muted-foreground/40 pointer-events-none' : 'text-muted-foreground'
+              className={`flex-1 flex flex-col items-center justify-center gap-1 h-full transition-colors ${
+                active 
+                  ? 'text-primary' 
+                  : disabled 
+                    ? 'text-muted-foreground/30 pointer-events-none' 
+                    : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className={`h-5 w-5 ${active ? 'drop-shadow-sm' : ''}`} />
               <span className="text-[10px] font-medium">{tab.label}</span>
             </Link>
           );

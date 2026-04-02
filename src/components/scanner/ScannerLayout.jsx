@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { WifiOff } from 'lucide-react';
 import ScannerBottomNav from './ScannerBottomNav';
@@ -14,7 +14,6 @@ export default function ScannerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Extract occurrenceId from URL if present
   const match = location.pathname.match(/\/scanner\/([^/]+)/);
   const occurrenceId = match ? match[1] : null;
 
@@ -47,8 +46,8 @@ export default function ScannerLayout() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
       </div>
     );
   }

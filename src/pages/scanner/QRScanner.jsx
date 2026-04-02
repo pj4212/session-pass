@@ -149,9 +149,9 @@ export default function QRScanner() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="flex items-center justify-center px-4 py-2 bg-slate-900/80 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2 text-lg font-bold text-white">
-          <Users className="h-5 w-5" />
+      <div className="flex items-center justify-center px-4 py-2.5 bg-card border-b border-border shrink-0">
+        <div className="flex items-center gap-2 text-lg font-bold text-foreground">
+          <Users className="h-5 w-5 text-primary" />
           <span>{checkedIn} / {total}</span>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function QRScanner() {
           <div id="qr-reader" className="w-full h-full" />
         </div>
         {!cameraReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black text-white">
+          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground">
             <p>Starting camera...</p>
           </div>
         )}

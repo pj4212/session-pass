@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, Calendar, Users, Settings, BarChart3, 
-  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine
+  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine, Ticket
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -41,8 +41,8 @@ export default function AdminLayout() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
@@ -52,26 +52,35 @@ export default function AdminLayout() {
   const isActive = (path) => location.pathname === path || (path !== '/admin' && location.pathname.startsWith(path));
 
   const sidebar = (
-    <div className={`flex flex-col h-full bg-card border-r ${collapsed ? 'w-16' : 'w-60'} transition-all`}>
-      <div className="p-4 border-b flex items-center justify-between">
-        {!collapsed && <span className="font-bold text-lg">Admin</span>}
-        <Button variant="ghost" size="icon" className="hidden md:flex" onClick={() => setCollapsed(!collapsed)}>
+    <div className={`flex flex-col h-full bg-sidebar border-r border-sidebar-border ${collapsed ? 'w-16' : 'w-60'} transition-all`}>
+      {/* Logo */}
+      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+        {!collapsed && (
+          <div className="flex items-center gap-2">
+            <Ticket className="h-5 w-5 text-primary" />
+            <span className="font-bold text-foreground">Session Pass</span>
+          </div>
+        )}
+        {collapsed && <Ticket className="h-5 w-5 text-primary mx-auto" />}
+        <Button variant="ghost" size="icon" className="hidden md:flex text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(false)}>
+        <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground hover:text-foreground" onClick={() => setMobileOpen(false)}>
           <X className="h-4 w-4" />
         </Button>
       </div>
-      <nav className="flex-1 p-2 space-y-1">
+
+      {/* Nav */}
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {filteredNav.map(item => (
           <Link
             key={item.path}
             to={item.path}
             onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               isActive(item.path) 
                 ? 'bg-primary text-primary-foreground' 
-                : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
             }`}
           >
             <item.icon className="h-4 w-4 shrink-0" />
@@ -79,15 +88,27 @@ export default function AdminLayout() {
           </Link>
         ))}
       </nav>
-      <div className="p-3 border-t space-y-1">
+
+      {/* Footer */}
+      <div className="p-3 border-t border-sidebar-border space-y-1">
         {!collapsed && (
-          <p className="text-xs text-muted-foreground mb-2 truncate">{user?.email}</p>
+          <p className="text-xs text-sidebar-foreground mb-2 truncate px-1">{user?.email}</p>
         )}
-        <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => navigate('/scanner')}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full justify-start gap-2 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent" 
+          onClick={() => navigate('/scanner')}
+        >
           <ScanLine className="h-4 w-4" />
           {!collapsed && 'Ticket Scanner'}
         </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => base44.auth.logout()}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full justify-start gap-2 text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent" 
+          onClick={() => base44.auth.logout()}
+        >
           <LogOut className="h-4 w-4" />
           {!collapsed && 'Logout'}
         </Button>
@@ -102,16 +123,19 @@ export default function AdminLayout() {
       {/* Mobile sidebar */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <div className="relative z-10 h-full w-60">{sidebar}</div>
         </div>
       )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b flex items-center px-4 gap-3 md:hidden">
+        <header className="h-14 border-b border-border flex items-center px-4 gap-3 md:hidden bg-card">
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <span className="font-semibold">Admin</span>
+          <div className="flex items-center gap-2">
+            <Ticket className="h-4 w-4 text-primary" />
+            <span className="font-semibold">Session Pass</span>
+          </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet context={{ user }} />

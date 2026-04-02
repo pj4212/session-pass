@@ -14,10 +14,7 @@ export default function ManualCheckinList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-
   const mountedRef = useRef(true);
-
-  // All staff can undo from the door list to correct mistakes
 
   useEffect(() => {
     mountedRef.current = true;
@@ -64,7 +61,6 @@ export default function ManualCheckinList() {
   const handleToggle = async (ticket) => {
     const isCheckedIn = ticket.check_in_status === 'checked_in';
 
-    // Optimistic update — instant visual feedback
     setTickets(prev => prev.map(t => 
       t.id === ticket.id 
         ? { ...t, check_in_status: isCheckedIn ? 'not_checked_in' : 'checked_in', checked_in_at: isCheckedIn ? '' : new Date().toISOString() }
@@ -78,7 +74,6 @@ export default function ManualCheckinList() {
     });
 
     if (res.data.status !== 'success') {
-      // Revert on failure
       setTickets(prev => prev.map(t =>
         t.id === ticket.id
           ? { ...t, check_in_status: isCheckedIn ? 'checked_in' : 'not_checked_in', checked_in_at: isCheckedIn ? ticket.checked_in_at : '' }
@@ -101,16 +96,16 @@ export default function ManualCheckinList() {
   });
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-white" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="shrink-0 border-b border-white/10 bg-slate-900/80">
-        <div className="flex items-center justify-center px-4 py-2">
-          <div className="flex items-center gap-2 text-lg font-bold text-white">
-            <Users className="h-5 w-5" />
+      <div className="shrink-0 border-b border-border bg-card">
+        <div className="flex items-center justify-center px-4 py-2.5">
+          <div className="flex items-center gap-2 text-lg font-bold text-foreground">
+            <Users className="h-5 w-5 text-primary" />
             <span>{checkedInCount} / {tickets.length}</span>
           </div>
         </div>
@@ -118,12 +113,12 @@ export default function ManualCheckinList() {
         {/* Search */}
         <div className="px-4 pb-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search name or email..." 
               value={search} 
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 h-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+              className="pl-9 h-10"
             />
           </div>
         </div>
@@ -138,7 +133,9 @@ export default function ManualCheckinList() {
             <Button
               key={tab.value}
               size="sm"
-              className={`text-xs ${filter === tab.value ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10'}`}
+              className={`text-xs ${filter === tab.value 
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                : 'bg-secondary text-muted-foreground hover:bg-secondary/80'}`}
               onClick={() => setFilter(tab.value)}
             >
               {tab.label}
@@ -156,7 +153,7 @@ export default function ManualCheckinList() {
           return (
             <button
               key={t.id}
-              className={`w-full flex items-center gap-4 px-4 py-4 min-h-[72px] border-b border-white/5 text-left transition-colors active:bg-white/10 ${
+              className={`w-full flex items-center gap-4 px-4 py-4 min-h-[72px] border-b border-border text-left transition-colors active:bg-accent ${
                 isChecked ? 'bg-emerald-500/10' : ''
               }`}
               onClick={() => handleToggle(t)}
@@ -165,20 +162,20 @@ export default function ManualCheckinList() {
                 {isChecked ? (
                   <CheckCircle2 className="h-8 w-8 text-emerald-400" />
                 ) : (
-                  <Circle className="h-8 w-8 text-slate-500" />
+                  <Circle className="h-8 w-8 text-muted-foreground" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-base truncate text-white">
+                <p className="font-medium text-base truncate text-foreground">
                   {t.attendee_first_name} {t.attendee_last_name}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{t.attendee_email}</p>
+                <p className="text-xs text-muted-foreground truncate">{t.attendee_email}</p>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-1">
-                <Badge variant="outline" className="text-xs border-white/20 text-slate-300">
+                <Badge variant="outline" className="text-xs">
                   {tt?.name || 'Ticket'}
                 </Badge>
-                <Badge className={`text-xs ${t.attendance_mode === 'online' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>
+                <Badge className={`text-xs ${t.attendance_mode === 'online' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
                   {t.attendance_mode === 'online' ? 'Online' : 'In-Person'}
                 </Badge>
               </div>
@@ -186,7 +183,7 @@ export default function ManualCheckinList() {
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-center text-slate-400 py-12">No attendees found</p>
+          <p className="text-center text-muted-foreground py-12">No attendees found</p>
         )}
       </div>
     </div>
