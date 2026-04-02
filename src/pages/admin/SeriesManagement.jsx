@@ -127,7 +127,7 @@ export default function SeriesManagement() {
                       <Link to={`/admin/events?series=${s.id}`}><Calendar className="h-4 w-4" /></Link>
                     </Button>
                     <Button variant="ghost" size="icon" asChild title="View Public">
-                      <a href={`https://sessionpass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                      <a href={`https://session-pass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete">
                       <Trash2 className="h-4 w-4 text-destructive" />
