@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, Calendar, Users, Settings, BarChart3, 
-  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail
+  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -79,10 +79,14 @@ export default function AdminLayout() {
           </Link>
         ))}
       </nav>
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-1">
         {!collapsed && (
           <p className="text-xs text-muted-foreground mb-2 truncate">{user?.email}</p>
         )}
+        <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => navigate('/scanner')}>
+          <ScanLine className="h-4 w-4" />
+          {!collapsed && 'Ticket Scanner'}
+        </Button>
         <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => base44.auth.logout()}>
           <LogOut className="h-4 w-4" />
           {!collapsed && 'Logout'}
