@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen } from 'lucide-react';
+import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_COLORS = {
   draft: 'secondary', published: 'default', cancelled: 'destructive', completed: 'outline'
@@ -22,6 +23,8 @@ export default function EventList() {
   const [modeFilter, setModeFilter] = useState('all');
   const [seriesFilter, setSeriesFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -46,6 +49,18 @@ export default function EventList() {
     const updated = { is_published: !ev.is_published, status: ev.is_published ? 'draft' : 'published' };
     await base44.entities.EventOccurrence.update(ev.id, updated);
     setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...updated } : e));
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    // Delete associated ticket types
+    const tts = await base44.entities.TicketType.filter({ occurrence_id: deleteTarget.id });
+    for (const tt of tts) { await base44.entities.TicketType.delete(tt.id); }
+    await base44.entities.EventOccurrence.delete(deleteTarget.id);
+    setEvents(prev => prev.filter(e => e.id !== deleteTarget.id));
+    setDeleteTarget(null);
+    setDeleting(false);
   };
 
   const ticketCount = (evId) => tickets.filter(t => t.occurrence_id === evId).length;
@@ -152,6 +167,9 @@ export default function EventList() {
                     <Button variant="ghost" size="sm" onClick={() => togglePublish(ev)}>
                       {ev.is_published ? 'Unpublish' : 'Publish'}
                     </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(ev)} title="Delete">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -162,6 +180,21 @@ export default function EventList() {
           </TableBody>
         </Table>
       </div>
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Event</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This will also delete all associated ticket types. Existing orders and tickets will not be deleted.</p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

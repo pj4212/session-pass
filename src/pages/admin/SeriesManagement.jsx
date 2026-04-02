@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Loader2, Eye, Calendar } from 'lucide-react';
+import { Plus, Edit, Loader2, Eye, Calendar, Trash2 } from 'lucide-react';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -27,6 +27,8 @@ export default function SeriesManagement() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', slug: '', description: '', is_published: false, status: 'draft' });
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -66,6 +68,21 @@ export default function SeriesManagement() {
     }
     setSaving(false);
     setDialogOpen(false);
+  };
+
+  const handleDeleteSeries = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    // Unlink any occurrences that belong to this series
+    const linked = occurrences.filter(o => o.series_id === deleteTarget.id);
+    for (const o of linked) {
+      await base44.entities.EventOccurrence.update(o.id, { series_id: '' });
+    }
+    await base44.entities.EventSeries.delete(deleteTarget.id);
+    setSeriesList(prev => prev.filter(s => s.id !== deleteTarget.id));
+    setOccurrences(prev => prev.map(o => o.series_id === deleteTarget.id ? { ...o, series_id: '' } : o));
+    setDeleteTarget(null);
+    setDeleting(false);
   };
 
   const updateForm = (field, value) => {
@@ -112,6 +129,9 @@ export default function SeriesManagement() {
                     <Button variant="ghost" size="icon" asChild title="View Public">
                       <Link to={`/series/${s.slug}`} target="_blank"><Eye className="h-4 w-4" /></Link>
                     </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -152,6 +172,27 @@ export default function SeriesManagement() {
             <Button onClick={handleSave} disabled={saving || !form.name || !form.slug} className="w-full">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
               {editing ? 'Save Changes' : 'Create Series'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Series</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
+            {sessionCount(deleteTarget?.id) > 0
+              ? ` The ${sessionCount(deleteTarget?.id)} session(s) in this series will be unlinked but not deleted.`
+              : ''}
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteSeries} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Delete
             </Button>
           </div>
         </DialogContent>

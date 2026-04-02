@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Loader2, Save } from 'lucide-react';
+import { Plus, Trash2, Loader2, Save, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -35,6 +36,8 @@ export default function EventForm() {
   const [seriesList, setSeriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -362,7 +365,35 @@ export default function EventForm() {
           {isEdit ? 'Save Changes' : 'Create Event'}
         </Button>
         <Button variant="outline" onClick={() => navigate('/admin/events')}>Cancel</Button>
+        {isEdit && (
+          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Trash2 className="h-4 w-4 mr-1.5" />Delete Event
+          </Button>
+        )}
       </div>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Event</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure you want to delete <strong>{form.name}</strong>? This will also delete all associated ticket types. Existing orders and tickets will not be deleted.</p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="destructive" disabled={deletingEvent} onClick={async () => {
+              setDeletingEvent(true);
+              const tts = await base44.entities.TicketType.filter({ occurrence_id: id });
+              for (const tt of tts) { await base44.entities.TicketType.delete(tt.id); }
+              await base44.entities.EventOccurrence.delete(id);
+              setDeletingEvent(false);
+              navigate('/admin/events');
+            }}>
+              {deletingEvent ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
