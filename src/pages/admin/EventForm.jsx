@@ -28,7 +28,7 @@ export default function EventForm() {
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
     venue_details: '', is_published: false,
-    sales_close_date: '', status: 'draft'
+    status: 'draft'
   });
   const [ticketTypes, setTicketTypes] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -68,7 +68,6 @@ export default function EventForm() {
               location_id: ev.location_id || '', zoom_link: ev.zoom_link || '',
               zoom_meeting_id: ev.zoom_meeting_id || '', venue_details: ev.venue_details || '',
               is_published: ev.is_published,
-              sales_close_date: ev.sales_close_date ? ev.sales_close_date.slice(0, 16) : '',
               status: ev.status || 'draft'
             });
             setTicketTypes(tts.map(tt => ({ ...tt, _existing: true })));
@@ -81,7 +80,7 @@ export default function EventForm() {
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
               location_id: ev.location_id || '', zoom_link: '',
               zoom_meeting_id: '', venue_details: ev.venue_details || '',
-              is_published: false, sales_close_date: '', status: 'draft'
+              is_published: false, status: 'draft'
             });
             setTicketTypes(tts.map(tt => ({
               name: tt.name, attendance_mode: tt.attendance_mode, price: tt.price,
@@ -148,12 +147,15 @@ export default function EventForm() {
     // Store datetime values as-entered (no timezone conversion)
     // Append :00 for seconds if needed, treat as literal time
     const toISO = (val) => val ? val + ':00' : '';
+    // Auto-set sales_close_date to 1 hour after end time
+    const endDt = form.end_datetime ? new Date(form.end_datetime + ':00') : null;
+    const salesClose = endDt ? new Date(endDt.getTime() + 60 * 60 * 1000).toISOString() : '';
     const eventData = {
       ...form,
       series_id: form.series_id === 'none' ? '' : form.series_id,
       start_datetime: toISO(form.start_datetime),
       end_datetime: toISO(form.end_datetime),
-      sales_close_date: toISO(form.sales_close_date)
+      sales_close_date: salesClose
     };
 
     let eventId;
@@ -310,10 +312,7 @@ export default function EventForm() {
         </div>
       )}
 
-      <div className="max-w-sm">
-        <Label>Sales Close Date</Label>
-        <Input type="datetime-local" value={form.sales_close_date} onChange={e => updateForm('sales_close_date', e.target.value)} />
-      </div>
+
 
       {/* Ticket Types */}
       <Card>
