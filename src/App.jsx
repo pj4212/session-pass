@@ -8,6 +8,10 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import EventPage from './pages/EventPage';
 import OrderConfirmation from './pages/OrderConfirmation';
 import AdminLayout from './components/admin/AdminLayout';
+import ScannerLayout from './components/scanner/ScannerLayout';
+import ScannerHome from './pages/scanner/ScannerHome';
+import QRScanner from './pages/scanner/QRScanner';
+import ManualCheckinList from './pages/scanner/ManualCheckinList';
 import Dashboard from './pages/admin/Dashboard';
 import EventList from './pages/admin/EventList';
 import EventForm from './pages/admin/EventForm';
@@ -55,6 +59,11 @@ const AuthenticatedApp = () => {
         <Route path="settings/mentors" element={<MentorManagement />} />
         <Route path="settings/platinum-leaders" element={<PlatinumLeaderManagement />} />
         <Route path="settings/users" element={<UserManagement />} />
+      </Route>
+      <Route path="/scanner" element={<ScannerLayout />}>
+        <Route index element={<ScannerHome />} />
+        <Route path=":occurrenceId/scan" element={<QRScanner />} />
+        <Route path=":occurrenceId/list" element={<ManualCheckinList />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
