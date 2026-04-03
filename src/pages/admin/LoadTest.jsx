@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,15 +22,24 @@ export default function LoadTest() {
   }, []);
 
   const runTest = async (testType) => {
+    const c = Math.min(Math.max(parseInt(concurrency) || 1, 1), 50);
+    setConcurrency(c);
     setRunning(testType);
     setResults(null);
-    const res = await base44.functions.invoke('loadTest', {
-      test_type: testType,
-      occurrence_id: selectedEvent,
-      concurrency: parseInt(concurrency)
-    });
-    setResults(res.data);
-    setRunning(null);
+    try {
+      const res = await base44.functions.invoke('loadTest', {
+        test_type: testType,
+        occurrence_id: selectedEvent,
+        concurrency: c
+      });
+      setResults(res.data);
+    } catch (err) {
+      const msg = err?.response?.data?.error || err.message || 'Unknown error';
+      toast.error(`Load test failed: ${msg}`);
+      setResults({ test_type: testType, error: msg });
+    } finally {
+      setRunning(null);
+    }
   };
 
   const selectedEventData = events.find(e => e.id === selectedEvent);
@@ -69,9 +79,13 @@ export default function LoadTest() {
               min={1}
               max={50}
               value={concurrency}
-              onChange={e => setConcurrency(e.target.value)}
+              onChange={e => {
+                const v = parseInt(e.target.value) || 1;
+                setConcurrency(Math.min(Math.max(v, 1), 50));
+              }}
               className="w-32"
             />
+            <p className="text-xs text-muted-foreground mt-1">Capped at 50 to avoid timeouts.</p>
           </div>
 
           {selectedEventData && (
