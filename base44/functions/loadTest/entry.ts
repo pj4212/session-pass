@@ -145,42 +145,54 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'No free ticket type found for this event. Add a free ticket type first.' }, { status: 400 });
       }
 
-      console.log(`Starting concurrent checkout test with ${count} requests for free ticket type "${freeType.name}"...`);
+      // Run checkout requests in waves of 8 to avoid rate limits
+      const WAVE_SIZE = 8;
+      const WAVE_DELAY_MS = 500;
+      console.log(`Starting checkout test: ${count} requests in waves of ${WAVE_SIZE} for "${freeType.name}"...`);
 
       const startTime = Date.now();
-      const results = await Promise.allSettled(
-        Array.from({ length: count }, (_, idx) => {
-          const t0 = Date.now();
-          return base44.functions.invoke('createCheckout', {
-            buyer: {
-              first_name: 'LoadTest',
-              last_name: `User${idx}`,
-              email: `loadtest${idx}@test.com`
-            },
-            attendees: [{
-              first_name: 'LoadTest',
-              last_name: `User${idx}`,
-              email: `loadtest${idx}@test.com`,
-              ticket_type_id: freeType.id
-            }],
-            occurrence_id
-          }).then(res => ({
-            index: idx,
-            status: res.data?.order_number ? 'success' : 'error',
-            order_number: res.data?.order_number || null,
-            error: res.data?.error || null,
-            elapsed_ms: Date.now() - t0
-          })).catch(err => ({
-            index: idx,
-            status: 'error',
-            error: err?.response?.data?.error || err.message,
-            elapsed_ms: Date.now() - t0
-          }));
-        })
-      );
+      const allResults = [];
+
+      for (let wave = 0; wave < count; wave += WAVE_SIZE) {
+        const batchIndices = Array.from({ length: Math.min(WAVE_SIZE, count - wave) }, (_, i) => wave + i);
+        const waveResults = await Promise.allSettled(
+          batchIndices.map(idx => {
+            const t0 = Date.now();
+            return base44.functions.invoke('createCheckout', {
+              buyer: {
+                first_name: 'LoadTest',
+                last_name: `User${idx}`,
+                email: `loadtest${idx}@test.com`
+              },
+              attendees: [{
+                first_name: 'LoadTest',
+                last_name: `User${idx}`,
+                email: `loadtest${idx}@test.com`,
+                ticket_type_id: freeType.id
+              }],
+              occurrence_id
+            }).then(res => ({
+              index: idx,
+              status: res.data?.order_number ? 'success' : 'error',
+              order_number: res.data?.order_number || null,
+              error: res.data?.error || null,
+              elapsed_ms: Date.now() - t0
+            })).catch(err => ({
+              index: idx,
+              status: 'error',
+              error: err?.response?.data?.error || err.message,
+              elapsed_ms: Date.now() - t0
+            }));
+          })
+        );
+        allResults.push(...waveResults);
+        if (wave + WAVE_SIZE < count) {
+          await sleep(WAVE_DELAY_MS);
+        }
+      }
 
       const totalElapsed = Date.now() - startTime;
-      const fulfilled = results.map(r => r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message });
+      const fulfilled = allResults.map(r => r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message });
       const successes = fulfilled.filter(r => r.status === 'success');
       const errors = fulfilled.filter(r => r.status === 'error');
 
