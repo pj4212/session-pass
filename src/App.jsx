@@ -25,6 +25,7 @@ import SeriesManagement from './pages/admin/SeriesManagement';
 import SeriesPage from './pages/SeriesPage';
 import Home from './pages/Home';
 import EmailTesting from './pages/admin/EmailTesting';
+import LoadTest from './pages/admin/LoadTest';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
         <Route path="settings/platinum-leaders" element={<PlatinumLeaderManagement />} />
         <Route path="settings/users" element={<UserManagement />} />
         <Route path="settings/email-testing" element={<EmailTesting />} />
+        <Route path="settings/load-test" element={<LoadTest />} />
       </Route>
       <Route path="/scanner" element={<ScannerLayout />}>
         <Route index element={<ScannerHome />} />
