@@ -2,6 +2,22 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+// Retry a function on rate limit errors
+async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt < maxRetries && (err.status === 429 || err.message?.includes('Rate limit'))) {
+        console.log(`Rate limited, retrying in ${baseDelay * (attempt + 1)}ms (attempt ${attempt + 1}/${maxRetries})...`);
+        await sleep(baseDelay * (attempt + 1));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 // Process items in batches with a delay between batches to avoid rate limits
 async function batchProcess(items, batchSize, delayMs, fn) {
   let processed = 0;
@@ -145,9 +161,10 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'No free ticket type found for this event. Add a free ticket type first.' }, { status: 400 });
       }
 
-      // Run checkout requests in waves of 8 to avoid rate limits
-      const WAVE_SIZE = 8;
-      const WAVE_DELAY_MS = 500;
+      // Run checkout requests in waves of 5 with longer delays to avoid rate limits
+      // Each createCheckout does ~5+ DB operations internally, so 5 concurrent = ~25+ DB ops per wave
+      const WAVE_SIZE = 5;
+      const WAVE_DELAY_MS = 1500;
       console.log(`Starting checkout test: ${count} requests in waves of ${WAVE_SIZE} for "${freeType.name}"...`);
 
       const startTime = Date.now();
@@ -201,11 +218,19 @@ Deno.serve(async (req) => {
       const maxTime = timings.length ? Math.max(...timings) : 0;
       const minTime = timings.length ? Math.min(...timings) : 0;
 
-      const testTickets = await base44.asServiceRole.entities.Ticket.filter({
-        occurrence_id,
-        ticket_status: 'active'
-      });
-      const loadTestTickets = testTickets.filter(t => t.attendee_email?.includes('loadtest') && t.attendee_email?.includes('@test.com'));
+      // Wait for rate limit window to reset before querying verification
+      await sleep(2000);
+      let loadTestTicketCount = 0;
+      try {
+        const testTickets = await withRetry(() => base44.asServiceRole.entities.Ticket.filter({
+          occurrence_id,
+          ticket_status: 'active'
+        }, '-created_date', 500));
+        loadTestTicketCount = testTickets.filter(t => t.attendee_email?.includes('loadtest') && t.attendee_email?.includes('@test.com')).length;
+      } catch (e) {
+        console.log('Could not verify ticket count after test:', e.message);
+        loadTestTicketCount = -1; // indicates verification failed
+      }
 
       console.log(`Checkout test complete: ${successes.length} success, ${errors.length} errors in ${totalElapsed}ms`);
 
@@ -218,7 +243,7 @@ Deno.serve(async (req) => {
           errors: errors.length,
         },
         timing: { avg_ms: avgTime, min_ms: minTime, max_ms: maxTime },
-        db_test_tickets: loadTestTickets.length,
+        db_test_tickets: loadTestTicketCount,
         details: fulfilled
       });
     }
