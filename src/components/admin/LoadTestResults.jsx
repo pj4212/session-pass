@@ -21,6 +21,20 @@ function StatCard({ label, value, icon: Icon, variant }) {
 }
 
 export default function LoadTestResults({ results }) {
+  if (results.error) {
+    return (
+      <Card>
+        <CardHeader><CardTitle className="text-base capitalize">{results.test_type || 'Load'} Test Failed</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-red-400">
+            <XCircle className="h-5 w-5" />
+            <span>{results.error}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (results.test_type === 'cleanup') {
     return (
       <Card>
