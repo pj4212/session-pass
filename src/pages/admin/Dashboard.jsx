@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp } from 'lucide-react';
+import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight } from 'lucide-react';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -35,14 +35,14 @@ export default function Dashboard() {
       const alertList = [];
       for (const ev of upcoming) {
         if ((ev.event_mode === 'online_stream' || ev.event_mode === 'hybrid') && !ev.zoom_link) {
-          alertList.push({ type: 'warning', message: `"${ev.name}" is missing a Zoom link` });
+          alertList.push({ type: 'warning', message: `"${ev.name}" is missing a Zoom link`, link: `/admin/events/${ev.id}/edit` });
         }
       }
       const soonEvents = upcoming.filter(e => new Date(e.event_date) <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
       for (const ev of soonEvents) {
         const evTickets = allTickets.filter(t => t.occurrence_id === ev.id);
         if (evTickets.length < 5) {
-          alertList.push({ type: 'info', message: `"${ev.name}" has only ${evTickets.length} tickets sold` });
+          alertList.push({ type: 'info', message: `"${ev.name}" has only ${evTickets.length} tickets sold`, link: `/admin/events/${ev.id}/attendees` });
         }
       }
 
@@ -108,12 +108,13 @@ export default function Dashboard() {
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Alerts</h2>
           {alerts.map((a, i) => (
-            <div key={i} className={`flex items-start gap-3 rounded-xl p-4 border ${
-              a.type === 'warning' ? 'bg-red-500/10 border-red-500/20' : 'bg-amber-500/10 border-amber-500/20'
+            <Link key={i} to={a.link} className={`flex items-center gap-3 rounded-xl p-4 border transition-colors cursor-pointer group ${
+              a.type === 'warning' ? 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20' : 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20'
             }`}>
-              <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${a.type === 'warning' ? 'text-red-400' : 'text-amber-400'}`} />
-              <p className="text-sm text-foreground">{a.message}</p>
-            </div>
+              <AlertTriangle className={`h-4 w-4 shrink-0 ${a.type === 'warning' ? 'text-red-400' : 'text-amber-400'}`} />
+              <p className="text-sm text-foreground flex-1">{a.message}</p>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </Link>
           ))}
         </div>
       )}
