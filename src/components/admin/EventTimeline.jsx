@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -324,6 +325,14 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                         <Button variant="ghost" size="icon" asChild title="Attendees">
                           <Link to={`/admin/events/${session.id}/attendees`}><Users className="h-4 w-4" /></Link>
                         </Button>
+                        {session.zoom_link && (
+                          <Button variant="ghost" size="icon" title="Copy Zoom Link" onClick={() => {
+                            navigator.clipboard.writeText(session.zoom_link);
+                            toast.success('Zoom link copied!');
+                          }}>
+                            <Video className="h-4 w-4" />
+                          </Button>
+                        )}
                       </>
                     ) : (
                       <Button variant="ghost" size="icon" asChild title="Edit source event">

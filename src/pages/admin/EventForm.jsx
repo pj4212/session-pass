@@ -12,6 +12,7 @@ import { Plus, Trash2, Loader2, Save, AlertTriangle, Video } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import VenueSelector from '../../components/admin/VenueSelector';
+import ZoomPanelistsManager from '../../components/admin/ZoomPanelistsManager';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -436,6 +437,11 @@ export default function EventForm() {
               <Label>Zoom Meeting ID</Label>
               <Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value)} placeholder="Auto-filled when creating webinar" />
             </div>
+            {isEdit && form.zoom_meeting_id && (
+              <div className="border-t pt-4">
+                <ZoomPanelistsManager webinarId={form.zoom_meeting_id} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

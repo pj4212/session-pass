@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon } from 'lucide-react';
+import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon, Video } from 'lucide-react';
+import { toast } from 'sonner';
 import EventTimeline from '@/components/admin/EventTimeline';
 import VenueConfirmDialog from '@/components/admin/VenueConfirmDialog';
 import { Switch } from '@/components/ui/switch';
@@ -227,6 +228,14 @@ export default function EventList() {
                     <Button variant="ghost" size="icon" asChild title="Duplicate">
                       <Link to={`/admin/events/new?duplicate=${ev.id}`}><Copy className="h-4 w-4" /></Link>
                     </Button>
+                    {ev.zoom_link && (
+                      <Button variant="ghost" size="icon" title="Copy Zoom Link" onClick={() => {
+                        navigator.clipboard.writeText(ev.zoom_link);
+                        toast.success('Zoom link copied!');
+                      }}>
+                        <Video className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" asChild title="View Public">
                       <a href={`/event/${ev.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
