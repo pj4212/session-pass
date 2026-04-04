@@ -71,8 +71,6 @@ export default function LoadTest() {
       return;
     }
 
-    const WAVE_SIZE = 5;
-    const WAVE_DELAY_MS = 3000;
     const startTime = Date.now();
     const allDetails = [];
     let successCount = 0;
@@ -80,57 +78,47 @@ export default function LoadTest() {
 
     setLiveProgress({ completed: 0, total: count, successes: 0, errors: 0 });
 
-    for (let wave = 0; wave < count; wave += WAVE_SIZE) {
+    for (let idx = 0; idx < count; idx++) {
       if (cancelRef.current) break;
 
-      const batchIndices = Array.from({ length: Math.min(WAVE_SIZE, count - wave) }, (_, i) => wave + i);
-
-      const waveResults = await Promise.allSettled(
-        batchIndices.map(async (idx) => {
-          const t0 = Date.now();
-          const MAX_ATTEMPTS = 8;
-          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            if (cancelRef.current) return { index: idx, status: 'cancelled', elapsed_ms: Date.now() - t0 };
-            try {
-              const res = await base44.functions.invoke('createCheckout', {
-                buyer: { first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com` },
-                attendees: [{ first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com`, ticket_type_id: freeType.id }],
-                occurrence_id: selectedEvent,
-                skip_emails: true
-              });
-              return {
-                index: idx,
-                status: res.data?.order_number ? 'success' : 'error',
-                order_number: res.data?.order_number || null,
-                error: res.data?.error || null,
-                elapsed_ms: Date.now() - t0,
-                attempts: attempt + 1
-              };
-            } catch (err) {
-              const errMsg = err?.response?.data?.error || err?.message || '';
-              const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
-              if (isRateLimit && attempt < MAX_ATTEMPTS - 1) {
-                await sleep(Math.min(3000 * Math.pow(2, attempt), 30000));
-                continue;
-              }
-              return { index: idx, status: 'error', error: errMsg || 'Unknown error', elapsed_ms: Date.now() - t0, attempts: attempt + 1 };
-            }
+      const t0 = Date.now();
+      let detail;
+      const MAX_ATTEMPTS = 5;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        if (cancelRef.current) { detail = { index: idx, status: 'cancelled', elapsed_ms: Date.now() - t0 }; break; }
+        try {
+          const res = await base44.functions.invoke('createCheckout', {
+            buyer: { first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com` },
+            attendees: [{ first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com`, ticket_type_id: freeType.id }],
+            occurrence_id: selectedEvent,
+            skip_emails: true
+          });
+          detail = {
+            index: idx,
+            status: res.data?.order_number ? 'success' : 'error',
+            order_number: res.data?.order_number || null,
+            error: res.data?.error || null,
+            elapsed_ms: Date.now() - t0,
+            attempts: attempt + 1
+          };
+          break;
+        } catch (err) {
+          const errMsg = err?.response?.data?.error || err?.message || '';
+          const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
+          if (isRateLimit && attempt < MAX_ATTEMPTS - 1) {
+            await sleep(Math.min(3000 * Math.pow(2, attempt), 30000));
+            continue;
           }
-        })
-      );
-
-      for (const r of waveResults) {
-        const detail = r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message };
-        allDetails.push(detail);
-        if (detail.status === 'success') successCount++;
-        else if (detail.status === 'error') errorCount++;
+          detail = { index: idx, status: 'error', error: errMsg || 'Unknown error', elapsed_ms: Date.now() - t0, attempts: attempt + 1 };
+          break;
+        }
       }
+
+      allDetails.push(detail);
+      if (detail.status === 'success') successCount++;
+      else if (detail.status === 'error') errorCount++;
 
       setLiveProgress({ completed: allDetails.length, total: count, successes: successCount, errors: errorCount });
-
-      if (wave + WAVE_SIZE < count && !cancelRef.current) {
-        await sleep(WAVE_DELAY_MS);
-      }
     }
 
     const totalElapsed = Date.now() - startTime;
