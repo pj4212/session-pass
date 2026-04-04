@@ -71,8 +71,8 @@ export default function LoadTest() {
       return;
     }
 
-    const WAVE_SIZE = 10;
-    const WAVE_DELAY_MS = 1500;
+    const WAVE_SIZE = 3;
+    const WAVE_DELAY_MS = 3000;
     const startTime = Date.now();
     const allDetails = [];
     let successCount = 0;
