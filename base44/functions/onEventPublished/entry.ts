@@ -73,7 +73,10 @@ Deno.serve(async (req) => {
     const startTime = data.start_datetime || `${data.event_date}T09:00:00`;
     const startDt = new Date(startTime);
     const endDt = data.end_datetime ? new Date(data.end_datetime) : null;
-    const durationMins = endDt ? Math.round((endDt - startDt) / 60000) : 60;
+    const eventDurationMins = endDt ? Math.round((endDt - startDt) / 60000) : 60;
+    // Add 1 hour buffer, minimum 2 hours total
+    const durationMins = Math.max(120, eventDurationMins + 60);
+    console.log(`Event duration: ${eventDurationMins}min, Zoom webinar duration: ${durationMins}min`);
 
     const webinarPayload = {
       topic: data.name,
