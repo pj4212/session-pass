@@ -203,10 +203,13 @@ Deno.serve(async (req) => {
                   attempts: attempt + 1
                 };
               } catch (err) {
-                const isRateLimit = err?.response?.status === 429 || err?.response?.data?.error?.includes?.('Rate limit') || err?.message?.includes?.('Rate limit');
+                const errMsg = err?.response?.data?.error || err?.message || '';
+                const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
                 if (isRateLimit && attempt < 2) {
-                  console.log(`Request ${idx + 1} rate limited, retry ${attempt + 1}...`);
-                  await sleep(2000 * (attempt + 1));
+                  // Longer backoff: 4s first retry, 8s second retry
+                  const retryDelay = 4000 * (attempt + 1);
+                  console.log(`Request ${idx + 1} rate limited, retry ${attempt + 1} after ${retryDelay}ms...`);
+                  await sleep(retryDelay);
                   continue;
                 }
                 return {
