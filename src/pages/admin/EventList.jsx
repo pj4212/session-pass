@@ -162,7 +162,7 @@ export default function EventList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">Sessions</h1>
           <div className="flex items-center border rounded-lg overflow-hidden">
@@ -180,7 +180,7 @@ export default function EventList() {
             </button>
           </div>
         </div>
-        <Button asChild><Link to="/admin/events/new"><Plus className="h-4 w-4 mr-1.5" />Create Event</Link></Button>
+        <Button asChild className="w-full sm:w-auto"><Link to="/admin/events/new"><Plus className="h-4 w-4 mr-1.5" />Create Event</Link></Button>
       </div>
 
       <div className="flex flex-wrap gap-3">

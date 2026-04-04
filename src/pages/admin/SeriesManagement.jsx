@@ -110,7 +110,8 @@ export default function SeriesManagement() {
         <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" />New Series</Button>
       </div>
 
-      <div className="border rounded-lg overflow-auto">
+      {/* Desktop table */}
+      <div className="border rounded-lg overflow-auto hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -193,6 +194,74 @@ export default function SeriesManagement() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {seriesList.map(s => {
+          const seriesOccurrences = occurrences.filter(o => o.series_id === s.id).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+          const isExpanded = expandedSeries[s.id];
+          return (
+            <div key={s.id} className="border rounded-lg bg-card">
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <button className="flex items-center gap-2 font-medium text-left hover:text-primary transition-colors" onClick={() => toggleExpand(s.id)}>
+                    {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                    <span>{s.name}</span>
+                  </button>
+                  <Badge variant={STATUS_COLORS[s.status] || 'secondary'}>{s.status}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3 pl-6">{sessionCount(s.id)} session(s)</p>
+                <div className="flex flex-wrap gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(s)} className="gap-1.5 text-xs h-8">
+                    <Edit className="h-3.5 w-3.5" />Edit
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs h-8">
+                    <Link to={`/admin/events?series=${s.id}`}><Calendar className="h-3.5 w-3.5" />Sessions</Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs h-8">
+                    <a href={`https://session-pass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />View</a>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8" onClick={() => {
+                    navigator.clipboard.writeText(`https://session-pass.com/series/${s.slug}`);
+                    toast.success('Link copied to clipboard');
+                  }}>
+                    <Copy className="h-3.5 w-3.5" />Copy
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8 text-destructive" onClick={() => setDeleteTarget(s)}>
+                    <Trash2 className="h-3.5 w-3.5" />Delete
+                  </Button>
+                </div>
+              </div>
+              {isExpanded && seriesOccurrences.length > 0 && (
+                <div className="border-t border-border">
+                  {seriesOccurrences.map(occ => (
+                    <div key={occ.id} className="flex items-center justify-between gap-2 px-4 py-2.5 bg-secondary/20 border-b border-border last:border-b-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {occ.event_mode === 'online_stream' ? <Monitor className="h-3.5 w-3.5 text-blue-400 shrink-0" /> : <MapPin className="h-3.5 w-3.5 text-green-400 shrink-0" />}
+                        <div className="min-w-0">
+                          <p className="text-sm truncate">{occ.name}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">{new Date(occ.event_date).toLocaleDateString('en-AU')}</span>
+                            <Badge variant={occ.is_published ? 'default' : 'secondary'} className="text-xs py-0">
+                              {occ.is_published ? 'Published' : 'Draft'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" asChild className="shrink-0">
+                        <Link to={`/admin/events/${occ.id}/edit`}><Edit className="h-4 w-4" /></Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {seriesList.length === 0 && (
+          <p className="text-center py-8 text-muted-foreground">No event series yet</p>
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
