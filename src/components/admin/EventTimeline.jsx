@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -151,7 +151,7 @@ function buildProjectedTimeline(sessions, months) {
   return weeks;
 }
 
-export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap, onVerifyVenue }) {
+export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap, onVerifyVenue, onCreateFromProjected, creatingProjected }) {
   // Group events by series for projection
   const timeline = useMemo(() => {
     const bySeries = {};
@@ -335,8 +335,18 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                         )}
                       </>
                     ) : (
-                      <Button variant="ghost" size="icon" asChild title="Edit source event">
-                        <Link to={`/admin/events/${sourceId}/edit`}><Edit className="h-4 w-4" /></Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Create & edit this session"
+                        disabled={creatingProjected === session.id}
+                        onClick={() => onCreateFromProjected?.(session)}
+                      >
+                        {creatingProjected === session.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Edit className="h-4 w-4" />
+                        )}
                       </Button>
                     )}
                   </div>

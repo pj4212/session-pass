@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon, Video } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import EventTimeline from '@/components/admin/EventTimeline';
 import VenueConfirmDialog from '@/components/admin/VenueConfirmDialog';
@@ -31,6 +32,8 @@ export default function EventList() {
   const [deleting, setDeleting] = useState(false);
   const [viewMode, setViewMode] = useState('timeline');
   const [venueTarget, setVenueTarget] = useState(null);
+  const [creatingProjected, setCreatingProjected] = useState(null);
+  const navigate = useNavigate();
 
   const [ticketTypesList, setTicketTypesList] = useState([]);
 
@@ -77,6 +80,61 @@ export default function EventList() {
 
   const handleVenueConfirmed = (eventId, updates) => {
     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...updates } : e));
+  };
+
+  const handleCreateFromProjected = async (projectedSession) => {
+    setCreatingProjected(projectedSession.id);
+    const sourceId = projectedSession._sourceId;
+    // Load source event to copy all fields
+    const sourceEvents = await base44.entities.EventOccurrence.filter({ id: sourceId });
+    const source = sourceEvents[0];
+    if (!source) { setCreatingProjected(null); return; }
+
+    // Build start/end datetimes using projected date + source times
+    const newData = {
+      template_id: source.template_id || '',
+      series_id: source.series_id || '',
+      name: source.name,
+      slug: source.slug + '-' + projectedSession.event_date,
+      description: source.description || '',
+      event_date: projectedSession.event_date,
+      start_datetime: projectedSession.start_datetime,
+      end_datetime: projectedSession.end_datetime,
+      timezone: source.timezone,
+      event_mode: source.event_mode,
+      recurrence_pattern: source.recurrence_pattern || '',
+      location_id: source.location_id || '',
+      venue_id: source.venue_id || '',
+      venue_name: source.venue_name || '',
+      venue_link: source.venue_link || '',
+      parking_link: source.parking_link || '',
+      venue_details: source.venue_details || '',
+      zoom_webinar_mode: source.zoom_webinar_mode || 'auto',
+      is_published: false,
+      status: 'draft',
+    };
+
+    const created = await base44.entities.EventOccurrence.create(newData);
+
+    // Copy ticket types from source
+    const sourceTTs = ticketTypesList.filter(tt => tt.occurrence_id === sourceId);
+    for (const tt of sourceTTs) {
+      await base44.entities.TicketType.create({
+        occurrence_id: created.id,
+        name: tt.name,
+        attendance_mode: tt.attendance_mode,
+        ticket_category: tt.ticket_category || '',
+        price: tt.price,
+        requires_payment: tt.requires_payment,
+        capacity_limit: tt.capacity_limit,
+        is_active: tt.is_active,
+        sort_order: tt.sort_order,
+        description: tt.description || '',
+      });
+    }
+
+    setCreatingProjected(null);
+    navigate(`/admin/events/${created.id}/edit`);
   };
 
   // Check URL for series filter
@@ -184,6 +242,8 @@ export default function EventList() {
           })()}
           seriesMap={seriesMap}
           onVerifyVenue={(session) => setVenueTarget(session)}
+          onCreateFromProjected={handleCreateFromProjected}
+          creatingProjected={creatingProjected}
         />
       ) : (
       <div className="border rounded-lg overflow-auto">

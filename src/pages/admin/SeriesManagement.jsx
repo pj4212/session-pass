@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2, Copy, Check } from 'lucide-react';
+import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2, Copy, Check, ChevronDown, ChevronRight, Monitor, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 function slugify(str) {
@@ -30,6 +30,11 @@ export default function SeriesManagement() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [expandedSeries, setExpandedSeries] = useState({});
+
+  const toggleExpand = (id) => {
+    setExpandedSeries(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     async function load() {
@@ -116,33 +121,73 @@ export default function SeriesManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {seriesList.map(s => (
-              <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell>{sessionCount(s.id)}</TableCell>
-                <TableCell><Badge variant={STATUS_COLORS[s.status] || 'secondary'}>{s.status}</Badge></TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(s)} title="Edit"><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" asChild title="Sessions">
-                      <Link to={`/admin/events?series=${s.id}`}><Calendar className="h-4 w-4" /></Link>
-                    </Button>
-                    <Button variant="ghost" size="icon" asChild title="View Public">
-                      <a href={`https://session-pass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
-                    </Button>
-                    <Button variant="ghost" size="icon" title="Copy Link" onClick={() => {
-                      navigator.clipboard.writeText(`https://session-pass.com/series/${s.slug}`);
-                      toast.success('Link copied to clipboard');
-                    }}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {seriesList.map(s => {
+              const seriesOccurrences = occurrences.filter(o => o.series_id === s.id).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+              const isExpanded = expandedSeries[s.id];
+              return (
+                <>
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">
+                      <button className="flex items-center gap-2 hover:text-primary transition-colors" onClick={() => toggleExpand(s.id)}>
+                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        {s.name}
+                      </button>
+                    </TableCell>
+                    <TableCell>{sessionCount(s.id)}</TableCell>
+                    <TableCell><Badge variant={STATUS_COLORS[s.status] || 'secondary'}>{s.status}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(s)} title="Edit Series"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" asChild title="Sessions">
+                          <Link to={`/admin/events?series=${s.id}`}><Calendar className="h-4 w-4" /></Link>
+                        </Button>
+                        <Button variant="ghost" size="icon" asChild title="View Public">
+                          <a href={`https://session-pass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Copy Link" onClick={() => {
+                          navigator.clipboard.writeText(`https://session-pass.com/series/${s.slug}`);
+                          toast.success('Link copied to clipboard');
+                        }}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && seriesOccurrences.map(occ => (
+                    <TableRow key={occ.id} className="bg-secondary/20">
+                      <TableCell className="pl-10">
+                        <div className="flex items-center gap-2">
+                          {occ.event_mode === 'online_stream' ? <Monitor className="h-3.5 w-3.5 text-blue-400" /> : <MapPin className="h-3.5 w-3.5 text-green-400" />}
+                          <span className="text-sm">{occ.name}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(occ.event_date).toLocaleDateString('en-AU')}</span>
+                          {occ.recurrence_pattern && (
+                            <Badge variant="outline" className="text-xs py-0">
+                              {occ.recurrence_pattern === 'weekly' ? 'Weekly' : occ.recurrence_pattern === 'fortnightly_A' ? 'Fortnight A' : 'Fortnight B'}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={occ.is_published ? 'default' : 'secondary'} className="text-xs">
+                          {occ.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" asChild title="Edit Source Event">
+                            <Link to={`/admin/events/${occ.id}/edit`}><Edit className="h-4 w-4" /></Link>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              );
+            })}
             {seriesList.length === 0 && (
               <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No event series yet</TableCell></TableRow>
             )}
