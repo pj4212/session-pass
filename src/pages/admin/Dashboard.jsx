@@ -15,9 +15,9 @@ export default function Dashboard() {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const [allTickets, allOrders, allEvents] = await Promise.all([
-        base44.entities.Ticket.filter({ ticket_status: 'active' }),
-        base44.entities.Order.filter({}),
-        base44.entities.EventOccurrence.filter({})
+        base44.entities.Ticket.filter({ ticket_status: 'active' }, '-created_date', 500),
+        base44.entities.Order.filter({}, '-created_date', 500),
+        base44.entities.EventOccurrence.filter({}, '-created_date', 500)
       ]);
 
       const weekTickets = allTickets.filter(t => new Date(t.created_date) >= weekAgo);
