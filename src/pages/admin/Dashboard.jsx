@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight } from 'lucide-react';
+import LiveSessionBanner from '@/components/admin/LiveSessionBanner';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
+  const [allTickets, setAllTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,6 +59,8 @@ export default function Dashboard() {
         nextEvent: upcoming[0] || null
       });
       setAlerts(alertList);
+      setAllEvents(allEvents);
+      setAllTickets(allTickets);
       setLoading(false);
     }
     load();
@@ -93,6 +98,8 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      <LiveSessionBanner events={allEvents} tickets={allTickets} />
 
       {/* Next event */}
       {stats.nextEvent && (
