@@ -9,13 +9,14 @@ export default function AttendeeForm({
   attendanceMode, 
   attendee, 
   onChange, 
-  leaders
+  leaders,
+  isBuyerSlot = false
 }) {
   const update = (field, value) => {
     onChange({ ...attendee, [field]: value });
   };
 
-  const isFirstTicket = index === 0;
+  const isFirstTicket = isBuyerSlot;
   const modeLabel = attendanceMode === 'online' ? 'Online' : 'In-Person';
 
   return (
@@ -27,7 +28,7 @@ export default function AttendeeForm({
       </div>
 
       {isFirstTicket && (
-        <p className="text-sm text-muted-foreground">Auto-filled from buyer details</p>
+        <p className="text-sm text-muted-foreground">Auto-filled from buyer details above</p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

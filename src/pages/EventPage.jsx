@@ -106,34 +106,49 @@ export default function EventPage() {
       const tt = ticketTypes.find(t => t.id === ttId);
       if (!tt) continue;
       for (let i = 0; i < qty; i++) {
-        slots.push({ ticket_type_id: ttId, ticketTypeName: tt.name, attendance_mode: tt.attendance_mode });
+        slots.push({
+          ticket_type_id: ttId,
+          ticketTypeName: tt.name,
+          attendance_mode: tt.attendance_mode,
+          ticket_category: tt.ticket_category || 'candidate',
+          sort_order: tt.sort_order || 0
+        });
       }
     }
+    // Sort so business_owner (sort_order 0) comes first — buyer details auto-fill into first slot
+    slots.sort((a, b) => a.sort_order - b.sort_order);
     return slots;
   }, [selections, ticketTypes]);
+
+  // Find which attendee index should receive the buyer's details:
+  // prefer the first business_owner slot, otherwise fall back to index 0
+  const buyerSlotIndex = useMemo(() => {
+    const boIdx = attendeeSlots.findIndex(s => s.ticket_category === 'business_owner');
+    return boIdx >= 0 ? boIdx : 0;
+  }, [attendeeSlots]);
 
   useEffect(() => {
     setAttendees(prev => {
       const savedLeader = loadSavedLeader();
       const next = attendeeSlots.map((slot, i) => ({
         ...slot,
-        first_name: i === 0 ? buyer.first_name : (prev[i]?.first_name || ''),
-        last_name: i === 0 ? buyer.last_name : (prev[i]?.last_name || ''),
-        email: i === 0 ? buyer.email : (prev[i]?.email || ''),
+        first_name: i === buyerSlotIndex ? buyer.first_name : (prev[i]?.first_name || ''),
+        last_name: i === buyerSlotIndex ? buyer.last_name : (prev[i]?.last_name || ''),
+        email: i === buyerSlotIndex ? buyer.email : (prev[i]?.email || ''),
         platinum_leader_id: prev[i]?.platinum_leader_id || savedLeader
       }));
       return next;
     });
   }, [attendeeSlots.length]);
 
-  // Always sync ticket 1 with buyer details
+  // Always sync buyer details into the buyer's attendee slot
   useEffect(() => {
-    if (attendees.length > 0) {
+    if (attendees.length > 0 && buyerSlotIndex < attendees.length) {
       const updated = [...attendees];
-      updated[0] = { ...updated[0], first_name: buyer.first_name, last_name: buyer.last_name, email: buyer.email };
+      updated[buyerSlotIndex] = { ...updated[buyerSlotIndex], first_name: buyer.first_name, last_name: buyer.last_name, email: buyer.email };
       setAttendees(updated);
     }
-  }, [buyer.first_name, buyer.last_name, buyer.email]);
+  }, [buyer.first_name, buyer.last_name, buyer.email, buyerSlotIndex]);
 
   const updateAttendee = (index, data) => {
     const updated = [...attendees];
@@ -360,6 +375,7 @@ export default function EventPage() {
                       attendee={att}
                       onChange={(data) => updateAttendee(i, data)}
                       leaders={leaders}
+                      isBuyerSlot={i === buyerSlotIndex}
                     />
                   ))}
                 </div>
