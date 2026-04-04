@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { test_type, occurrence_id, concurrency } = body;
-    const count = Math.min(concurrency || 15, 50);
+    const count = Math.min(concurrency || 15, 1000);
 
     if (test_type === 'checkin') {
       // Get active tickets for this occurrence

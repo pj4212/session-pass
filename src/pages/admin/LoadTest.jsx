@@ -22,7 +22,7 @@ export default function LoadTest() {
   }, []);
 
   const runTest = async (testType) => {
-    const c = Math.min(Math.max(parseInt(concurrency) || 1, 1), 200);
+    const c = Math.min(Math.max(parseInt(concurrency) || 1, 1), 1000);
     setConcurrency(c);
     setRunning(testType);
     setResults(null);
@@ -73,19 +73,19 @@ export default function LoadTest() {
           </div>
 
           <div>
-            <Label>Concurrent Requests (max 200)</Label>
+            <Label>Concurrent Requests (max 1000)</Label>
             <Input
               type="number"
               min={1}
-              max={200}
+              max={1000}
               value={concurrency}
               onChange={e => {
                 const v = parseInt(e.target.value) || 1;
-                setConcurrency(Math.min(Math.max(v, 1), 200));
+                setConcurrency(Math.min(Math.max(v, 1), 1000));
               }}
               className="w-32"
             />
-            <p className="text-xs text-muted-foreground mt-1">Capped at 200 to avoid timeouts.</p>
+            <p className="text-xs text-muted-foreground mt-1">Capped at 1000. Higher values may take longer to complete.</p>
           </div>
 
           {selectedEventData && (
