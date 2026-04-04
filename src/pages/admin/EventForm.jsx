@@ -43,6 +43,7 @@ export default function EventForm() {
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
     recurrence_pattern: '',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
+    zoom_webinar_mode: 'auto',
     venue_id: '', venue_name: '', venue_link: '', parking_link: '',
     venue_details: '', is_published: false,
     status: 'draft'
@@ -87,6 +88,7 @@ export default function EventForm() {
               recurrence_pattern: ev.recurrence_pattern || '',
               location_id: ev.location_id || '', zoom_link: ev.zoom_link || '',
               zoom_meeting_id: ev.zoom_meeting_id || '',
+              zoom_webinar_mode: ev.zoom_webinar_mode || 'auto',
               venue_id: ev.venue_id || '', venue_name: ev.venue_name || '',
               venue_link: ev.venue_link || '', parking_link: ev.parking_link || '',
               venue_details: ev.venue_details || '',
@@ -364,8 +366,43 @@ export default function EventForm() {
           <CardHeader><CardTitle className="text-base">Zoom / Online Access</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
+              <Label className="mb-2 block">Webinar Setup</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="zoom_webinar_mode"
+                    checked={form.zoom_webinar_mode === 'auto'}
+                    onChange={() => updateForm('zoom_webinar_mode', 'auto')}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm">Auto-create webinar on publish</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="zoom_webinar_mode"
+                    checked={form.zoom_webinar_mode === 'manual'}
+                    onChange={() => updateForm('zoom_webinar_mode', 'manual')}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm">Manual — I'll add my own link</span>
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {form.zoom_webinar_mode === 'auto'
+                  ? 'A Zoom webinar will be automatically created when this event is published.'
+                  : 'Enter your own Zoom link below.'}
+              </p>
+            </div>
+            <div>
               <Label>Zoom Registration Link</Label>
-              <Input value={form.zoom_link} onChange={e => updateForm('zoom_link', e.target.value)} placeholder="https://zoom.us/webinar/register/..." />
+              <Input
+                value={form.zoom_link}
+                onChange={e => updateForm('zoom_link', e.target.value)}
+                placeholder={form.zoom_webinar_mode === 'auto' ? 'Will be auto-filled on publish...' : 'https://zoom.us/webinar/register/...'}
+                disabled={form.zoom_webinar_mode === 'auto' && !form.zoom_link}
+              />
               <p className="text-xs text-muted-foreground mt-1">This link is sent to online ticket holders in their confirmation email.</p>
             </div>
             {isEdit && (
@@ -377,9 +414,9 @@ export default function EventForm() {
                   className="gap-2"
                 >
                   {creatingWebinar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
-                  {form.zoom_link ? 'Re-create Zoom Webinar' : 'Create Zoom Webinar'}
+                  {form.zoom_link ? 'Re-create Zoom Webinar' : 'Create Zoom Webinar Now'}
                 </Button>
-                <p className="text-xs text-muted-foreground">Automatically creates a Zoom webinar and sets the registration link. Requires Zoom API credentials to be configured.</p>
+                <p className="text-xs text-muted-foreground">Manually trigger webinar creation via Zoom API.</p>
                 {webinarResult && webinarResult.success && (
                   <Alert>
                     <AlertDescription>

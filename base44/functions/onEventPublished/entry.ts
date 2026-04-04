@@ -52,6 +52,13 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: "not newly published" });
     }
 
+    // Check if auto-create is enabled (default to auto if not set)
+    const webinarMode = data.zoom_webinar_mode || 'auto';
+    if (webinarMode !== 'auto') {
+      console.log(`Webinar mode is "${webinarMode}", skipping auto-creation.`);
+      return Response.json({ skipped: true, reason: `zoom_webinar_mode is ${webinarMode}` });
+    }
+
     // Only create Zoom for online or hybrid events
     const mode = data.event_mode;
     if (mode !== 'online_stream' && mode !== 'hybrid') {

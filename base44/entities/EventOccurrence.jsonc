@@ -91,6 +91,15 @@
       "type": "string",
       "title": "Zoom Meeting ID"
     },
+    "zoom_webinar_mode": {
+      "type": "string",
+      "title": "Zoom Webinar Mode",
+      "enum": [
+        "auto",
+        "manual"
+      ],
+      "default": "auto"
+    },
     "venue_details": {
       "type": "string",
       "title": "Venue Details"
