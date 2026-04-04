@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { buyer, attendees, occurrence_id, origin_url, skip_emails } = body;
+    const { buyer, attendees, occurrence_id, origin_url, skip_emails, send_all_to_buyer } = body;
 
     // Load occurrence
     const occurrences = await withRetry(
@@ -199,7 +199,8 @@ Deno.serve(async (req) => {
         occurrence_id: occurrence.id,
         total_amount: totalAmount,
         payment_status: isFree ? 'free' : 'pending',
-        order_status: 'confirmed'
+        order_status: 'confirmed',
+        send_all_to_buyer: !!send_all_to_buyer
       }),
       'create order'
     );
@@ -318,15 +319,26 @@ Deno.serve(async (req) => {
 
     // Send emails with retry — fire all in parallel for speed, but with individual retry protection
     if (!skip_emails) {
-      const emailPromises = [
-        sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
-          .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
-        ...tickets.map(ticket =>
-          sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id])
-            .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
-        )
-      ];
-      await Promise.all(emailPromises);
+      if (send_all_to_buyer) {
+        // Send one combined email with all tickets to the buyer
+        const emailPromises = [
+          sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
+            .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
+          sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap)
+            .catch(err => console.error(`Failed to send combined tickets email to ${order.buyer_email}:`, err.message))
+        ];
+        await Promise.all(emailPromises);
+      } else {
+        const emailPromises = [
+          sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
+            .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
+          ...tickets.map(ticket =>
+            sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id])
+              .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
+          )
+        ];
+        await Promise.all(emailPromises);
+      }
     }
 
     return Response.json({ 
@@ -591,4 +603,165 @@ async function sendTicketEmail(base44, ticket, occurrence, ticketType) {
     html: html
   }));
   console.log(`Ticket email sent to ${ticket.attendee_email} for ticket ${ticket.id}`);
+}
+
+function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap) {
+  const eventDate = formatEventDate(occurrence.event_date);
+  const startTime = formatTime(occurrence.start_datetime);
+  const endTime = formatTime(occurrence.end_datetime);
+  const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
+
+  let venueBlock = '';
+  if (occurrence.venue_details) {
+    venueBlock = `
+      <tr>
+        <td style="padding:6px 0;color:#94a3b8;font-size:13px;width:100px;">Venue</td>
+        <td style="padding:6px 0;font-size:14px;color:#334155;">${occurrence.venue_details}</td>
+      </tr>`;
+  }
+
+  // Check if there's a single shared zoom link for online tickets
+  const hasOnlineTickets = tickets.some(t => t.attendance_mode === 'online');
+  const hasInPersonTickets = tickets.some(t => t.attendance_mode !== 'online');
+
+  let zoomBlock = '';
+  if (hasOnlineTickets && occurrence.zoom_link) {
+    zoomBlock = `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
+          <tr><td>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Join Online</h3>
+            <p style="margin:0 0 12px;font-size:13px;color:#64748b;line-height:1.4;">Click the button below to register for the webinar and receive your unique Zoom link.</p>
+            <a href="${occurrence.zoom_link}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar →</a>
+          </td></tr>
+        </table>
+      </td></tr>`;
+  } else if (hasOnlineTickets) {
+    zoomBlock = `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
+          <tr><td>
+            <h3 style="margin:0 0 4px;font-size:15px;color:#4338ca;">🖥 Online Event</h3>
+            <p style="margin:0;font-size:13px;color:#64748b;">The webinar link will be sent before the event.</p>
+          </td></tr>
+        </table>
+      </td></tr>`;
+  }
+
+  if (hasInPersonTickets && occurrence.venue_details) {
+    zoomBlock += `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:8px;padding:20px;border:1px solid #bbf7d0;">
+          <tr><td>
+            <h3 style="margin:0 0 4px;font-size:15px;color:#166534;">📍 In-Person Venue</h3>
+            <p style="margin:0;font-size:14px;color:#334155;">${occurrence.venue_details}</p>
+          </td></tr>
+        </table>
+      </td></tr>`;
+  }
+
+  // Build a ticket card for each ticket
+  const ticketBlocks = tickets.map((ticket, idx) => {
+    const tt = ticketTypeMap[ticket.ticket_type_id];
+    const isOnline = ticket.attendance_mode === 'online';
+    const mode = isOnline ? 'Online' : 'In-Person';
+    const modeBg = isOnline ? '#eef2ff;color:#4338ca' : '#f0fdf4;color:#166534';
+
+    let qrHtml = '';
+    if (!isOnline) {
+      const qrPayload = JSON.stringify({ t: ticket.id, e: ticket.occurrence_id, h: ticket.qr_code_hash });
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
+      qrHtml = `
+        <div style="text-align:center;margin-top:16px;">
+          <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Check-In QR Code</p>
+          <img src="${qrCodeUrl}" alt="QR Code" width="180" height="180" style="border:1px solid ${BRAND.cardBorder};border-radius:8px;padding:6px;background:#fff;" />
+        </div>`;
+    }
+
+    return `
+      <tr><td style="padding:0 40px ${idx < tickets.length - 1 ? '16px' : '24px'};">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.cardBg};border-radius:8px;border:1px solid ${BRAND.cardBorder};">
+          <tr><td style="padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h3 style="margin:0;font-size:16px;color:${BRAND.headingColor};">Ticket ${idx + 1}: ${ticket.attendee_first_name} ${ticket.attendee_last_name}</h3>
+            </div>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:4px 0;color:#94a3b8;font-size:13px;width:110px;">Type</td>
+                <td style="padding:4px 0;font-size:14px;color:#334155;">${tt?.name || 'General'}</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 0;color:#94a3b8;font-size:13px;">Attendance</td>
+                <td style="padding:4px 0;font-size:14px;color:#334155;"><span style="display:inline-block;background:${modeBg};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">${mode}</span></td>
+              </tr>
+            </table>
+            ${qrHtml}
+          </td></tr>
+        </table>
+      </td></tr>`;
+  }).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:${BRAND.bodyBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bodyBg};padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,0.08);">
+        
+        ${brandHeader('All Your Tickets', occurrence.name)}
+
+        <tr><td style="padding:32px 40px 16px;">
+          <p style="margin:0;font-size:16px;color:#334155;">Hi <strong>${order.buyer_name}</strong>,</p>
+          <p style="margin:8px 0 0;font-size:14px;color:#64748b;line-height:1.5;">Here are all ${tickets.length} ticket${tickets.length > 1 ? 's' : ''} for the upcoming event.</p>
+        </td></tr>
+
+        <tr><td style="padding:8px 40px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.cardBg};border-radius:8px;padding:20px;border:1px solid ${BRAND.cardBorder};">
+            <tr><td>
+              <h2 style="margin:0 0 12px;font-size:18px;color:${BRAND.headingColor};">${occurrence.name}</h2>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;width:100px;">Date</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;font-weight:600;">${eventDate}</td>
+                </tr>
+                ${timeStr ? `<tr>
+                  <td style="padding:6px 0;color:#94a3b8;font-size:13px;">Time</td>
+                  <td style="padding:6px 0;font-size:14px;color:#334155;">${timeStr} (${occurrence.timezone || 'AEST'})</td>
+                </tr>` : ''}
+                ${venueBlock}
+              </table>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        ${zoomBlock}
+
+        <tr><td style="padding:0 40px 12px;">
+          <h3 style="margin:0;font-size:15px;color:${BRAND.headingColor};text-transform:uppercase;letter-spacing:0.5px;">Your Tickets</h3>
+          ${hasInPersonTickets ? '<p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Present each QR code at the door for check-in.</p>' : ''}
+        </td></tr>
+
+        ${ticketBlocks}
+
+        ${brandFooter()}
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap) {
+  const html = buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap);
+
+  await sendWithRetry(() => resend.emails.send({
+    from: 'Session Pass <noreply@session-pass.com>',
+    to: order.buyer_email,
+    subject: `Your ${tickets.length} Ticket${tickets.length > 1 ? 's' : ''} — ${occurrence.name}`,
+    html: html
+  }));
+  console.log(`Combined tickets email sent to ${order.buyer_email} for order ${order.order_number}`);
 }

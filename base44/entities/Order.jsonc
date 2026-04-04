@@ -58,6 +58,11 @@
     "stripe_payment_intent_id": {
       "type": "string",
       "title": "Stripe Payment Intent ID"
+    },
+    "send_all_to_buyer": {
+      "type": "boolean",
+      "title": "Send All Tickets to Buyer",
+      "default": false
     }
   },
   "required": [

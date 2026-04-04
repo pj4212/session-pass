@@ -42,6 +42,7 @@ export default function EventPage() {
   const [attendees, setAttendees] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [sendAllToBuyer, setSendAllToBuyer] = useState(false);
 
   // Load event data
   useEffect(() => {
@@ -236,7 +237,8 @@ export default function EventPage() {
         platinum_leader_id: a.platinum_leader_id
       })),
       occurrence_id: occurrence.id,
-      origin_url: window.location.origin
+      origin_url: window.location.origin,
+      send_all_to_buyer: sendAllToBuyer
     });
 
     if (result.data.error) {
@@ -361,6 +363,23 @@ export default function EventPage() {
               <>
                 {/* Buyer Form */}
                 <BuyerForm buyer={buyer} onChange={setBuyer} />
+
+                {/* Send all tickets to one email option */}
+                {attendees.length > 0 && (
+                  <div className="flex items-start gap-3 p-4 border rounded-lg bg-card">
+                    <input
+                      type="checkbox"
+                      id="sendAllToBuyer"
+                      checked={sendAllToBuyer}
+                      onChange={e => setSendAllToBuyer(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-input"
+                    />
+                    <label htmlFor="sendAllToBuyer" className="text-sm cursor-pointer">
+                      <span className="font-medium">Send all tickets to my email</span>
+                      <p className="text-muted-foreground mt-0.5">All tickets and QR codes will be sent in a single email to {buyer.email || 'the buyer\'s email'} instead of individual emails to each attendee.</p>
+                    </label>
+                  </div>
+                )}
 
                 {/* Attendee Forms */}
                 <div className="space-y-4">
