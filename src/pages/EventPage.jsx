@@ -333,6 +333,19 @@ export default function EventPage() {
           </Alert>
         ) : (
           <div className="space-y-8">
+            {/* Temporary TicketTailor redirect for Melbourne/Sydney online */}
+            <div className="p-4 border border-primary/30 rounded-lg bg-primary/5 text-center">
+              <p className="text-sm text-muted-foreground mb-2">Booking for online Melbourne or Sydney?</p>
+              <a
+                href="https://www.tickettailor.com/events/groupeducationsession"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
+              >
+                Click here to book via TicketTailor →
+              </a>
+            </div>
+
             {/* Ticket Selection */}
             <TicketSelector
               ticketTypes={ticketTypes}
