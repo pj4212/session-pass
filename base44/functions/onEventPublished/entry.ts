@@ -130,6 +130,26 @@ Deno.serve(async (req) => {
     const webinar = await createRes.json();
     console.log("Zoom webinar created:", webinar.id, "Registration URL:", webinar.registration_url);
 
+    // Strip registration questions down to just first name, last name, email
+    const questionsRes = await fetch(`https://api.zoom.us/v2/webinars/${webinar.id}/registrants/questions`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        questions: [
+          { field_name: "last_name", required: true },
+        ],
+        custom_questions: []
+      })
+    });
+    if (!questionsRes.ok) {
+      console.warn("Failed to update registration questions:", questionsRes.status, await questionsRes.text());
+    } else {
+      console.log("Registration questions simplified to name + email only.");
+    }
+
     // Save the Zoom link back to the event occurrence
     await base44.asServiceRole.entities.EventOccurrence.update(event.entity_id, {
       zoom_link: webinar.registration_url,
