@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -128,6 +129,12 @@ export default function SeriesManagement() {
                     </Button>
                     <Button variant="ghost" size="icon" asChild title="View Public">
                       <a href={`https://session-pass.com/series/${s.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                    </Button>
+                    <Button variant="ghost" size="icon" title="Copy Link" onClick={() => {
+                      navigator.clipboard.writeText(`https://session-pass.com/series/${s.slug}`);
+                      toast.success('Link copied to clipboard');
+                    }}>
+                      <Copy className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete">
                       <Trash2 className="h-4 w-4 text-destructive" />
