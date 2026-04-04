@@ -83,14 +83,19 @@ Deno.serve(async (req) => {
     const eventDurationMins = endDt ? Math.round((endDt - startDt) / 60000) : 60;
     // Add 1 hour buffer, minimum 2 hours total
     const durationMins = Math.max(120, eventDurationMins + 60);
+
+    // Convert UTC start time to local time in event's timezone for Zoom
+    const eventTz = data.timezone || "Australia/Brisbane";
+    const localStartStr = startDt.toLocaleString('sv-SE', { timeZone: eventTz }).replace(' ', 'T');
+    console.log(`UTC start: ${startDt.toISOString()}, Local start (${eventTz}): ${localStartStr}`);
     console.log(`Event duration: ${eventDurationMins}min, Zoom webinar duration: ${durationMins}min`);
 
     const webinarPayload = {
       topic: data.name,
       type: 5, // Scheduled webinar
-      start_time: startDt.toISOString().replace('.000Z', 'Z'),
+      start_time: localStartStr,
       duration: durationMins,
-      timezone: data.timezone || "Australia/Brisbane",
+      timezone: eventTz,
       agenda: data.description || `Webinar for ${data.name}`,
       settings: {
         approval_type: 0,
