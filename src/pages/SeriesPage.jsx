@@ -27,7 +27,7 @@ export default function SeriesPage() {
 
   useEffect(() => {
     async function load() {
-      // Use cache if available (instant back navigation)
+      // Show cached data immediately if available, but always refresh
       if (pageCache[slug]) {
         const c = pageCache[slug];
         setSeries(c.series);
@@ -35,7 +35,6 @@ export default function SeriesPage() {
         setSessions(c.sessions);
         setTicketTypes(c.ticketTypes);
         setLoading(false);
-        return;
       }
 
       const allSeries = await base44.entities.EventSeries.filter({ slug });
