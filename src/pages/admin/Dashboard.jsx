@@ -37,6 +37,9 @@ export default function Dashboard() {
         if ((ev.event_mode === 'online_stream' || ev.event_mode === 'hybrid') && !ev.zoom_link) {
           alertList.push({ type: 'warning', message: `"${ev.name}" is missing a Zoom link`, link: `/admin/events/${ev.id}/edit` });
         }
+        if ((ev.event_mode === 'in_person' || ev.event_mode === 'hybrid') && ev.is_published && !ev.venue_confirmed) {
+          alertList.push({ type: 'warning', message: `"${ev.name}" is published but venue is not confirmed`, link: `/admin/events/${ev.id}/edit` });
+        }
       }
       const soonEvents = upcoming.filter(e => new Date(e.event_date) <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
       for (const ev of soonEvents) {
