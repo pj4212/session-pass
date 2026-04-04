@@ -6,28 +6,33 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
-// Retry wrapper with exponential backoff for email sending
-async function sendWithRetry(fn, maxRetries = 5) {
+// Retry wrapper with exponential backoff for any retryable operation (DB, email, API)
+async function withRetry(fn, label = 'operation', maxRetries = 8) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const result = await fn();
-      return result;
+      return await fn();
     } catch (err) {
-      const isRateLimit = err?.statusCode === 429 || err?.message?.includes('rate');
-      const isServerError = err?.statusCode >= 500;
+      const msg = err?.message || '';
+      const status = err?.statusCode || err?.status || 0;
+      const isRateLimit = status === 429 || msg.includes('Rate limit') || msg.includes('rate');
+      const isServerError = status >= 500;
       const isRetryable = isRateLimit || isServerError || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET';
-      
+
       if (!isRetryable || attempt === maxRetries) {
-        console.error(`sendWithRetry failed after ${attempt} attempts:`, err.message);
+        console.error(`${label} failed after ${attempt} attempts:`, msg);
         throw err;
       }
-      
-      const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 500, 30000);
-      console.warn(`sendWithRetry attempt ${attempt} failed (${err.message}), retrying in ${Math.round(delay)}ms...`);
+
+      // Exponential backoff: 2s, 4s, 8s, 16s, 32s, capped at 60s + jitter
+      const delay = Math.min(2000 * Math.pow(2, attempt - 1), 60000) + Math.random() * 1000;
+      console.warn(`${label} attempt ${attempt} failed (${msg}), retrying in ${Math.round(delay)}ms...`);
       await new Promise(r => setTimeout(r, delay));
     }
   }
 }
+
+// Backwards-compatible alias for email sending
+const sendWithRetry = (fn, maxRetries) => withRetry(fn, 'email', maxRetries);
 
 async function generateQrHash(ticketId, occurrenceId) {
   const salt = Deno.env.get("QR_SECRET_SALT");
@@ -85,7 +90,10 @@ Deno.serve(async (req) => {
     const { buyer, attendees, occurrence_id, origin_url } = body;
 
     // Load occurrence
-    const occurrences = await base44.asServiceRole.entities.EventOccurrence.filter({ id: occurrence_id });
+    const occurrences = await withRetry(
+      () => base44.asServiceRole.entities.EventOccurrence.filter({ id: occurrence_id }),
+      'load occurrence'
+    );
     if (!occurrences.length) {
       return Response.json({ error: "Event not found" }, { status: 404 });
     }
@@ -105,7 +113,10 @@ Deno.serve(async (req) => {
     }
 
     // Load ticket types for this occurrence
-    const allTicketTypes = await base44.asServiceRole.entities.TicketType.filter({ occurrence_id: occurrence.id });
+    const allTicketTypes = await withRetry(
+      () => base44.asServiceRole.entities.TicketType.filter({ occurrence_id: occurrence.id }),
+      'load ticket types'
+    );
     const ticketTypeMap = {};
     for (const tt of allTicketTypes) {
       ticketTypeMap[tt.id] = tt;
@@ -135,12 +146,15 @@ Deno.serve(async (req) => {
     // Check existing active tickets for each attendee
     for (const att of attendees) {
       const tt = ticketTypeMap[att.ticket_type_id];
-      const existingTickets = await base44.asServiceRole.entities.Ticket.filter({
-        occurrence_id: occurrence.id,
-        attendee_email: att.email.toLowerCase(),
-        attendance_mode: tt.attendance_mode,
-        ticket_status: 'active'
-      });
+      const existingTickets = await withRetry(
+        () => base44.asServiceRole.entities.Ticket.filter({
+          occurrence_id: occurrence.id,
+          attendee_email: att.email.toLowerCase(),
+          attendance_mode: tt.attendance_mode,
+          ticket_status: 'active'
+        }),
+        `check duplicates for ${att.email}`
+      );
       if (existingTickets.length > 0) {
         return Response.json({ 
           error: `${att.email} already has an active ${tt.attendance_mode === 'online' ? 'online' : 'in-person'} ticket for this event.` 
@@ -176,34 +190,40 @@ Deno.serve(async (req) => {
     const isFree = totalAmount === 0;
 
     // Create order
-    const order = await base44.asServiceRole.entities.Order.create({
-      order_number: orderNumber,
-      buyer_name: `${buyer.first_name} ${buyer.last_name}`,
-      buyer_email: buyer.email,
-      buyer_phone: buyer.phone || '',
-      occurrence_id: occurrence.id,
-      total_amount: totalAmount,
-      payment_status: isFree ? 'free' : 'pending',
-      order_status: 'confirmed'
-    });
+    const order = await withRetry(
+      () => base44.asServiceRole.entities.Order.create({
+        order_number: orderNumber,
+        buyer_name: `${buyer.first_name} ${buyer.last_name}`,
+        buyer_email: buyer.email,
+        buyer_phone: buyer.phone || '',
+        occurrence_id: occurrence.id,
+        total_amount: totalAmount,
+        payment_status: isFree ? 'free' : 'pending',
+        order_status: 'confirmed'
+      }),
+      'create order'
+    );
 
     if (!isFree) {
       for (const att of attendees) {
         const tt = ticketTypeMap[att.ticket_type_id];
         const tempHash = 'pending';
-        await base44.asServiceRole.entities.Ticket.create({
-          order_id: order.id,
-          occurrence_id: occurrence.id,
-          ticket_type_id: att.ticket_type_id,
-          attendance_mode: tt.attendance_mode,
-          attendee_first_name: att.first_name,
-          attendee_last_name: att.last_name,
-          attendee_email: att.email.toLowerCase(),
-          upline_mentor_id: att.upline_mentor_id || '',
-          platinum_leader_id: att.platinum_leader_id || '',
-          qr_code_hash: tempHash,
-          ticket_status: 'active'
-        });
+        await withRetry(
+          () => base44.asServiceRole.entities.Ticket.create({
+            order_id: order.id,
+            occurrence_id: occurrence.id,
+            ticket_type_id: att.ticket_type_id,
+            attendance_mode: tt.attendance_mode,
+            attendee_first_name: att.first_name,
+            attendee_last_name: att.last_name,
+            attendee_email: att.email.toLowerCase(),
+            upline_mentor_id: att.upline_mentor_id || '',
+            platinum_leader_id: att.platinum_leader_id || '',
+            qr_code_hash: tempHash,
+            ticket_status: 'active'
+          }),
+          `create paid ticket for ${att.email}`
+        );
       }
 
       // Create Stripe Checkout session
@@ -245,9 +265,12 @@ Deno.serve(async (req) => {
         }
       });
 
-      await base44.asServiceRole.entities.Order.update(order.id, {
-        stripe_checkout_session_id: session.id
-      });
+      await withRetry(
+        () => base44.asServiceRole.entities.Order.update(order.id, {
+          stripe_checkout_session_id: session.id
+        }),
+        'update order with stripe session'
+      );
 
       return Response.json({ 
         checkout_url: session.url,
@@ -260,28 +283,37 @@ Deno.serve(async (req) => {
     const tickets = [];
     for (const att of attendees) {
       const tt = ticketTypeMap[att.ticket_type_id];
-      const ticket = await base44.asServiceRole.entities.Ticket.create({
-        order_id: order.id,
-        occurrence_id: occurrence.id,
-        ticket_type_id: att.ticket_type_id,
-        attendance_mode: tt.attendance_mode,
-        attendee_first_name: att.first_name,
-        attendee_last_name: att.last_name,
-        attendee_email: att.email.toLowerCase(),
-        upline_mentor_id: att.upline_mentor_id || '',
-        platinum_leader_id: att.platinum_leader_id || '',
-        qr_code_hash: 'temp',
-        ticket_status: 'active'
-      });
+      const ticket = await withRetry(
+        () => base44.asServiceRole.entities.Ticket.create({
+          order_id: order.id,
+          occurrence_id: occurrence.id,
+          ticket_type_id: att.ticket_type_id,
+          attendance_mode: tt.attendance_mode,
+          attendee_first_name: att.first_name,
+          attendee_last_name: att.last_name,
+          attendee_email: att.email.toLowerCase(),
+          upline_mentor_id: att.upline_mentor_id || '',
+          platinum_leader_id: att.platinum_leader_id || '',
+          qr_code_hash: 'temp',
+          ticket_status: 'active'
+        }),
+        `create free ticket for ${att.email}`
+      );
 
       const qrHash = await generateQrHash(ticket.id, occurrence.id);
-      await base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash });
+      await withRetry(
+        () => base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash }),
+        `update QR hash for ${att.email}`
+      );
       ticket.qr_code_hash = qrHash;
       tickets.push(ticket);
 
-      await base44.asServiceRole.entities.TicketType.update(tt.id, {
-        quantity_sold: (tt.quantity_sold || 0) + 1
-      });
+      await withRetry(
+        () => base44.asServiceRole.entities.TicketType.update(tt.id, {
+          quantity_sold: (tt.quantity_sold || 0) + 1
+        }),
+        `update quantity_sold for ${tt.name}`
+      );
     }
 
     // Send emails with retry — fire all in parallel for speed, but with individual retry protection
