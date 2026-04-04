@@ -9,6 +9,7 @@ export default function LiveSessionBanner({ events, tickets }) {
   // Find online/hybrid sessions where now is between 2hr before start and 1hr after end
   const liveSessions = events.filter(ev => {
     if (ev.status === 'cancelled') return false;
+    if (!ev.is_published || ev.status !== 'published') return false;
     if (ev.event_mode !== 'online_stream' && ev.event_mode !== 'hybrid') return false;
     if (!ev.start_datetime) return false;
 
