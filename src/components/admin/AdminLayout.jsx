@@ -15,8 +15,8 @@ const NAV_ITEMS = [
   { path: '/admin/reports', label: 'Reports', icon: BarChart3, roles: ['super_admin', 'event_admin'] },
   { path: '/admin/settings/users', label: 'Users', icon: Users, roles: ['super_admin'] },
   { path: '/admin/settings/platinum-leaders', label: 'Platinum Leaders', icon: Settings, roles: ['super_admin'] },
-  { path: '/admin/settings/email-testing', label: 'Email Testing', icon: Mail, roles: ['super_admin'] },
-  { path: '/admin/settings/load-test', label: 'Load Testing', icon: Zap, roles: ['super_admin'] },
+  { path: '/admin/settings/email-testing', label: 'Email Testing', icon: Mail, roles: ['admin'] },
+  { path: '/admin/settings/load-test', label: 'Load Testing', icon: Zap, roles: ['admin'] },
 ];
 
 export default function AdminLayout() {
@@ -48,8 +48,12 @@ export default function AdminLayout() {
     );
   }
 
-  const effectiveRole = user?.role === 'admin' ? 'super_admin' : user?.role;
-  const filteredNav = NAV_ITEMS.filter(item => item.roles.includes(effectiveRole));
+  const userRoles = user?.role === 'admin'
+    ? ['admin', 'super_admin', 'event_admin']
+    : user?.role === 'super_admin'
+      ? ['super_admin', 'event_admin']
+      : [user?.role];
+  const filteredNav = NAV_ITEMS.filter(item => item.roles.some(r => userRoles.includes(r)));
   const isActive = (path) => location.pathname === path || (path !== '/admin' && location.pathname.startsWith(path));
 
   const sidebar = (
