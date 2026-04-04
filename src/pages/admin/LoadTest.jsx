@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,25 +7,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Zap, Trash2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Loader2, Zap, Trash2, CheckCircle2, AlertTriangle, XCircle, Square } from 'lucide-react';
 import LoadTestResults from '@/components/admin/LoadTestResults';
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 export default function LoadTest() {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState('');
   const [concurrency, setConcurrency] = useState(15);
-  const [running, setRunning] = useState(null); // 'checkin' | 'checkout' | 'cleanup'
+  const [running, setRunning] = useState(null);
   const [results, setResults] = useState(null);
+  const [liveProgress, setLiveProgress] = useState(null); // { completed, total, successes, errors }
+  const cancelRef = useRef(false);
 
   useEffect(() => {
     base44.entities.EventOccurrence.filter({ status: 'published' }, '-event_date', 50).then(setEvents);
   }, []);
 
-  const runTest = async (testType) => {
+  const runBackendTest = async (testType) => {
     const c = Math.min(Math.max(parseInt(concurrency) || 1, 1), 1000);
     setConcurrency(c);
     setRunning(testType);
     setResults(null);
+    setLiveProgress(null);
     try {
       const res = await base44.functions.invoke('loadTest', {
         test_type: testType,
@@ -39,8 +44,117 @@ export default function LoadTest() {
       setResults({ test_type: testType, error: msg });
     } finally {
       setRunning(null);
+      setLiveProgress(null);
     }
   };
+
+  const runCheckoutTest = useCallback(async () => {
+    const count = Math.min(Math.max(parseInt(concurrency) || 1, 1), 1000);
+    setConcurrency(count);
+    setRunning('checkout');
+    setResults(null);
+    cancelRef.current = false;
+
+    // First, find a free ticket type for this event
+    let freeType;
+    try {
+      const ticketTypes = await base44.entities.TicketType.filter({ occurrence_id: selectedEvent });
+      freeType = ticketTypes.find(tt => (tt.price || 0) === 0 && tt.is_active);
+      if (!freeType) {
+        toast.error('No free ticket type found for this event.');
+        setRunning(null);
+        return;
+      }
+    } catch (err) {
+      toast.error('Failed to load ticket types');
+      setRunning(null);
+      return;
+    }
+
+    const WAVE_SIZE = 10;
+    const WAVE_DELAY_MS = 1500;
+    const startTime = Date.now();
+    const allDetails = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    setLiveProgress({ completed: 0, total: count, successes: 0, errors: 0 });
+
+    for (let wave = 0; wave < count; wave += WAVE_SIZE) {
+      if (cancelRef.current) break;
+
+      const batchIndices = Array.from({ length: Math.min(WAVE_SIZE, count - wave) }, (_, i) => wave + i);
+
+      const waveResults = await Promise.allSettled(
+        batchIndices.map(async (idx) => {
+          const t0 = Date.now();
+          const MAX_ATTEMPTS = 8;
+          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            if (cancelRef.current) return { index: idx, status: 'cancelled', elapsed_ms: Date.now() - t0 };
+            try {
+              const res = await base44.functions.invoke('createCheckout', {
+                buyer: { first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com` },
+                attendees: [{ first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com`, ticket_type_id: freeType.id }],
+                occurrence_id: selectedEvent,
+                skip_emails: true
+              });
+              return {
+                index: idx,
+                status: res.data?.order_number ? 'success' : 'error',
+                order_number: res.data?.order_number || null,
+                error: res.data?.error || null,
+                elapsed_ms: Date.now() - t0,
+                attempts: attempt + 1
+              };
+            } catch (err) {
+              const errMsg = err?.response?.data?.error || err?.message || '';
+              const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
+              if (isRateLimit && attempt < MAX_ATTEMPTS - 1) {
+                await sleep(Math.min(3000 * Math.pow(2, attempt), 30000));
+                continue;
+              }
+              return { index: idx, status: 'error', error: errMsg || 'Unknown error', elapsed_ms: Date.now() - t0, attempts: attempt + 1 };
+            }
+          }
+        })
+      );
+
+      for (const r of waveResults) {
+        const detail = r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message };
+        allDetails.push(detail);
+        if (detail.status === 'success') successCount++;
+        else if (detail.status === 'error') errorCount++;
+      }
+
+      setLiveProgress({ completed: allDetails.length, total: count, successes: successCount, errors: errorCount });
+
+      if (wave + WAVE_SIZE < count && !cancelRef.current) {
+        await sleep(WAVE_DELAY_MS);
+      }
+    }
+
+    const totalElapsed = Date.now() - startTime;
+    const timings = allDetails.filter(d => d.elapsed_ms).map(d => d.elapsed_ms);
+
+    setResults({
+      test_type: 'checkout',
+      total_requests: allDetails.length,
+      total_requested: count,
+      total_elapsed_ms: totalElapsed,
+      timed_out: cancelRef.current,
+      summary: { successes: successCount, errors: errorCount },
+      timing: {
+        avg_ms: timings.length ? Math.round(timings.reduce((a, b) => a + b, 0) / timings.length) : 0,
+        min_ms: timings.length ? Math.min(...timings) : 0,
+        max_ms: timings.length ? Math.max(...timings) : 0,
+      },
+      details: allDetails
+    });
+    setRunning(null);
+    setLiveProgress(null);
+  }, [concurrency, selectedEvent]);
+
+  const handleStop = () => { cancelRef.current = true; };
 
   const selectedEventData = events.find(e => e.id === selectedEvent);
 
@@ -96,7 +210,7 @@ export default function LoadTest() {
 
           <div className="flex flex-wrap gap-3 pt-2">
             <Button
-              onClick={() => runTest('checkin')}
+              onClick={() => runBackendTest('checkin')}
               disabled={!selectedEvent || running}
               className="gap-2"
             >
@@ -104,7 +218,7 @@ export default function LoadTest() {
               Run Check-In Test
             </Button>
             <Button
-              onClick={() => runTest('checkout')}
+              onClick={runCheckoutTest}
               disabled={!selectedEvent || running}
               variant="secondary"
               className="gap-2"
@@ -113,7 +227,7 @@ export default function LoadTest() {
               Run Checkout Test
             </Button>
             <Button
-              onClick={() => runTest('cleanup')}
+              onClick={() => runBackendTest('cleanup')}
               disabled={!selectedEvent || running}
               variant="outline"
               className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
@@ -121,15 +235,37 @@ export default function LoadTest() {
               {running === 'cleanup' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Cleanup Test Data
             </Button>
+            {running === 'checkout' && (
+              <Button onClick={handleStop} variant="destructive" className="gap-2">
+                <Square className="h-4 w-4" /> Stop Test
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {running && (
         <Card>
-          <CardContent className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Running {running} test with {concurrency} concurrent requests...
+          <CardContent className="py-6">
+            <div className="flex items-center gap-3 justify-center text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Running {running} test{running !== 'checkout' ? ` with ${concurrency} concurrent requests...` : '...'}
+            </div>
+            {liveProgress && (
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{liveProgress.completed} / {liveProgress.total} requests</span>
+                  <span className="text-green-400">{liveProgress.successes} ok</span>
+                  {liveProgress.errors > 0 && <span className="text-red-400">{liveProgress.errors} errors</span>}
+                </div>
+                <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${(liveProgress.completed / liveProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
