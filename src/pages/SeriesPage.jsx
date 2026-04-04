@@ -65,11 +65,10 @@ export default function SeriesPage() {
 
 
 
-  // Build a week-by-week timeline showing only the next upcoming week
+  // Build a week-by-week timeline showing the next 3 weeks of published sessions
   const weeklyTimeline = useMemo(() => {
     if (!sessions.length) return [];
 
-    // Local date helpers (avoid UTC conversion bugs)
     function toLocalDateStr(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -89,107 +88,32 @@ export default function SeriesPage() {
       return toLocalDateStr(monday);
     }
 
-    const fortnightlyA = sessions.filter(s => s.recurrence_pattern === 'fortnightly_A');
-    const fortnightlyB = sessions.filter(s => s.recurrence_pattern === 'fortnightly_B');
-    const weeklySessions = sessions.filter(s => s.recurrence_pattern === 'weekly' || !s.recurrence_pattern);
-
-    let refAMonday = null;
-    let refBMonday = null;
-    if (fortnightlyA.length) refAMonday = localDate(getMonday(fortnightlyA[0].event_date));
-    if (fortnightlyB.length) refBMonday = localDate(getMonday(fortnightlyB[0].event_date));
-
-    function isWeekA(mondayDate) {
-      if (refAMonday) return Math.round((mondayDate - refAMonday) / (7 * 86400000)) % 2 === 0;
-      if (refBMonday) return Math.round((mondayDate - refBMonday) / (7 * 86400000)) % 2 !== 0;
-      return true;
-    }
-
-    function buildTemplates(list) {
-      const seen = new Set();
-      return list.filter(s => {
-        const key = `${localDate(s.event_date).getDay()}-${s.name}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      }).map(s => ({
-        dayOfWeek: localDate(s.event_date).getDay(),
-        name: s.name, slug: s.slug, event_mode: s.event_mode,
-        location_id: s.location_id, start_datetime: s.start_datetime,
-        end_datetime: s.end_datetime, description: s.description,
-        id: s.id, occurrence_id: s.id, recurrence_pattern: s.recurrence_pattern,
-      }));
-    }
-
-    const weeklyT = buildTemplates(weeklySessions);
-    const aT = buildTemplates(fortnightlyA);
-    const bT = buildTemplates(fortnightlyB);
-
-    const actualByWeek = {};
-    for (const s of sessions) {
-      const m = getMonday(s.event_date);
-      if (!actualByWeek[m]) actualByWeek[m] = [];
-      actualByWeek[m].push(s);
-    }
-
-    function projectTemplate(tmpl, mondayStr) {
-      const targetDay = tmpl.dayOfWeek;
-      const mondayDate = localDate(mondayStr);
-      const dayOffset = targetDay === 0 ? 6 : targetDay - 1;
-      const sessionDate = new Date(mondayDate);
-      sessionDate.setDate(sessionDate.getDate() + dayOffset);
-      const dateStr = toLocalDateStr(sessionDate);
-      const origStart = new Date(tmpl.start_datetime);
-      const origEnd = new Date(tmpl.end_datetime);
-      const newStart = new Date(sessionDate);
-      newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
-      const newEnd = new Date(sessionDate);
-      newEnd.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
-      return {
-        ...tmpl,
-        id: `projected-${tmpl.id}-${dateStr}`,
-        event_date: dateStr,
-        start_datetime: newStart.toISOString(),
-        end_datetime: newEnd.toISOString(),
-        _projected: true
-      };
-    }
-
     const todayStr = toLocalDateStr(new Date());
-    const startMonday = localDate(getMonday(todayStr));
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 12);
 
-    const current = new Date(startMonday);
+    // Group published sessions by week
+    const weekMap = {};
+    for (const s of sessions) {
+      if (s.event_date < todayStr) continue; // skip past
+      const m = getMonday(s.event_date);
+      if (!weekMap[m]) weekMap[m] = [];
+      weekMap[m].push(s);
+    }
 
-    while (current < endDate) {
-      const mondayStr = toLocalDateStr(current);
-      const weekIsA = isWeekA(current);
-      const actual = actualByWeek[mondayStr] || [];
-      const fortnightlyTemplates = weekIsA ? aT : bT;
-      const allTemplates = [...weeklyT, ...fortnightlyTemplates];
-      const actualNames = new Set(actual.map(s => s.name));
-      const missing = allTemplates.filter(t => !actualNames.has(t.name));
-      const projected = missing.map(t => projectTemplate(t, mondayStr));
-
-      // Filter out past sessions and sort: online first, then alphabetical
-      const weekSessions = [...actual, ...projected]
-        .filter(s => s.event_date >= todayStr)
-        .sort((a, b) => {
+    // Sort weeks and take the first 3
+    const sortedWeeks = Object.entries(weekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(0, 3)
+      .map(([weekStart, weekSessions]) => ({
+        weekStart,
+        sessions: weekSessions.sort((a, b) => {
           const aOnline = a.event_mode === 'online_stream' ? 0 : 1;
           const bOnline = b.event_mode === 'online_stream' ? 0 : 1;
           if (aOnline !== bOnline) return aOnline - bOnline;
           return a.name.localeCompare(b.name);
-        });
+        })
+      }));
 
-      // Return only the first week that has future sessions
-      if (weekSessions.length > 0) {
-        return [{ weekStart: mondayStr, sessions: weekSessions }];
-      }
-
-      current.setDate(current.getDate() + 7);
-    }
-
-    return [];
+    return sortedWeeks;
   }, [sessions]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;

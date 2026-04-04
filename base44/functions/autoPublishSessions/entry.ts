@@ -13,21 +13,21 @@ Deno.serve(async (req) => {
     // Find published source events (these define the recurrence pattern)
     const published = allEvents.filter(e => e.is_published && e.status === 'published');
 
-    // Find draft events that are upcoming (next 14 days)
-    const twoWeeksOut = new Date(now);
-    twoWeeksOut.setDate(twoWeeksOut.getDate() + 14);
-    const twoWeeksStr = twoWeeksOut.toISOString().slice(0, 10);
+    // Find draft events that are upcoming (next 21 days / 3 weeks)
+    const threeWeeksOut = new Date(now);
+    threeWeeksOut.setDate(threeWeeksOut.getDate() + 21);
+    const threeWeeksStr = threeWeeksOut.toISOString().slice(0, 10);
 
     const drafts = allEvents.filter(e =>
       e.status === 'draft' &&
       !e.is_published &&
       e.event_date >= todayStr &&
-      e.event_date <= twoWeeksStr &&
+      e.event_date <= threeWeeksStr &&
       e.series_id
     );
 
     if (!drafts.length) {
-      console.log("No draft sessions found in the next 2 weeks to auto-publish.");
+      console.log("No draft sessions found in the next 3 weeks to auto-publish.");
       return Response.json({ published: 0, skipped: 0 });
     }
 
