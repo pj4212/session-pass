@@ -133,8 +133,11 @@ export default function EventList() {
       });
     }
 
+    // Refresh events list so the timeline updates with the new real session
+    const evs = await base44.entities.EventOccurrence.filter({});
+    setEvents(evs.sort((a, b) => new Date(b.event_date) - new Date(a.event_date)));
     setCreatingProjected(null);
-    navigate(`/admin/events/${created.id}/edit`);
+    toast.success(`Session created: ${created.name} on ${projectedSession.event_date}`);
   };
 
   // Check URL for series filter

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video, Loader2, Eye, EyeOff, PlusCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -280,8 +280,12 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                       {sessionPast && <Badge variant="secondary" className="text-xs py-0 gap-1"><CheckCircle2 className="h-3 w-3" />Completed</Badge>}
                       {isProjected && !sessionPast && <Badge variant="outline" className="text-xs py-0 text-muted-foreground">Projected</Badge>}
                       {seriesName && <span className="text-xs text-muted-foreground">· {seriesName}</span>}
-                      {!isProjected && !sessionPast && session.event_mode !== 'online_stream' && (
-                        session.venue_confirmed ? (
+                      {!sessionPast && session.event_mode !== 'online_stream' && (
+                        isProjected ? (
+                          <Badge variant="outline" className="text-xs py-0 gap-1 text-muted-foreground border-border">
+                            <AlertTriangle className="h-3 w-3" />Venue Pending
+                          </Badge>
+                        ) : session.venue_confirmed ? (
                           <Badge variant="outline" className="text-xs py-0 gap-1 text-green-400 border-green-500/30">
                             <CheckCircle2 className="h-3 w-3" />Venue Confirmed
                           </Badge>
@@ -361,17 +365,19 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                       </>
                     ) : (
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Create & edit this session"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        title="Create this session so you can publish it, confirm venue, and manage attendees"
                         disabled={creatingProjected === session.id}
                         onClick={() => onCreateFromProjected?.(session)}
                       >
                         {creatingProjected === session.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <Edit className="h-4 w-4" />
+                          <PlusCircle className="h-3.5 w-3.5" />
                         )}
+                        Create Session
                       </Button>
                     )}
                   </div>
