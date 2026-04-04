@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Monitor, Users, Edit, CheckCircle2, Star, AlertTriangle, Video, Loader2, Eye, EyeOff } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -151,7 +152,14 @@ function buildProjectedTimeline(sessions, months) {
   return weeks;
 }
 
-export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap, onVerifyVenue, onCreateFromProjected, creatingProjected }) {
+export default function EventTimeline({ events, locations, ticketCounts, checkinCounts, candidateCounts, businessOwnerCounts, seriesMap, onVerifyVenue, onCreateFromProjected, creatingProjected, onTogglePublish }) {
+  const [publishingId, setPublishingId] = useState(null);
+
+  const handleTogglePublish = async (session) => {
+    setPublishingId(session.id);
+    await onTogglePublish?.(session);
+    setPublishingId(null);
+  };
   // Group events by series for projection
   const timeline = useMemo(() => {
     const bySeries = {};
@@ -319,6 +327,23 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                   <div className="flex items-center gap-1 shrink-0">
                     {!isProjected ? (
                       <>
+                        {!sessionPast && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={session.is_published ? 'Unpublish' : 'Publish'}
+                            disabled={publishingId === session.id}
+                            onClick={() => handleTogglePublish(session)}
+                          >
+                            {publishingId === session.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : session.is_published ? (
+                              <Eye className="h-4 w-4 text-green-400" />
+                            ) : (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" asChild title="Edit">
                           <Link to={`/admin/events/${session.id}/edit`}><Edit className="h-4 w-4" /></Link>
                         </Button>

@@ -244,6 +244,7 @@ export default function EventList() {
           onVerifyVenue={(session) => setVenueTarget(session)}
           onCreateFromProjected={handleCreateFromProjected}
           creatingProjected={creatingProjected}
+          onTogglePublish={togglePublish}
         />
       ) : (
       <div className="border rounded-lg overflow-auto">
