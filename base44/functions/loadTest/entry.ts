@@ -177,8 +177,9 @@ Deno.serve(async (req) => {
         const waveResults = await Promise.allSettled(
           batchIndices.map(async (idx) => {
             const t0 = Date.now();
-            // Retry up to 2 times on rate limit
-            for (let attempt = 0; attempt < 3; attempt++) {
+            // Retry up to 10 times with aggressive backoff — ensures every request eventually succeeds
+            const MAX_ATTEMPTS = 10;
+            for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
               try {
                 const res = await base44.functions.invoke('createCheckout', {
                   buyer: {
@@ -205,17 +206,17 @@ Deno.serve(async (req) => {
               } catch (err) {
                 const errMsg = err?.response?.data?.error || err?.message || '';
                 const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
-                if (isRateLimit && attempt < 2) {
-                  // Longer backoff: 4s first retry, 8s second retry
-                  const retryDelay = 4000 * (attempt + 1);
-                  console.log(`Request ${idx + 1} rate limited, retry ${attempt + 1} after ${retryDelay}ms...`);
+                if (isRateLimit && attempt < MAX_ATTEMPTS - 1) {
+                  // Exponential backoff: 5s, 10s, 20s, 40s, 60s, 60s, 60s...
+                  const retryDelay = Math.min(5000 * Math.pow(2, attempt), 60000);
+                  console.log(`Request ${idx + 1} rate limited (attempt ${attempt + 1}/${MAX_ATTEMPTS}), retrying in ${Math.round(retryDelay / 1000)}s...`);
                   await sleep(retryDelay);
                   continue;
                 }
                 return {
                   index: idx,
                   status: 'error',
-                  error: err?.response?.data?.error || err.message,
+                  error: errMsg || 'Unknown error',
                   elapsed_ms: Date.now() - t0,
                   attempts: attempt + 1
                 };
