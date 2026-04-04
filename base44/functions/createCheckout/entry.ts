@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { buyer, attendees, occurrence_id, origin_url } = body;
+    const { buyer, attendees, occurrence_id, origin_url, skip_emails } = body;
 
     // Load occurrence
     const occurrences = await withRetry(
@@ -317,15 +317,17 @@ Deno.serve(async (req) => {
     }
 
     // Send emails with retry — fire all in parallel for speed, but with individual retry protection
-    const emailPromises = [
-      sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
-        .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
-      ...tickets.map(ticket =>
-        sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id])
-          .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
-      )
-    ];
-    await Promise.all(emailPromises);
+    if (!skip_emails) {
+      const emailPromises = [
+        sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
+          .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
+        ...tickets.map(ticket =>
+          sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id])
+            .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
+        )
+      ];
+      await Promise.all(emailPromises);
+    }
 
     return Response.json({ 
       order_number: orderNumber,

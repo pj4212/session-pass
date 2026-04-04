@@ -161,23 +161,31 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'No free ticket type found for this event. Add a free ticket type first.' }, { status: 400 });
       }
 
-      // Run checkout requests in waves of 5 with longer delays to avoid rate limits
-      // Each createCheckout does ~5+ DB operations internally, so 5 concurrent = ~25+ DB ops per wave
-      const WAVE_SIZE = 5;
-      const WAVE_DELAY_MS = 1500;
-      console.log(`Starting checkout test: ${count} requests in waves of ${WAVE_SIZE} for "${freeType.name}"...`);
+      // Larger waves + fixed delay — emails are skipped during load test so we can push harder
+      const WAVE_SIZE = 10;
+      const WAVE_DELAY_MS = 2000;
+      const FUNCTION_TIMEOUT_MS = 270000; // 4.5 min safety margin (Deno limit ~5 min)
+      const functionStart = Date.now();
+      console.log(`Starting checkout test: ${count} requests in waves of ${WAVE_SIZE} (emails skipped)...`);
 
       const startTime = Date.now();
       const allResults = [];
+      let timedOut = false;
 
       for (let wave = 0; wave < count; wave += WAVE_SIZE) {
+        // Check if we're running out of time
+        if (Date.now() - functionStart > FUNCTION_TIMEOUT_MS) {
+          console.log(`Approaching timeout after ${Math.round((Date.now() - functionStart) / 1000)}s, stopping at ${wave} requests`);
+          timedOut = true;
+          break;
+        }
+
         const waveNum = Math.floor(wave / WAVE_SIZE) + 1;
         const batchIndices = Array.from({ length: Math.min(WAVE_SIZE, count - wave) }, (_, i) => wave + i);
         console.log(`Wave ${waveNum}: requests ${wave + 1}-${wave + batchIndices.length}`);
         const waveResults = await Promise.allSettled(
           batchIndices.map(async (idx) => {
             const t0 = Date.now();
-            // Retry up to 10 times with aggressive backoff — ensures every request eventually succeeds
             const MAX_ATTEMPTS = 10;
             for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
               try {
@@ -193,7 +201,8 @@ Deno.serve(async (req) => {
                     email: `loadtest${idx}@test.com`,
                     ticket_type_id: freeType.id
                   }],
-                  occurrence_id
+                  occurrence_id,
+                  skip_emails: true
                 });
                 return {
                   index: idx,
@@ -207,8 +216,7 @@ Deno.serve(async (req) => {
                 const errMsg = err?.response?.data?.error || err?.message || '';
                 const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
                 if (isRateLimit && attempt < MAX_ATTEMPTS - 1) {
-                  // Exponential backoff: 5s, 10s, 20s, 40s, 60s, 60s, 60s...
-                  const retryDelay = Math.min(5000 * Math.pow(2, attempt), 60000);
+                  const retryDelay = Math.min(3000 * Math.pow(2, attempt), 60000);
                   console.log(`Request ${idx + 1} rate limited (attempt ${attempt + 1}/${MAX_ATTEMPTS}), retrying in ${Math.round(retryDelay / 1000)}s...`);
                   await sleep(retryDelay);
                   continue;
@@ -225,10 +233,8 @@ Deno.serve(async (req) => {
           })
         );
         allResults.push(...waveResults);
-        if (wave + WAVE_SIZE < count) {
-          // Progressive delay: later waves wait longer as rate limit bucket depletes
-          const progressiveDelay = WAVE_DELAY_MS + (waveNum * 500);
-          await sleep(progressiveDelay);
+        if (wave + WAVE_SIZE < count && !timedOut) {
+          await sleep(WAVE_DELAY_MS);
         }
       }
 
@@ -253,15 +259,17 @@ Deno.serve(async (req) => {
         loadTestTicketCount = testTickets.filter(t => t.attendee_email?.includes('loadtest') && t.attendee_email?.includes('@test.com')).length;
       } catch (e) {
         console.log('Could not verify ticket count after test:', e.message);
-        loadTestTicketCount = -1; // indicates verification failed
+        loadTestTicketCount = -1;
       }
 
-      console.log(`Checkout test complete: ${successes.length} success, ${errors.length} errors in ${totalElapsed}ms`);
+      console.log(`Checkout test complete: ${successes.length}/${fulfilled.length} success in ${totalElapsed}ms${timedOut ? ' (timed out, partial results)' : ''}`);
 
       return Response.json({
         test_type: 'checkout',
-        total_requests: count,
+        total_requests: fulfilled.length,
+        total_requested: count,
         total_elapsed_ms: totalElapsed,
+        timed_out: timedOut,
         summary: {
           successes: successes.length,
           errors: errors.length,

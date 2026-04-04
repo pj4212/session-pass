@@ -48,18 +48,26 @@ export default function LoadTestResults({ results }) {
     );
   }
 
-  const { summary, timing, details, total_elapsed_ms, total_requests } = results;
+  const { summary, timing, details, total_elapsed_ms, total_requests, total_requested, timed_out } = results;
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base capitalize">{results.test_type} Test Results</CardTitle>
-            <Badge variant={results.integrity_ok !== false ? 'default' : 'destructive'} className="gap-1">
-              {results.integrity_ok !== false ? <Shield className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-              {results.integrity_ok !== false ? 'Integrity OK' : 'Integrity Issue'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {timed_out && (
+                <Badge variant="secondary" className="gap-1 text-amber-400 border-amber-400/30">
+                  <AlertTriangle className="h-3 w-3" />
+                  Partial — {total_requests}/{total_requested} completed
+                </Badge>
+              )}
+              <Badge variant={results.integrity_ok !== false ? 'default' : 'destructive'} className="gap-1">
+                {results.integrity_ok !== false ? <Shield className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                {results.integrity_ok !== false ? 'Integrity OK' : 'Integrity Issue'}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
