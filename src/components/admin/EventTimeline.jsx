@@ -173,10 +173,13 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
       }
     }
 
-    // Project each series
+    // Project each series and include non-published series events
     const allWeeks = [];
+    const seriesDrafts = []; // draft/unpublished series events to add separately
     for (const [seriesId, seriesEvents] of Object.entries(bySeries)) {
       const published = seriesEvents.filter(e => e.is_published && e.status === 'published');
+      const nonPublished = seriesEvents.filter(e => !e.is_published || e.status !== 'published');
+      seriesDrafts.push(...nonPublished.map(e => ({ ...e, _seriesId: seriesId })));
       if (!published.length) continue;
       const projected = buildProjectedTimeline(published, 3);
       projected.forEach(w => {
@@ -196,6 +199,13 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
       const m = getMonday(dateOnly(ev.event_date));
       if (!weekMap[m]) weekMap[m] = [];
       weekMap[m].push(ev);
+    }
+    // Add draft/unpublished series events that aren't already in the timeline
+    for (const ev of seriesDrafts) {
+      const m = getMonday(dateOnly(ev.event_date));
+      if (!weekMap[m]) weekMap[m] = [];
+      const existing = weekMap[m].find(s => s.id === ev.id);
+      if (!existing) weekMap[m].push(ev);
     }
 
     return Object.entries(weekMap)
