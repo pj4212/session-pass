@@ -110,7 +110,10 @@ export default function Reports() {
   // Report 3: Revenue by occurrence
   const revenueReport = filteredOccurrences.map(o => {
     const oOrders = orders.filter(ord => ord.occurrence_id === o.id && (ord.payment_status === 'completed' || ord.payment_status === 'free'));
-    return { name: o.name, date: o.event_date, location: locations[o.location_id]?.name || '—', revenue: oOrders.reduce((s, ord) => s + (ord.total_amount || 0), 0) };
+    const revenue = oOrders.reduce((s, ord) => s + (ord.total_amount || 0), 0);
+    const paidOrders = oOrders.filter(ord => ord.payment_status === 'completed' && ord.total_amount > 0);
+    const fees = paidOrders.reduce((s, ord) => s + (ord.total_amount * 0.029 + 0.30), 0);
+    return { name: o.name, date: o.event_date, location: locations[o.location_id]?.name || '—', revenue, fees, profit: revenue - fees };
   });
 
   // Report 5: Team Attribution
@@ -208,24 +211,35 @@ export default function Reports() {
         <TabsContent value="revenue" className="space-y-3">
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => exportCsv(
-              ['Event', 'Date', 'Location', 'Revenue'],
-              revenueReport.map(r => [r.name, r.date, r.location, r.revenue.toFixed(2)]),
+              ['Event', 'Date', 'Location', 'Revenue', 'Stripe Fees', 'Profit'],
+              revenueReport.map(r => [r.name, r.date, r.location, r.revenue.toFixed(2), r.fees.toFixed(2), r.profit.toFixed(2)]),
               'revenue-report.csv'
             )}><Download className="h-4 w-4 mr-1" />CSV</Button>
           </div>
-          <Card>
-            <CardHeader><CardTitle>Total Revenue: ${revenueReport.reduce((s, r) => s + r.revenue, 0).toFixed(2)} AUD</CardTitle></CardHeader>
-          </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold">${revenueReport.reduce((s, r) => s + r.revenue, 0).toFixed(2)}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Stripe Fees (est.)</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold text-red-400">${revenueReport.reduce((s, r) => s + r.fees, 0).toFixed(2)}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profit After Fees</CardTitle></CardHeader>
+              <CardContent><p className="text-2xl font-bold text-emerald-400">${revenueReport.reduce((s, r) => s + r.profit, 0).toFixed(2)}</p></CardContent>
+            </Card>
+          </div>
           <div className="border rounded-lg overflow-auto">
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Event</TableHead><TableHead>Date</TableHead><TableHead>Location</TableHead><TableHead>Revenue</TableHead>
+                <TableHead>Event</TableHead><TableHead>Date</TableHead><TableHead>Location</TableHead><TableHead>Revenue</TableHead><TableHead>Fees</TableHead><TableHead>Profit</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {revenueReport.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell>{r.name}</TableCell><TableCell>{r.date}</TableCell><TableCell>{r.location}</TableCell>
-                    <TableCell>${r.revenue.toFixed(2)}</TableCell>
+                    <TableCell>${r.revenue.toFixed(2)}</TableCell><TableCell className="text-red-400">${r.fees.toFixed(2)}</TableCell><TableCell className="text-emerald-400">${r.profit.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
