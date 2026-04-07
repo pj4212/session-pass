@@ -67,8 +67,8 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
               <p className="font-medium">{leader?.name || '—'}</p>
             </div>
             <div>
-              <p className="text-muted-foreground text-xs">Payment</p>
-              <p className="font-medium">{isPaid ? `$${order.total_amount.toFixed(2)} (Paid)` : 'Free'}</p>
+              <p className="text-muted-foreground text-xs">Ticket Price</p>
+              <p className="font-medium">{ticketType?.requires_payment ? `$${(ticketType.price || 0).toFixed(2)} (Paid)` : 'Free'}</p>
             </div>
             {order && (
               <div className="col-span-2">
