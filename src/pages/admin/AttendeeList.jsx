@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useOutletContext } from 'react-router-dom';
+import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,13 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Download, X, Ban, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase } from 'lucide-react';
+import { Download, X, Ban, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase, ArrowLeft } from 'lucide-react';
 import AttendeeCard from '@/components/admin/AttendeeCard';
 import AttendeeDetailDialog from '@/components/admin/AttendeeDetailDialog';
 
 export default function AttendeeList() {
   const { id } = useParams();
   const { user } = useOutletContext();
+  const navigate = useNavigate();
   const [occurrence, setOccurrence] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [ticketTypes, setTicketTypes] = useState({});
@@ -198,6 +199,9 @@ export default function AttendeeList() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold truncate">Attendees</h1>
             {occurrence && <p className="text-sm text-muted-foreground truncate">{occurrence.name} — {new Date(occurrence.event_date).toLocaleDateString('en-AU')}</p>}
