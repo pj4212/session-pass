@@ -4,12 +4,14 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight, RefreshCw } from 'lucide-react';
 import LiveSessionBanner from '@/components/admin/LiveSessionBanner';
+import WeeklyEvents from '@/components/admin/WeeklyEvents';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [allTickets, setAllTickets] = useState([]);
+  const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
@@ -17,10 +19,11 @@ export default function Dashboard() {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [allTickets, allOrders, allEvents] = await Promise.all([
+    const [allTickets, allOrders, allEvents, allTicketTypes] = await Promise.all([
       base44.entities.Ticket.filter({ ticket_status: 'active' }, '-created_date', 500),
       base44.entities.Order.filter({}, '-created_date', 500),
-      base44.entities.EventOccurrence.filter({}, '-created_date', 500)
+      base44.entities.EventOccurrence.filter({}, '-created_date', 500),
+      base44.entities.TicketType.filter({}, '-created_date', 500)
     ]);
 
     const weekTickets = allTickets.filter(t => new Date(t.created_date) >= weekAgo);
@@ -66,6 +69,7 @@ export default function Dashboard() {
     setAlerts(alertList);
     setAllEvents(allEvents);
     setAllTickets(allTickets);
+    setTicketTypes(allTicketTypes);
     setLoading(false);
   }
 
@@ -142,6 +146,8 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      <WeeklyEvents events={allEvents} tickets={allTickets} ticketTypes={ticketTypes} />
 
       <div className="flex flex-wrap gap-3">
         <Button variant="secondary" asChild><Link to="/admin/events"><List className="h-4 w-4 mr-1.5" />View Events</Link></Button>
