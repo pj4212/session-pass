@@ -33,11 +33,9 @@ export default function AttendeeCard({ ticket, ticketType, leader, isSuperAdmin,
           {isBO ? <Briefcase className="h-3 w-3" /> : <Users className="h-3 w-3" />}
           {isBO ? 'Business Owner' : 'Candidate'}
         </Badge>
-        {ticketType?.name && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-            {ticketType.name}
-          </Badge>
-        )}
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+          {ticket.attendance_mode === 'online' ? 'Online' : 'In-Person'}
+        </Badge>
         {leader?.name && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
             {leader.name}
