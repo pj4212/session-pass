@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Download, X, Ban, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase } from 'lucide-react';
 import AttendeeCard from '@/components/admin/AttendeeCard';
+import AttendeeDetailDialog from '@/components/admin/AttendeeDetailDialog';
 
 export default function AttendeeList() {
   const { id } = useParams();
@@ -31,6 +32,7 @@ export default function AttendeeList() {
   const [targetOccurrenceId, setTargetOccurrenceId] = useState('');
   const [allOccurrences, setAllOccurrences] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -78,6 +80,16 @@ export default function AttendeeList() {
     }
     return true;
   });
+
+  const handleDetailUpdate = (ticketId, updates) => {
+    if (updates === null) {
+      // Deleted
+      setTickets(prev => prev.filter(t => t.id !== ticketId));
+    } else {
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, ...updates } : t));
+    }
+    setSelectedTicket(null);
+  };
 
   const handleCancel = async (ticket) => {
     if (!confirm('Cancel this ticket? This cannot be undone.')) return;
@@ -255,17 +267,18 @@ export default function AttendeeList() {
       {/* Mobile: Card list */}
       <div className="sm:hidden space-y-2">
         {filtered.map(t => (
-          <AttendeeCard
-            key={t.id}
-            ticket={t}
-            ticketType={ticketTypes[t.ticket_type_id]}
-            leader={leaders[t.platinum_leader_id]}
-            isSuperAdmin={isSuperAdmin}
-            actionLoading={actionLoading}
-            onCancel={handleCancel}
-            onRefund={handleRefund}
-            onReschedule={openReschedule}
-          />
+          <div key={t.id} onClick={() => setSelectedTicket(t)} className="cursor-pointer">
+            <AttendeeCard
+              ticket={t}
+              ticketType={ticketTypes[t.ticket_type_id]}
+              leader={leaders[t.platinum_leader_id]}
+              isSuperAdmin={isSuperAdmin}
+              actionLoading={actionLoading}
+              onCancel={handleCancel}
+              onRefund={handleRefund}
+              onReschedule={openReschedule}
+            />
+          </div>
         ))}
         {filtered.length === 0 && (
           <p className="text-center py-8 text-muted-foreground text-sm">No attendees found</p>
@@ -289,7 +302,7 @@ export default function AttendeeList() {
           </TableHeader>
           <TableBody>
             {filtered.map(t => (
-              <TableRow key={t.id}>
+              <TableRow key={t.id} className="cursor-pointer hover:bg-accent/50" onClick={() => setSelectedTicket(t)}>
                 <TableCell className="text-sm font-medium whitespace-nowrap">{t.attendee_first_name} {t.attendee_last_name}</TableCell>
                 <TableCell className="text-sm truncate max-w-[180px]">{t.attendee_email}</TableCell>
                 <TableCell className="text-sm">{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
@@ -332,6 +345,17 @@ export default function AttendeeList() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Attendee Detail Dialog */}
+      <AttendeeDetailDialog
+        ticket={selectedTicket}
+        ticketType={selectedTicket ? ticketTypes[selectedTicket.ticket_type_id] : null}
+        leader={selectedTicket ? leaders[selectedTicket.platinum_leader_id] : null}
+        order={selectedTicket ? orders[selectedTicket.order_id] : null}
+        open={!!selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onUpdate={handleDetailUpdate}
+      />
 
       {/* Reschedule Dialog */}
       <Dialog open={!!rescheduleTicket} onOpenChange={() => setRescheduleTicket(null)}>
