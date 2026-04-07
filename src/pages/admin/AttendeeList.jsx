@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Download, X, Ban, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase, ArrowLeft } from 'lucide-react';
+import { Download, Trash2, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase, ArrowLeft } from 'lucide-react';
 import AttendeeCard from '@/components/admin/AttendeeCard';
 import AttendeeDetailDialog from '@/components/admin/AttendeeDetailDialog';
 
@@ -92,19 +92,11 @@ export default function AttendeeList() {
     setSelectedTicket(null);
   };
 
-  const handleCancel = async (ticket) => {
-    if (!confirm('Cancel this ticket? This cannot be undone.')) return;
+  const handleDelete = async (ticket) => {
+    if (!confirm(`Permanently delete ticket for ${ticket.attendee_first_name} ${ticket.attendee_last_name}? This cannot be undone.`)) return;
     setActionLoading(true);
-    await base44.entities.Ticket.update(ticket.id, { ticket_status: 'cancelled' });
-    setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, ticket_status: 'cancelled' } : t));
-    setActionLoading(false);
-  };
-
-  const handleRefund = async (ticket) => {
-    if (!confirm('Mark this ticket as refunded? Process the actual refund via Stripe dashboard.')) return;
-    setActionLoading(true);
-    await base44.entities.Ticket.update(ticket.id, { ticket_status: 'refunded' });
-    setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, ticket_status: 'refunded' } : t));
+    await base44.entities.Ticket.delete(ticket.id);
+    setTickets(prev => prev.filter(t => t.id !== ticket.id));
     setActionLoading(false);
   };
 
@@ -278,8 +270,7 @@ export default function AttendeeList() {
               leader={leaders[t.platinum_leader_id]}
               isSuperAdmin={isSuperAdmin}
               actionLoading={actionLoading}
-              onCancel={handleCancel}
-              onRefund={handleRefund}
+              onDelete={handleDelete}
               onReschedule={openReschedule}
             />
           </div>
@@ -328,13 +319,10 @@ export default function AttendeeList() {
                   <TableCell>
                     {t.ticket_status === 'active' && (
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleCancel(t)} disabled={actionLoading}>
-                          <X className="h-3 w-3 mr-1" />Cancel
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(t); }} disabled={actionLoading}>
+                          <Trash2 className="h-3 w-3 mr-1" />Delete
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleRefund(t)} disabled={actionLoading}>
-                          <Ban className="h-3 w-3 mr-1" />Refund
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openReschedule(t)} disabled={actionLoading}>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openReschedule(t); }} disabled={actionLoading}>
                           <RefreshCw className="h-3 w-3 mr-1" />Reschedule
                         </Button>
                       </div>

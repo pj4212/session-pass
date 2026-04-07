@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
-import { Ban, Trash2, Loader2, CheckCircle2, Circle, Briefcase, Users } from 'lucide-react';
+import { Trash2, Loader2, CheckCircle2, Circle, Briefcase, Users } from 'lucide-react';
 
 export default function AttendeeDetailDialog({ ticket, ticketType, leader, order, open, onClose, onUpdate }) {
   const [actionLoading, setActionLoading] = useState(null);
@@ -15,13 +15,7 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
   const isActive = ticket.ticket_status === 'active';
   const isPaid = order?.payment_status === 'completed' && order?.total_amount > 0;
 
-  const handleRefund = async () => {
-    if (!confirm('Mark this ticket as refunded? You will still need to process the actual refund via the Stripe dashboard.')) return;
-    setActionLoading('refund');
-    await base44.entities.Ticket.update(ticket.id, { ticket_status: 'refunded' });
-    onUpdate(ticket.id, { ticket_status: 'refunded' });
-    setActionLoading(null);
-  };
+
 
   const handleDelete = async () => {
     if (!confirm(`Permanently delete this ticket for ${ticket.attendee_first_name} ${ticket.attendee_last_name}? This cannot be undone.`)) return;
@@ -85,42 +79,17 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
           </div>
 
           {/* Actions */}
-          {isActive && (
-            <div className="flex gap-2 pt-2 border-t border-border">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleRefund}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === 'refund' ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Ban className="h-4 w-4 mr-1.5" />}
-                Refund
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={handleDelete}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === 'delete' ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
-                Delete
-              </Button>
-            </div>
-          )}
-
-          {!isActive && (
-            <div className="flex gap-2 pt-2 border-t border-border">
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={handleDelete}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === 'delete' ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
-                Delete from System
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2 pt-2 border-t border-border">
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={handleDelete}
+              disabled={!!actionLoading}
+            >
+              {actionLoading === 'delete' ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+              Delete
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

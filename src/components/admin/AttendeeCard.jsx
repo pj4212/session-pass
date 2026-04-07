@@ -1,8 +1,8 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { X, Ban, RefreshCw, CheckCircle2, Circle, Users, Briefcase } from 'lucide-react';
+import { Trash2, RefreshCw, CheckCircle2, Circle, Users, Briefcase } from 'lucide-react';
 
-export default function AttendeeCard({ ticket, ticketType, leader, isSuperAdmin, actionLoading, onCancel, onRefund, onReschedule }) {
+export default function AttendeeCard({ ticket, ticketType, leader, isSuperAdmin, actionLoading, onDelete, onReschedule }) {
   const isBO = ticketType?.ticket_category === 'business_owner';
   const isCheckedIn = ticket.check_in_status === 'checked_in';
   const isActive = ticket.ticket_status === 'active';
@@ -47,13 +47,10 @@ export default function AttendeeCard({ ticket, ticketType, leader, isSuperAdmin,
 
       {isSuperAdmin && isActive && (
         <div className="flex gap-1 mt-2.5 pt-2 border-t border-border">
-          <Button variant="ghost" size="sm" className="h-7 text-xs flex-1" onClick={() => onCancel(ticket)} disabled={actionLoading}>
-            <X className="h-3 w-3 mr-1" />Cancel
+          <Button variant="ghost" size="sm" className="h-7 text-xs flex-1 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(ticket); }} disabled={actionLoading}>
+            <Trash2 className="h-3 w-3 mr-1" />Delete
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs flex-1" onClick={() => onRefund(ticket)} disabled={actionLoading}>
-            <Ban className="h-3 w-3 mr-1" />Refund
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs flex-1" onClick={() => onReschedule(ticket)} disabled={actionLoading}>
+          <Button variant="ghost" size="sm" className="h-7 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onReschedule(ticket); }} disabled={actionLoading}>
             <RefreshCw className="h-3 w-3 mr-1" />Move
           </Button>
         </div>
