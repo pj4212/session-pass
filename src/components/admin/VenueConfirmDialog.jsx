@@ -78,7 +78,7 @@ export default function VenueConfirmDialog({ open, onOpenChange, event, location
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle>Confirm Venue</DialogTitle>
         </DialogHeader>
@@ -126,11 +126,11 @@ export default function VenueConfirmDialog({ open, onOpenChange, event, location
           )}
         </div>
 
-        <div className="flex gap-3 justify-end mt-2">
+        <div className="flex flex-wrap gap-3 justify-end mt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleConfirm} disabled={saving || (!venueData.venue_id && !venueData.venue_name)}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
-            Confirm Venue
+            Confirm
           </Button>
         </div>
       </DialogContent>
