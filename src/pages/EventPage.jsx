@@ -306,27 +306,33 @@ export default function EventPage() {
           {occurrence.description && (
             <p className="text-muted-foreground mb-4">{occurrence.description}</p>
           )}
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>{formatDate(occurrence.event_date)}</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">{formatDate(occurrence.event_date)}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span>{formatTime(occurrence.start_datetime)} – {formatTime(occurrence.end_datetime)}</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">{formatTime(occurrence.start_datetime)} – {formatTime(occurrence.end_datetime)}</span>
             </div>
             {location && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0 max-w-full">
                 {location.name === 'Online' ? (
-                  <><Monitor className="h-4 w-4 text-muted-foreground" /><span>Online via Zoom</span></>
+                  <><Monitor className="h-4 w-4 text-muted-foreground shrink-0" /><span className="truncate">Online via Zoom</span></>
                 ) : (
-                  <><MapPin className="h-4 w-4 text-muted-foreground" /><span>{location.name}{location.address ? `, ${location.address}` : ''}</span></>
+                  <><MapPin className="h-4 w-4 text-muted-foreground shrink-0" /><span className="break-words">{location.name}{location.address ? `, ${location.address}` : ''}</span></>
                 )}
+              </div>
+            )}
+            {occurrence.venue_name && occurrence.event_mode !== 'online_stream' && (
+              <div className="flex items-center gap-1.5 min-w-0 max-w-full">
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="break-words">{occurrence.venue_name}</span>
               </div>
             )}
           </div>
           {occurrence.venue_details && occurrence.event_mode !== 'online_stream' && (
-            <p className="text-sm text-muted-foreground mt-2">{occurrence.venue_details}</p>
+            <p className="text-sm text-muted-foreground mt-2 break-words">{occurrence.venue_details}</p>
           )}
         </div>
 
