@@ -19,6 +19,7 @@ export default function AttendeeList() {
   const [mentors, setMentors] = useState({});
   const [leaders, setLeaders] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
@@ -34,7 +35,8 @@ export default function AttendeeList() {
     loadData();
   }, [id]);
 
-  async function loadData() {
+  async function loadData(isRefresh = false) {
+    if (isRefresh) setRefreshing(true);
     const [occs, tix, tts, mList, lList, ords] = await Promise.all([
       base44.entities.EventOccurrence.filter({ id }),
       base44.entities.Ticket.filter({ occurrence_id: id }),
@@ -58,6 +60,7 @@ export default function AttendeeList() {
     ords.forEach(o => { oMap[o.id] = o; });
     setOrders(oMap);
     setLoading(false);
+    setRefreshing(false);
   }
 
   const filtered = tickets.filter(t => {
@@ -179,9 +182,14 @@ export default function AttendeeList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Attendees</h1>
-          {occurrence && <p className="text-muted-foreground">{occurrence.name} — {new Date(occurrence.event_date).toLocaleDateString('en-AU')}</p>}
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-2xl font-bold">Attendees</h1>
+            {occurrence && <p className="text-muted-foreground">{occurrence.name} — {new Date(occurrence.event_date).toLocaleDateString('en-AU')}</p>}
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => loadData(true)} disabled={refreshing} title="Refresh">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
         <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-1.5" />Export CSV</Button>
       </div>

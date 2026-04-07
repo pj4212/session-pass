@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon, Video } from 'lucide-react';
+import { Plus, Eye, Copy, Edit, Users, Loader2, FolderOpen, Trash2, ExternalLink, CalendarDays, TableIcon, Video, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import EventTimeline from '@/components/admin/EventTimeline';
@@ -37,24 +37,26 @@ export default function EventList() {
 
   const [ticketTypesList, setTicketTypesList] = useState([]);
 
+  async function load() {
+    setLoading(true);
+    const [evs, locs, tix, series, tts] = await Promise.all([
+      base44.entities.EventOccurrence.filter({}),
+      base44.entities.Location.filter({}),
+      base44.entities.Ticket.filter({ ticket_status: 'active' }),
+      base44.entities.EventSeries.filter({}),
+      base44.entities.TicketType.filter({})
+    ]);
+    const locMap = {};
+    locs.forEach(l => { locMap[l.id] = l; });
+    setEvents(evs.sort((a, b) => new Date(b.event_date) - new Date(a.event_date)));
+    setLocations(locMap);
+    setTickets(tix);
+    setSeriesList(series);
+    setTicketTypesList(tts);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function load() {
-      const [evs, locs, tix, series, tts] = await Promise.all([
-        base44.entities.EventOccurrence.filter({}),
-        base44.entities.Location.filter({}),
-        base44.entities.Ticket.filter({ ticket_status: 'active' }),
-        base44.entities.EventSeries.filter({}),
-        base44.entities.TicketType.filter({})
-      ]);
-      const locMap = {};
-      locs.forEach(l => { locMap[l.id] = l; });
-      setEvents(evs.sort((a, b) => new Date(b.event_date) - new Date(a.event_date)));
-      setLocations(locMap);
-      setTickets(tix);
-      setSeriesList(series);
-      setTicketTypesList(tts);
-      setLoading(false);
-    }
     load();
   }, []);
 
@@ -168,6 +170,9 @@ export default function EventList() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">Sessions</h1>
+          <Button variant="ghost" size="icon" onClick={load} disabled={loading} title="Refresh">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
           <div className="flex items-center border rounded-lg overflow-hidden">
             <button
               onClick={() => setViewMode('timeline')}
