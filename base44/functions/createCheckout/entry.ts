@@ -122,8 +122,7 @@ Deno.serve(async (req) => {
       ticketTypeMap[tt.id] = tt;
     }
 
-    // Validate attendees and check duplicates
-    const emailModeSet = new Set();
+    // Validate attendees
     for (const att of attendees) {
       if (!att.first_name || !att.last_name || !att.email || !att.ticket_type_id) {
         return Response.json({ error: "All attendee fields are required" }, { status: 400 });
@@ -131,34 +130,6 @@ Deno.serve(async (req) => {
       const tt = ticketTypeMap[att.ticket_type_id];
       if (!tt) {
         return Response.json({ error: `Invalid ticket type: ${att.ticket_type_id}` }, { status: 400 });
-      }
-
-      // Check within-order duplicates
-      const key = `${att.email.toLowerCase()}_${tt.attendance_mode}`;
-      if (emailModeSet.has(key)) {
-        return Response.json({ 
-          error: `Each attendee can only have one ${tt.attendance_mode === 'online' ? 'online' : 'in-person'} ticket. Duplicate: ${att.email}` 
-        }, { status: 400 });
-      }
-      emailModeSet.add(key);
-    }
-
-    // Check existing active tickets for each attendee
-    for (const att of attendees) {
-      const tt = ticketTypeMap[att.ticket_type_id];
-      const existingTickets = await withRetry(
-        () => base44.asServiceRole.entities.Ticket.filter({
-          occurrence_id: occurrence.id,
-          attendee_email: att.email.toLowerCase(),
-          attendance_mode: tt.attendance_mode,
-          ticket_status: 'active'
-        }),
-        `check duplicates for ${att.email}`
-      );
-      if (existingTickets.length > 0) {
-        return Response.json({ 
-          error: `${att.email} already has an active ${tt.attendance_mode === 'online' ? 'online' : 'in-person'} ticket for this event.` 
-        }, { status: 400 });
       }
     }
 
