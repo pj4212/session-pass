@@ -153,18 +153,15 @@ export default function AttendeeList() {
   };
 
   const exportCSV = () => {
-    const headers = ['Name', 'Email', 'Ticket Type', 'Category', 'Mode', 'Mentor', 'Platinum Leader', 'Check-In', 'Status', 'Order Number'];
+    const headers = ['Name', 'Email', 'Ticket Type', 'Category', 'Leader', 'Check-In', 'Status'];
     const rows = filtered.map(t => [
       `${t.attendee_first_name} ${t.attendee_last_name}`,
       t.attendee_email,
       ticketTypes[t.ticket_type_id]?.name || '',
       ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'Business Owner' : 'Candidate',
-      t.attendance_mode,
-      mentors[t.upline_mentor_id]?.name || '',
       leaders[t.platinum_leader_id]?.name || '',
       t.check_in_status,
-      t.ticket_status,
-      orders[t.order_id]?.order_number || ''
+      t.ticket_status
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -229,46 +226,40 @@ export default function AttendeeList() {
         <span>Business Owners: {filtered.filter(t => ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner').length}</span>
       </div>
 
-      <div className="border rounded-lg overflow-auto">
+      <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="hidden sm:table-cell">Email</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Mode</TableHead>
-              <TableHead>Mentor</TableHead>
               <TableHead>Leader</TableHead>
               <TableHead>Check-In</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Order</TableHead>
               {isSuperAdmin && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map(t => (
               <TableRow key={t.id}>
-                <TableCell>{t.attendee_first_name} {t.attendee_last_name}</TableCell>
-                <TableCell className="text-sm">{t.attendee_email}</TableCell>
-                <TableCell>{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
+                <TableCell className="text-sm font-medium whitespace-nowrap">{t.attendee_first_name} {t.attendee_last_name}</TableCell>
+                <TableCell className="hidden sm:table-cell text-sm truncate max-w-[180px]">{t.attendee_email}</TableCell>
+                <TableCell className="text-sm">{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
                 <TableCell>
-                  <Badge variant={ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'default' : 'secondary'}>
-                    {ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'Business Owner' : 'Candidate'}
+                  <Badge variant={ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'default' : 'secondary'} className="text-xs">
+                    {ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'BO' : 'Cand'}
                   </Badge>
                 </TableCell>
-                <TableCell><Badge variant="outline" className="capitalize">{t.attendance_mode?.replace('_', ' ')}</Badge></TableCell>
-                <TableCell className="text-sm">{mentors[t.upline_mentor_id]?.name || '—'}</TableCell>
                 <TableCell className="text-sm">{leaders[t.platinum_leader_id]?.name || '—'}</TableCell>
                 <TableCell>
-                  <Badge variant={t.check_in_status === 'checked_in' ? 'default' : 'secondary'}>
-                    {t.check_in_status === 'checked_in' ? 'Checked In' : 'Not Checked In'}
+                  <Badge variant={t.check_in_status === 'checked_in' ? 'default' : 'secondary'} className="text-xs">
+                    {t.check_in_status === 'checked_in' ? 'In' : 'No'}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={t.ticket_status === 'active' ? 'default' : 'destructive'}>{t.ticket_status}</Badge>
+                  <Badge variant={t.ticket_status === 'active' ? 'default' : 'destructive'} className="text-xs">{t.ticket_status}</Badge>
                 </TableCell>
-                <TableCell className="text-xs">{orders[t.order_id]?.order_number || '—'}</TableCell>
                 {isSuperAdmin && (
                   <TableCell>
                     {t.ticket_status === 'active' && (
@@ -289,7 +280,7 @@ export default function AttendeeList() {
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
