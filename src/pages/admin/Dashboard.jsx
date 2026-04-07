@@ -34,13 +34,15 @@ export default function Dashboard() {
     );
     const weekRevenue = weekOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
     const paidWeekOrders = weekOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0);
-    const weekFeesTotal = paidWeekOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
     const ttMap = Object.fromEntries(allTicketTypes.map(tt => [tt.id, tt]));
-    const paidTicketCount = allTickets.filter(t => {
-      const tt = ttMap[t.ticket_type_id];
-      return tt?.ticket_category === 'business_owner';
-    }).length;
-    const avgFeePerTicket = paidTicketCount > 0 ? weekFeesTotal / paidTicketCount : 0;
+    const allPaidOrders = allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0 && o.stripe_fee > 0);
+    const allFeesTotal = allPaidOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
+    const paidOrderIds = new Set(allPaidOrders.map(o => o.id));
+    const paidTicketCount = allTickets.filter(t => 
+      paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.ticket_category === 'business_owner'
+    ).length;
+    const avgFeePerTicket = paidTicketCount > 0 ? allFeesTotal / paidTicketCount : 0;
+    const weekFeesTotal = paidWeekOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
     const weekProfit = weekRevenue - weekFeesTotal;
 
     const upcoming = allEvents.filter(e => 
