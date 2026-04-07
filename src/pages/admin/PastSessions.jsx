@@ -19,12 +19,12 @@ export default function PastSessions() {
   useEffect(() => {
     async function load() {
       const [evts, locs] = await Promise.all([
-        base44.entities.EventOccurrence.list('-event_date'),
+        base44.entities.EventOccurrence.filter({}, '-event_date', 500),
         base44.entities.Location.list()
       ]);
-      // Only past events
-      const now = moment().startOf('day');
-      const pastEvents = evts.filter(e => moment(e.event_date).isBefore(now));
+      // Past events = event_date is before today
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const pastEvents = evts.filter(e => e.event_date && e.event_date.slice(0, 10) < todayStr);
       setEvents(pastEvents);
       setLocations(locs);
       setLoading(false);
