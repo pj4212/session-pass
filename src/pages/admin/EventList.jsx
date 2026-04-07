@@ -167,59 +167,65 @@ export default function EventList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Sessions</h1>
-          <Button variant="ghost" size="icon" onClick={load} disabled={loading} title="Refresh">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold shrink-0">Sessions</h1>
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={load} disabled={loading} title="Refresh">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-          <div className="flex items-center border rounded-lg overflow-hidden">
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-lg overflow-hidden shrink-0">
             <button
               onClick={() => setViewMode('timeline')}
-              className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'timeline' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
+              className={`px-2.5 py-1.5 text-xs sm:text-sm flex items-center gap-1 transition-colors ${viewMode === 'timeline' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
             >
-              <CalendarDays className="h-3.5 w-3.5" />Timeline
+              <CalendarDays className="h-3.5 w-3.5" /><span className="hidden sm:inline">Timeline</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
+              className={`px-2.5 py-1.5 text-xs sm:text-sm flex items-center gap-1 transition-colors ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
             >
-              <TableIcon className="h-3.5 w-3.5" />Table
+              <TableIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Table</span>
             </button>
           </div>
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/admin/events/new"><Plus className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Create Event</span></Link>
+          </Button>
         </div>
-        <Button asChild className="w-full sm:w-auto"><Link to="/admin/events/new"><Plus className="h-4 w-4 mr-1.5" />Create Event</Link></Button>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Input placeholder="Search events..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={modeFilter} onValueChange={setModeFilter}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Modes</SelectItem>
-            <SelectItem value="online_stream">Online</SelectItem>
-            <SelectItem value="in_person">In-Person</SelectItem>
-            <SelectItem value="hybrid">Hybrid</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={seriesFilter} onValueChange={setSeriesFilter}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Series</SelectItem>
-            <SelectItem value="standalone">Standalone Only</SelectItem>
-            {seriesList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="space-y-2">
+        <Input placeholder="Search events..." value={search} onChange={e => setSearch(e.target.value)} className="w-full sm:max-w-xs" />
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="sm:w-36 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={modeFilter} onValueChange={setModeFilter}>
+            <SelectTrigger className="sm:w-36 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Modes</SelectItem>
+              <SelectItem value="online_stream">Online</SelectItem>
+              <SelectItem value="in_person">In-Person</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={seriesFilter} onValueChange={setSeriesFilter}>
+            <SelectTrigger className="sm:w-44 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Series</SelectItem>
+              <SelectItem value="standalone">Standalone</SelectItem>
+              {seriesList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {viewMode === 'timeline' ? (

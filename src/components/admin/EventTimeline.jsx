@@ -252,7 +252,7 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
               const sessionPast = dateOnly(session.event_date) < todayStr;
 
               return (
-                <div key={session.id + '-' + idx} className={`flex items-center gap-4 p-4 border rounded-lg transition-colors ${
+                <div key={session.id + '-' + idx} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 sm:p-4 border rounded-lg transition-colors ${
                   sessionPast
                     ? 'bg-muted/30 border-border/30 opacity-60'
                     : isProjected
@@ -275,7 +275,14 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
 
                   {/* Details */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {/* Mobile: date + name row */}
+                    <div className="flex items-center gap-2 sm:hidden mb-1">
+                      <span className={`text-xs font-medium shrink-0 rounded px-1.5 py-0.5 ${sessionPast ? 'bg-muted/50 text-muted-foreground' : isCurrentWeek && !isProjected ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+                        {localDate(session.event_date).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric' })}
+                      </span>
+                      <span className={`font-semibold text-sm truncate ${sessionPast ? 'text-muted-foreground' : 'text-foreground'}`}>{session.name}</span>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-2 flex-wrap mb-1">
                       <span className={`font-semibold truncate ${sessionPast ? 'text-muted-foreground' : 'text-foreground'}`}>{session.name}</span>
                       {sessionPast && <Badge variant="secondary" className="text-xs py-0 gap-1"><CheckCircle2 className="h-3 w-3" />Completed</Badge>}
                       {isProjected && !sessionPast && <Badge variant="outline" className="text-xs py-0 text-muted-foreground">Projected</Badge>}
@@ -299,11 +306,31 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                         )
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1 sm:hidden">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {formatDate(session.event_date)}
-                      </span>
+                    {/* Mobile badges row */}
+                    <div className="flex flex-wrap items-center gap-1.5 sm:hidden mb-1">
+                      {sessionPast && <Badge variant="secondary" className="text-[10px] py-0 gap-0.5"><CheckCircle2 className="h-2.5 w-2.5" />Done</Badge>}
+                      {isProjected && !sessionPast && <Badge variant="outline" className="text-[10px] py-0">Projected</Badge>}
+                      {!sessionPast && session.event_mode !== 'online_stream' && (
+                        isProjected ? (
+                          <Badge variant="outline" className="text-[10px] py-0 gap-0.5 text-muted-foreground border-border">
+                            <AlertTriangle className="h-2.5 w-2.5" />Venue TBC
+                          </Badge>
+                        ) : session.venue_confirmed ? (
+                          <Badge variant="outline" className="text-[10px] py-0 gap-0.5 text-green-400 border-green-500/30">
+                            <CheckCircle2 className="h-2.5 w-2.5" />Venue ✓
+                          </Badge>
+                        ) : (
+                          <button
+                            onClick={() => onVerifyVenue?.(session)}
+                            className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md border border-amber-500/40 text-amber-400 bg-amber-500/10"
+                          >
+                            <AlertTriangle className="h-2.5 w-2.5" />Venue?
+                          </button>
+                        )
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs sm:text-sm text-muted-foreground">
+
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
                         {formatTime(session.start_datetime)} – {formatTime(session.end_datetime)}
@@ -328,7 +355,7 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
                     {!isProjected ? (
                       <>
                         {!sessionPast && (
