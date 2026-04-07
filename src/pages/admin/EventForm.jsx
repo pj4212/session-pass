@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Loader2, Save, AlertTriangle, Video } from 'lucide-react';
+import { Plus, Trash2, Loader2, Save, AlertTriangle, Video, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import VenueSelector from '../../components/admin/VenueSelector';
@@ -242,7 +242,12 @@ export default function EventForm() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold">{isEdit ? 'Edit Event' : duplicateId ? 'Duplicate Event' : 'Create Event'}</h1>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-xl sm:text-2xl font-bold">{isEdit ? 'Edit Event' : duplicateId ? 'Duplicate Event' : 'Create Event'}</h1>
+      </div>
 
       {seriesList.length > 0 && (
         <div>
