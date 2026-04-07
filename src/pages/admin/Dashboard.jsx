@@ -39,7 +39,7 @@ export default function Dashboard() {
     const allFeesTotal = allPaidOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
     const paidOrderIds = new Set(allPaidOrders.map(o => o.id));
     const paidTicketCount = allTickets.filter(t => 
-      paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.ticket_category === 'business_owner'
+      paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
     ).length;
     const avgFeePerTicket = paidTicketCount > 0 ? allFeesTotal / paidTicketCount : 0;
     const weekFeesTotal = paidWeekOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
