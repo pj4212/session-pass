@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Download, X, Ban, RefreshCw, Loader2 } from 'lucide-react';
+import { Download, X, Ban, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase } from 'lucide-react';
+import AttendeeCard from '@/components/admin/AttendeeCard';
 
 export default function AttendeeList() {
   const { id } = useParams();
@@ -176,62 +177,108 @@ export default function AttendeeList() {
 
   const isSuperAdmin = user?.role === 'super_admin';
 
+  const candidateCount = filtered.filter(t => (ticketTypes[t.ticket_type_id]?.ticket_category || 'candidate') === 'candidate').length;
+  const boCount = filtered.filter(t => ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner').length;
+  const checkedInCount = filtered.filter(t => t.check_in_status === 'checked_in').length;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div>
-            <h1 className="text-2xl font-bold">Attendees</h1>
-            {occurrence && <p className="text-muted-foreground">{occurrence.name} — {new Date(occurrence.event_date).toLocaleDateString('en-AU')}</p>}
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">Attendees</h1>
+            {occurrence && <p className="text-sm text-muted-foreground truncate">{occurrence.name} — {new Date(occurrence.event_date).toLocaleDateString('en-AU')}</p>}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => loadData(true)} disabled={refreshing} title="Refresh">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => loadData(true)} disabled={refreshing} title="Refresh">
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
-        <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-1.5" />Export CSV</Button>
+        <Button variant="outline" size="sm" className="shrink-0 self-start sm:self-auto" onClick={exportCSV}><Download className="h-4 w-4 mr-1.5" />Export</Button>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Input placeholder="Search name or email..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="refunded">Refunded</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={modeFilter} onValueChange={setModeFilter}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Modes</SelectItem>
-            <SelectItem value="online">Online</SelectItem>
-            <SelectItem value="in_person">In-Person</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="candidate">Candidates</SelectItem>
-            <SelectItem value="business_owner">Business Owners</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Stats pills */}
+      <div className="grid grid-cols-4 gap-2">
+        <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
+          <p className="text-lg sm:text-xl font-bold text-foreground">{filtered.length}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
+          <p className="text-lg sm:text-xl font-bold text-blue-400">{candidateCount}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Candidates</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
+          <p className="text-lg sm:text-xl font-bold text-amber-400">{boCount}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Business</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
+          <p className="text-lg sm:text-xl font-bold text-emerald-400">{checkedInCount}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Checked In</p>
+        </div>
       </div>
 
-      <div className="text-sm text-muted-foreground flex flex-wrap gap-4">
-        <span>{filtered.length} attendees</span>
-        <span>Candidates: {filtered.filter(t => (ticketTypes[t.ticket_type_id]?.ticket_category || 'candidate') === 'candidate').length}</span>
-        <span>Business Owners: {filtered.filter(t => ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner').length}</span>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search name or email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:flex">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="sm:w-32 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="refunded">Refunded</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={modeFilter} onValueChange={setModeFilter}>
+            <SelectTrigger className="sm:w-32 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Modes</SelectItem>
+              <SelectItem value="online">Online</SelectItem>
+              <SelectItem value="in_person">In-Person</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="sm:w-36 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="candidate">Candidates</SelectItem>
+              <SelectItem value="business_owner">Business Owners</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      {/* Mobile: Card list */}
+      <div className="sm:hidden space-y-2">
+        {filtered.map(t => (
+          <AttendeeCard
+            key={t.id}
+            ticket={t}
+            ticketType={ticketTypes[t.ticket_type_id]}
+            leader={leaders[t.platinum_leader_id]}
+            isSuperAdmin={isSuperAdmin}
+            actionLoading={actionLoading}
+            onCancel={handleCancel}
+            onRefund={handleRefund}
+            onReschedule={openReschedule}
+          />
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-center py-8 text-muted-foreground text-sm">No attendees found</p>
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden sm:block border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead className="hidden sm:table-cell">Email</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Leader</TableHead>
@@ -244,7 +291,7 @@ export default function AttendeeList() {
             {filtered.map(t => (
               <TableRow key={t.id}>
                 <TableCell className="text-sm font-medium whitespace-nowrap">{t.attendee_first_name} {t.attendee_last_name}</TableCell>
-                <TableCell className="hidden sm:table-cell text-sm truncate max-w-[180px]">{t.attendee_email}</TableCell>
+                <TableCell className="text-sm truncate max-w-[180px]">{t.attendee_email}</TableCell>
                 <TableCell className="text-sm">{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
                 <TableCell>
                   <Badge variant={ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'default' : 'secondary'} className="text-xs">
