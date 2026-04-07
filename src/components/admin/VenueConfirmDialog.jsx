@@ -78,7 +78,7 @@ export default function VenueConfirmDialog({ open, onOpenChange, event, location
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)]">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Confirm Venue</DialogTitle>
         </DialogHeader>
@@ -92,7 +92,7 @@ export default function VenueConfirmDialog({ open, onOpenChange, event, location
           <div>
             <Label>Venue</Label>
             <Select value={venueData.venue_id || 'custom'} onValueChange={handleSelectVenue}>
-              <SelectTrigger><SelectValue placeholder="Select a venue..." /></SelectTrigger>
+              <SelectTrigger className="w-full [&>span]:truncate [&>span]:block [&>span]:max-w-[calc(100%-2rem)]"><SelectValue placeholder="Select a venue..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="custom">Custom / Manual Entry</SelectItem>
                 {filteredVenues.map(v => (
