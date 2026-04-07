@@ -29,6 +29,10 @@
       "title": "Total Amount",
       "default": 0
     },
+    "stripe_fee": {
+      "type": "number",
+      "title": "Stripe Fee"
+    },
     "payment_status": {
       "type": "string",
       "title": "Payment Status",
