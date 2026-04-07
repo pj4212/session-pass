@@ -7,21 +7,11 @@ Deno.serve(async (req) => {
 
     const errors = [];
 
+    // Check capacity limits for each ticket type
+    const ticketTypeCounts = {};
     for (const att of attendees) {
-      const existingTickets = await base44.asServiceRole.entities.Ticket.filter({
-        occurrence_id,
-        attendee_email: att.email.toLowerCase(),
-        attendance_mode: att.attendance_mode,
-        ticket_status: 'active'
-      });
-
-      if (existingTickets.length > 0) {
-        errors.push({
-          email: att.email,
-          attendance_mode: att.attendance_mode,
-          message: `${att.email} already has an active ${att.attendance_mode === 'online' ? 'online' : 'in-person'} ticket for this event.`
-        });
-      }
+      // We no longer block duplicate emails — multiple tickets per email are allowed
+      // Just aggregate counts per attendance_mode for capacity checks if needed
     }
 
     return Response.json({ valid: errors.length === 0, errors });

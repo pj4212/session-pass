@@ -261,35 +261,46 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`Sending ${reminders.join(', ')} reminders for "${occ.name}" to ${tickets.length} attendees.`);
+      // Group tickets by email so we send one email per unique email
+      const ticketsByEmail = {};
+      for (const ticket of tickets) {
+        const email = ticket.attendee_email.toLowerCase();
+        if (!ticketsByEmail[email]) ticketsByEmail[email] = [];
+        ticketsByEmail[email].push(ticket);
+      }
+
+      const uniqueEmails = Object.keys(ticketsByEmail);
+      console.log(`Sending ${reminders.join(', ')} reminders for "${occ.name}" to ${uniqueEmails.length} unique emails (${tickets.length} tickets).`);
 
       for (const reminderType of reminders) {
         const label = reminderType === '1hour' ? '1-Hour' : '5-Minute';
         
         // Send in batches of 10 to avoid overwhelming Resend
         const batchSize = 10;
-        for (let i = 0; i < tickets.length; i += batchSize) {
-          const batch = tickets.slice(i, i + batchSize);
-          const promises = batch.map(ticket => {
-            const html = buildReminderEmailHtml(ticket, occ, reminderType);
+        for (let i = 0; i < uniqueEmails.length; i += batchSize) {
+          const batch = uniqueEmails.slice(i, i + batchSize);
+          const promises = batch.map(email => {
+            const emailTickets = ticketsByEmail[email];
+            // Use the first ticket's name for the greeting
+            const html = buildReminderEmailHtml(emailTickets[0], occ, reminderType);
             return sendWithRetry(() => resend.emails.send({
               from: 'Session Pass <noreply@session-pass.com>',
-              to: ticket.attendee_email,
+              to: email,
               subject: `${label} Reminder — ${occ.name}`,
               html
             }))
             .then(() => {
               totalSent++;
-              console.log(`✓ ${label} reminder sent to ${ticket.attendee_email}`);
+              console.log(`✓ ${label} reminder sent to ${email} (${emailTickets.length} ticket${emailTickets.length > 1 ? 's' : ''})`);
             })
             .catch(err => {
-              console.error(`✗ Failed ${label} reminder to ${ticket.attendee_email}:`, err.message);
+              console.error(`✗ Failed ${label} reminder to ${email}:`, err.message);
             });
           });
           await Promise.all(promises);
           
           // Small delay between batches to respect rate limits
-          if (i + batchSize < tickets.length) {
+          if (i + batchSize < uniqueEmails.length) {
             await new Promise(r => setTimeout(r, 1000));
           }
         }

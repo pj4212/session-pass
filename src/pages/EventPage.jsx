@@ -175,16 +175,6 @@ export default function EventPage() {
       if (!/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
     }
 
-    // Check within-order duplicates
-    const seen = new Set();
-    for (let i = 0; i < attendees.length; i++) {
-      const key = `${attendees[i].email.toLowerCase()}_${attendees[i].attendance_mode}`;
-      if (seen.has(key)) {
-        return `Each attendee can only have one ${attendees[i].attendance_mode === 'online' ? 'online' : 'in-person'} ticket. Duplicate email: ${attendees[i].email}`;
-      }
-      seen.add(key);
-    }
-
     return null;
   };
 
