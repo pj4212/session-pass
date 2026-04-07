@@ -65,13 +65,12 @@ export default function AttendeeForm({
 
       <div>
         <div>
-          <Label>Platinum Leader</Label>
+          <Label>Platinum Leader *</Label>
           <Select value={attendee.platinum_leader_id || ''} onValueChange={v => update('platinum_leader_id', v)}>
             <SelectTrigger>
               <SelectValue placeholder="Select leader..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>None</SelectItem>
               {leaders.map(l => (
                 <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
               ))}

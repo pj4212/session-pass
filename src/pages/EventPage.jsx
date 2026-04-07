@@ -173,6 +173,7 @@ export default function EventPage() {
       const a = attendees[i];
       if (!a.first_name || !a.last_name || !a.email) return `Please fill in all details for Ticket ${i + 1}.`;
       if (!/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
+      if (!a.platinum_leader_id) return `Please select a Platinum Leader for Ticket ${i + 1}.`;
     }
 
     return null;
