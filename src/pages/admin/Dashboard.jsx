@@ -34,8 +34,13 @@ export default function Dashboard() {
     );
     const weekRevenue = weekOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
     const paidWeekOrders = weekOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0);
-    const weekFees = paidWeekOrders.reduce((sum, o) => sum + (o.total_amount * 0.029 + 0.30), 0);
-    const weekProfit = weekRevenue - weekFees;
+    const weekFeesTotal = paidWeekOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
+    const paidTicketCount = allTickets.filter(t => {
+      const order = allOrders.find(o => o.id === t.order_id);
+      return order && order.payment_status === 'completed' && order.total_amount > 0;
+    }).length;
+    const avgFeePerTicket = paidTicketCount > 0 ? weekFeesTotal / paidTicketCount : 0;
+    const weekProfit = weekRevenue - weekFeesTotal;
 
     const upcoming = allEvents.filter(e => 
       new Date(e.event_date) >= now && e.status !== 'cancelled'
@@ -61,7 +66,7 @@ export default function Dashboard() {
     setStats({
       weekTickets: weekTickets.length,
       weekRevenue,
-      weekFees,
+      avgFeePerTicket,
       weekProfit,
       upcomingCount: upcoming.length,
       nextEvent: upcoming[0] || null
@@ -84,7 +89,7 @@ export default function Dashboard() {
   const statCards = [
     { label: 'Tickets This Week', value: stats.weekTickets, icon: Ticket, accent: 'text-blue-400 bg-blue-500/15' },
     { label: 'Revenue This Week', value: `$${stats.weekRevenue.toFixed(2)}`, icon: DollarSign, accent: 'text-emerald-400 bg-emerald-500/15' },
-    { label: 'Stripe Fees (est.)', value: `$${stats.weekFees.toFixed(2)}`, icon: TrendingUp, accent: 'text-red-400 bg-red-500/15' },
+    { label: 'Avg Stripe Fee / Ticket', value: `$${stats.avgFeePerTicket.toFixed(2)}`, icon: TrendingUp, accent: 'text-red-400 bg-red-500/15' },
     { label: 'Profit After Fees', value: `$${stats.weekProfit.toFixed(2)}`, icon: DollarSign, accent: 'text-purple-400 bg-purple-500/15' },
     { label: 'Upcoming Events', value: stats.upcomingCount, icon: Calendar, accent: 'text-amber-400 bg-amber-500/15' },
   ];
