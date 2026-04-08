@@ -344,6 +344,8 @@ export default function AttendeeList() {
         ticketType={selectedTicket ? ticketTypes[selectedTicket.ticket_type_id] : null}
         leader={selectedTicket ? leaders[selectedTicket.platinum_leader_id] : null}
         order={selectedTicket ? orders[selectedTicket.order_id] : null}
+        occurrence={occurrence}
+        ticketTypes={ticketTypes}
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
         onUpdate={handleDetailUpdate}

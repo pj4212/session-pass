@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
-import { Trash2, Loader2, CheckCircle2, Circle, Briefcase, Users } from 'lucide-react';
+import { Trash2, Loader2, CheckCircle2, Circle, Briefcase, Users, Monitor, MapPin } from 'lucide-react';
+import ConvertModeDialog from './ConvertModeDialog';
 
-export default function AttendeeDetailDialog({ ticket, ticketType, leader, order, open, onClose, onUpdate }) {
+export default function AttendeeDetailDialog({ ticket, ticketType, leader, order, occurrence, ticketTypes, open, onClose, onUpdate }) {
   const [actionLoading, setActionLoading] = useState(null);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
 
   if (!ticket) return null;
 
@@ -80,6 +82,20 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
 
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-border">
+            {isActive && (
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setConvertDialogOpen(true)}
+                disabled={!!actionLoading}
+              >
+                {ticket.attendance_mode === 'online' ? (
+                  <><MapPin className="h-4 w-4 mr-1.5" />Convert to In-Person</>
+                ) : (
+                  <><Monitor className="h-4 w-4 mr-1.5" />Convert to Online</>
+                )}
+              </Button>
+            )}
             <Button
               variant="destructive"
               className="flex-1"
@@ -92,6 +108,24 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
           </div>
         </div>
       </DialogContent>
+
+      {ticket && (
+        <ConvertModeDialog
+          ticket={ticket}
+          ticketTypes={ticketTypes || {}}
+          occurrence={occurrence}
+          open={convertDialogOpen}
+          onClose={() => setConvertDialogOpen(false)}
+          onConverted={(result) => {
+            onUpdate(ticket.id, {
+              attendance_mode: result.new_mode,
+              ticket_type_id: result.new_ticket_type_id,
+              qr_code_hash: result.qr_code_hash,
+            });
+            setConvertDialogOpen(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
