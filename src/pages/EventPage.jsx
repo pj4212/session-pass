@@ -362,7 +362,7 @@ export default function EventPage() {
                 <BuyerForm buyer={buyer} onChange={setBuyer} />
 
                 {/* Send all tickets to one email option */}
-                {attendees.length > 0 && (
+                {attendees.length > 1 && (
                   <div className="flex items-start gap-3 p-4 border rounded-lg bg-card">
                     <input
                       type="checkbox"
