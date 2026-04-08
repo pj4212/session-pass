@@ -71,8 +71,6 @@ export default function QRScanner() {
       const containerEl = document.getElementById("qr-reader");
       if (!containerEl) return;
 
-      // Use a smaller qrbox relative to viewport — scans more of the frame
-      // so QR codes don't need to fill the screen
       const size = Math.min(containerEl.clientWidth, containerEl.clientHeight);
       const qrboxSize = Math.max(Math.floor(size * 0.85), 200);
 
@@ -81,45 +79,38 @@ export default function QRScanner() {
         qrbox: { width: qrboxSize, height: qrboxSize },
         aspectRatio: 1.0,
         disableFlip: false,
-        formatsToSupport: [0], // QR_CODE only
-      };
-
-      // Request high-resolution back camera for better distance reading
-      const cameraConstraints = {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        focusMode: { ideal: "continuous" },
+        formatsToSupport: [0],
       };
 
       try {
         await html5QrCode.start(
-          cameraConstraints,
+          { facingMode: "environment" },
           scanConfig,
           (decodedText) => { handleScan(decodedText); },
           () => {}
         );
       } catch (err) {
-        console.warn("High-res camera failed, using fallback:", err.message);
-        if (stopped) return;
-        try {
-          await html5QrCode.start(
-            { facingMode: "environment" },
-            scanConfig,
-            (decodedText) => { handleScan(decodedText); },
-            () => {}
-          );
-        } catch (err2) {
-          console.error("Camera error:", err2);
-          return;
-        }
+        console.error("Camera error:", err);
+        return;
       }
 
-      // Apply autofocus + min zoom after camera starts
+      // After camera starts, apply high-res + continuous autofocus via track constraints
       await new Promise(r => setTimeout(r, 500));
       if (!stopped) {
         const videoEl = document.querySelector('#qr-reader video');
-        await applyFocusAndZoom(videoEl);
+        if (videoEl?.srcObject) {
+          const track = videoEl.srcObject.getVideoTracks()[0];
+          if (track) {
+            try {
+              // Request higher resolution for better distance reading
+              await track.applyConstraints({
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              });
+            } catch (e) { /* device may not support */ }
+            await applyFocusAndZoom(videoEl);
+          }
+        }
       }
       if (mountedRef.current) setCameraReady(true);
     }
