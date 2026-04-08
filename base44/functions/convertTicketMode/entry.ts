@@ -47,18 +47,16 @@ function buildConversionEmailHtml(ticket, occurrence, newMode, qrHash, joinUrl) 
   const modeBadgeColor = isNowOnline ? '#4338ca' : '#166534';
 
   let accessBlock = '';
-  if (isNowOnline && (joinUrl || occurrence.zoom_link)) {
-    const webinarUrl = joinUrl || occurrence.zoom_link;
+  if (isNowOnline && joinUrl) {
     const joinBtnHtml = `
         <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">You've been registered for the webinar. Use the link below to join:</p>
-        <a href="${webinarUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
+        <a href="${joinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
     accessBlock = `
       <tr><td style="padding:0 40px 24px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Join Online</h3>
             ${joinBtnHtml}
-            ${regBtnHtml}
           </td></tr>
         </table>
       </td></tr>`;
@@ -68,7 +66,7 @@ function buildConversionEmailHtml(ticket, occurrence, newMode, qrHash, joinUrl) 
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
           <tr><td>
             <h3 style="margin:0 0 4px;font-size:15px;color:#4338ca;">🖥 Online Event</h3>
-            <p style="margin:0;font-size:13px;color:#64748b;">The webinar link will be sent to you before the event.</p>
+            <p style="margin:0;font-size:13px;color:#64748b;">The webinar join link will be sent to you before the event.</p>
           </td></tr>
         </table>
       </td></tr>`;
