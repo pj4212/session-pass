@@ -3,7 +3,6 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Users } from 'lucide-react';
 import ScanResultOverlay from '@/components/scanner/ScanResultOverlay';
-import { Html5Qrcode } from 'html5-qrcode';
 
 export default function QRScanner() {
   const { occurrenceId } = useParams();
@@ -12,17 +11,19 @@ export default function QRScanner() {
   const [total, setTotal] = useState(0);
   const [result, setResult] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
   const lastScanRef = useRef({});
-  const scannerRef = useRef(null);
   const mountedRef = useRef(true);
   const occurrenceIdRef = useRef(occurrenceId);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const scanningRef = useRef(false);
 
-  // Keep ref in sync so the scan callback always has the latest value
   useEffect(() => {
     occurrenceIdRef.current = occurrenceId;
   }, [occurrenceId]);
 
-  // Load initial counts and start polling
+  // Load initial counts and poll
   useEffect(() => {
     mountedRef.current = true;
     loadCounts();
@@ -33,94 +34,96 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
-  // Initialize camera scanner with high-res + continuous autofocus
+  // Camera + scanning loop
   useEffect(() => {
-    let html5QrCode = null;
     let stopped = false;
+    let animFrameId = null;
 
-    async function applyFocusAndZoom(videoEl) {
-      try {
-        if (!videoEl?.srcObject) return;
-        const track = videoEl.srcObject.getVideoTracks()[0];
-        if (!track) return;
-        const caps = track.getCapabilities?.() || {};
-        const constraints = [];
-        if (caps.focusMode?.includes('continuous')) constraints.push({ focusMode: 'continuous' });
-        else if (caps.focusMode?.includes('auto')) constraints.push({ focusMode: 'auto' });
-        // Zoom out slightly if device supports it to widen field of view
-        if (caps.zoom && caps.zoom.min) constraints.push({ zoom: caps.zoom.min });
-        if (constraints.length) {
-          await track.applyConstraints({ advanced: constraints });
-          console.log('Applied camera constraints:', constraints);
-        }
-      } catch (err) {
-        console.warn('Could not apply camera constraints:', err.message);
-      }
-    }
-
-    async function startScanner() {
-      await new Promise(r => setTimeout(r, 300));
-      if (stopped) return;
-
-      html5QrCode = new Html5Qrcode("qr-reader", {
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        verbose: false,
-      });
-      scannerRef.current = html5QrCode;
-
-      const containerEl = document.getElementById("qr-reader");
-      if (!containerEl) return;
-
-      const size = Math.min(containerEl.clientWidth, containerEl.clientHeight);
-      const qrboxSize = Math.max(Math.floor(size * 0.85), 200);
-
-      const scanConfig = {
-        fps: 15,
-        qrbox: { width: qrboxSize, height: qrboxSize },
-        aspectRatio: 1.0,
-        disableFlip: false,
-        formatsToSupport: [0],
-      };
-
-      try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          scanConfig,
-          (decodedText) => { handleScan(decodedText); },
-          () => {}
-        );
-      } catch (err) {
-        console.error("Camera error:", err);
+    async function start() {
+      let detector = null;
+      if ('BarcodeDetector' in window) {
+        detector = new BarcodeDetector({ formats: ['qr_code'] });
+      } else {
+        setCameraError('QR scanning not supported on this browser. Please use Chrome or Safari.');
         return;
       }
 
-      // After camera starts, apply high-res + continuous autofocus via track constraints
-      await new Promise(r => setTimeout(r, 500));
-      if (!stopped) {
-        const videoEl = document.querySelector('#qr-reader video');
-        if (videoEl?.srcObject) {
-          const track = videoEl.srcObject.getVideoTracks()[0];
-          if (track) {
-            try {
-              // Request higher resolution for better distance reading
-              await track.applyConstraints({
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-              });
-            } catch (e) { /* device may not support */ }
-            await applyFocusAndZoom(videoEl);
-          }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+
+        if (stopped) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
         }
+
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.srcObject = stream;
+        await video.play();
+
+        // Apply continuous autofocus
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          try {
+            const caps = track.getCapabilities?.() || {};
+            const advanced = [];
+            if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
+            else if (caps.focusMode?.includes('auto')) advanced.push({ focusMode: 'auto' });
+            if (advanced.length) {
+              await track.applyConstraints({ advanced });
+            }
+          } catch (e) { /* some devices don't support */ }
+        }
+
+        if (mountedRef.current) setCameraReady(true);
+
+        // Scan loop
+        const scanLoop = async () => {
+          if (stopped || !video || video.readyState < 2) {
+            if (!stopped) animFrameId = requestAnimationFrame(scanLoop);
+            return;
+          }
+
+          if (!scanningRef.current) {
+            scanningRef.current = true;
+            try {
+              const barcodes = await detector.detect(video);
+              if (barcodes.length > 0) {
+                handleScan(barcodes[0].rawValue);
+              }
+            } catch (e) {
+              // detect() can fail on some frames
+            }
+            scanningRef.current = false;
+          }
+
+          if (!stopped) animFrameId = requestAnimationFrame(scanLoop);
+        };
+
+        animFrameId = requestAnimationFrame(scanLoop);
+      } catch (err) {
+        console.error('Camera error:', err);
+        if (mountedRef.current) setCameraError('Could not access camera. Please allow camera permissions and try again.');
       }
-      if (mountedRef.current) setCameraReady(true);
     }
 
-    startScanner();
+    start();
 
     return () => {
       stopped = true;
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(() => {});
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
     };
   }, [occurrenceId]);
@@ -144,8 +147,6 @@ export default function QRScanner() {
 
   const handleScan = async (decodedText) => {
     const currentOccurrenceId = occurrenceIdRef.current;
-
-    // Debounce: ignore same QR within 5 seconds
     const now = Date.now();
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 5000) return;
     lastScanRef.current[decodedText] = now;
@@ -159,39 +160,31 @@ export default function QRScanner() {
     }
 
     const { t: ticketId, e: eventId, h: hash } = payload;
-
     if (!ticketId || !hash) {
       setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Missing ticket data' });
       return;
     }
-
     if (hash === 'pending' || hash === 'temp') {
-      setResult({ type: 'error', title: 'Ticket Not Ready', subtitle: 'This ticket\'s QR code hasn\'t been activated yet. Please ask an admin to fix it.' });
+      setResult({ type: 'error', title: 'Ticket Not Ready', subtitle: "This ticket's QR code hasn't been activated yet. Please ask an admin to fix it." });
       return;
     }
 
-    // Call backend check-in (backend validates occurrence match)
     const res = await base44.functions.invoke('checkin', {
       action: 'checkin',
       ticket_id: ticketId,
       occurrence_id: currentOccurrenceId,
       qr_hash: hash
     });
-
     const data = res.data;
 
     if (data.status === 'success') {
       const t = data.ticket;
-      setResult({ 
-        type: 'success', 
-        title: `${t.attendee_first_name} ${t.attendee_last_name}`,
-        subtitle: 'Checked In ✓'
-      });
+      setResult({ type: 'success', title: `${t.attendee_first_name} ${t.attendee_last_name}`, subtitle: 'Checked In \u2713' });
       setCheckedIn(prev => prev + 1);
     } else if (data.status === 'warning_checked_in') {
       const t = data.ticket;
       const name = t ? `${t.attendee_first_name} ${t.attendee_last_name}` : 'Attendee';
-      setResult({ type: 'warning', title: `${name} — Checked In`, subtitle: data.reason });
+      setResult({ type: 'warning', title: `${name} \u2014 Checked In`, subtitle: data.reason });
       setCheckedIn(prev => prev + 1);
     } else if (data.status === 'warning') {
       const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;
@@ -212,14 +205,34 @@ export default function QRScanner() {
         </div>
       </div>
 
-      {/* Camera viewport — square aspect ratio */}
+      {/* Camera viewport */}
       <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        <div className="w-full max-w-[100vmin] aspect-square relative qr-square-container">
-          <div id="qr-reader" className="w-full h-full" />
-        </div>
-        {!cameraReady && (
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          playsInline
+          muted
+          autoPlay
+        />
+        {/* Scan frame overlay */}
+        {cameraReady && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-64 h-64 border-2 border-white/60 rounded-2xl relative">
+              <div className="absolute -top-0.5 -left-0.5 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
+              <div className="absolute -top-0.5 -right-0.5 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-2xl" />
+              <div className="absolute -bottom-0.5 -left-0.5 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-2xl" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
+            </div>
+          </div>
+        )}
+        {!cameraReady && !cameraError && (
           <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground">
             <p>Starting camera...</p>
+          </div>
+        )}
+        {cameraError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground p-6 text-center">
+            <p className="text-destructive">{cameraError}</p>
           </div>
         )}
       </div>
