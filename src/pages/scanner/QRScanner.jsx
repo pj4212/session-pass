@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Users } from 'lucide-react';
@@ -36,8 +36,13 @@ export default function QRScanner() {
   // Initialize camera scanner
   useEffect(() => {
     let html5QrCode = null;
+    let stopped = false;
 
     async function startScanner() {
+      // Small delay to ensure DOM element is ready
+      await new Promise(r => setTimeout(r, 300));
+      if (stopped) return;
+
       html5QrCode = new Html5Qrcode("qr-reader");
       scannerRef.current = html5QrCode;
 
@@ -47,16 +52,21 @@ export default function QRScanner() {
 
         // Calculate a square qrbox that fits the container
         const size = Math.min(containerEl.clientWidth, containerEl.clientHeight);
-        const qrboxSize = Math.floor(size * 0.7);
+        const qrboxSize = Math.max(Math.floor(size * 0.7), 150);
 
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 10,
+            fps: 15,
             qrbox: { width: qrboxSize, height: qrboxSize },
             aspectRatio: 1.0,
+            disableFlip: false,
+            formatsToSupport: [0], // QR_CODE only for faster detection
           },
-          handleScanRef,
+          (decodedText) => {
+            // Inline callback ensures it always has latest refs
+            handleScan(decodedText);
+          },
           () => {} // ignore scan failures
         );
         if (mountedRef.current) setCameraReady(true);
@@ -68,6 +78,7 @@ export default function QRScanner() {
     startScanner();
 
     return () => {
+      stopped = true;
       if (html5QrCode && html5QrCode.isScanning) {
         html5QrCode.stop().catch(() => {});
       }
@@ -91,8 +102,7 @@ export default function QRScanner() {
     }
   };
 
-  // Use a ref-based handler so the closure captured by html5-qrcode always calls current logic
-  const handleScanRef = useCallback(async (decodedText) => {
+  const handleScan = async (decodedText) => {
     const currentOccurrenceId = occurrenceIdRef.current;
 
     // Debounce: ignore same QR within 5 seconds
@@ -112,6 +122,11 @@ export default function QRScanner() {
 
     if (!ticketId || !hash) {
       setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Missing ticket data' });
+      return;
+    }
+
+    if (hash === 'pending' || hash === 'temp') {
+      setResult({ type: 'error', title: 'Ticket Not Ready', subtitle: 'This ticket\'s QR code hasn\'t been activated yet. Please ask an admin to fix it.' });
       return;
     }
 
@@ -145,7 +160,7 @@ export default function QRScanner() {
       const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;
       setResult({ type: 'error', title: name || 'Error', subtitle: data.reason || 'Check-in failed' });
     }
-  }, []);
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
