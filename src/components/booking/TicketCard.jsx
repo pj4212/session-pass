@@ -25,13 +25,26 @@ export default function TicketCard({ ticket, occurrence, ticketType }) {
         <span className="text-muted-foreground">Ticket Type:</span> {ticketType?.name || 'General'}
       </p>
 
-      {ticket.attendance_mode === 'online' && occurrence.zoom_link && (
+      {ticket.attendance_mode === 'online' && (ticket.zoom_join_url || occurrence.zoom_link) && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3 mt-3">
-          <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Zoom Link</p>
-          <a href={occurrence.zoom_link} target="_blank" rel="noopener noreferrer" 
-             className="text-sm text-blue-600 dark:text-blue-400 underline break-all">
-            {occurrence.zoom_link}
-          </a>
+          {ticket.zoom_join_url ? (
+            <>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Join Webinar</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">You're registered — click below to join directly.</p>
+              <a href={ticket.zoom_join_url} target="_blank" rel="noopener noreferrer" 
+                 className="inline-block bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-blue-700">
+                Join Webinar →
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Zoom Registration</p>
+              <a href={occurrence.zoom_link} target="_blank" rel="noopener noreferrer" 
+                 className="text-sm text-blue-600 dark:text-blue-400 underline break-all">
+                Register for Webinar →
+              </a>
+            </>
+          )}
         </div>
       )}
 

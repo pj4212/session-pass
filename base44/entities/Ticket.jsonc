@@ -56,6 +56,10 @@
       "type": "string",
       "title": "QR Code URL"
     },
+    "zoom_join_url": {
+      "type": "string",
+      "title": "Zoom Join URL"
+    },
     "check_in_status": {
       "type": "string",
       "title": "Check-In Status",

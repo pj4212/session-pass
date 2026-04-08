@@ -101,6 +101,15 @@ Deno.serve(async (req) => {
       );
 
       if (result) {
+        // Save the join URL on the ticket entity
+        try {
+          await base44.asServiceRole.entities.Ticket.update(ticket.id, {
+            zoom_join_url: result.join_url
+          });
+        } catch (err) {
+          console.error(`Failed to save zoom_join_url on ticket ${ticket.id}:`, err.message);
+        }
+
         results.push({
           ticket_id: ticket.id,
           email: ticket.attendee_email,

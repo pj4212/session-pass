@@ -303,8 +303,9 @@ Deno.serve(async (req) => {
           })),
           occurrence_id: occurrence.id
         });
-        if (zoomRes?.registrations) {
-          for (const reg of zoomRes.registrations) {
+        const zoomData = zoomRes?.data || zoomRes;
+        if (zoomData?.registrations) {
+          for (const reg of zoomData.registrations) {
             if (reg.join_url) {
               zoomJoinUrls[reg.ticket_id] = reg.join_url;
             }
