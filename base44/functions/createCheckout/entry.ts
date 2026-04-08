@@ -511,9 +511,12 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
   if (!isOnline) {
     qrBlock = `
       <tr><td style="padding:0 40px 32px;text-align:center;">
-        <h3 style="margin:0 0 12px;font-size:15px;color:${BRAND.headingColor};text-transform:uppercase;letter-spacing:0.5px;">Your Check-In QR Code</h3>
-        <p style="margin:0 0 16px;font-size:13px;color:#94a3b8;">Present this at the door for fast entry.</p>
-        <img src="${qrCodeUrl}" alt="QR Code" width="200" height="200" style="border:1px solid ${BRAND.cardBorder};border-radius:8px;padding:8px;background:#fff;" />
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:2px solid ${BRAND.cardBorder};padding:24px;">
+          <tr><td style="text-align:center;">
+            <img src="${qrCodeUrl}" alt="QR Code" width="280" height="280" style="display:block;margin:0 auto;" />
+            <p style="margin:16px 0 0;font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Scan at door for entry</p>
+          </td></tr>
+        </table>
       </td></tr>`;
   }
 
@@ -678,11 +681,11 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
 
     let qrHtml = '';
     if (!isOnline) {
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.qr_code_hash)}`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(ticket.qr_code_hash)}`;
       qrHtml = `
-        <div style="text-align:center;margin-top:16px;">
-          <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Check-In QR Code</p>
-          <img src="${qrCodeUrl}" alt="QR Code" width="180" height="180" style="border:1px solid ${BRAND.cardBorder};border-radius:8px;padding:6px;background:#fff;" />
+        <div style="text-align:center;margin-top:16px;padding:20px;background:#ffffff;border-radius:12px;border:2px solid ${BRAND.cardBorder};">
+          <img src="${qrCodeUrl}" alt="QR Code" width="240" height="240" style="display:block;margin:0 auto;" />
+          <p style="margin:12px 0 0;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Scan at door for entry</p>
         </div>`;
     }
 
