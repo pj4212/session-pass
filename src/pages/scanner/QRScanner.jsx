@@ -23,7 +23,6 @@ export default function QRScanner() {
     occurrenceIdRef.current = occurrenceId;
   }, [occurrenceId]);
 
-  // Load initial counts and poll
   useEffect(() => {
     mountedRef.current = true;
     loadCounts();
@@ -34,18 +33,36 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
-  // Camera + scanning loop
+  // Camera + scanning
   useEffect(() => {
     let stopped = false;
     let animFrameId = null;
 
     async function start() {
+      // Use native BarcodeDetector if available (Chrome/Android), else load jsQR (iOS Safari)
       let detector = null;
+      let jsQRFn = null;
+
       if ('BarcodeDetector' in window) {
         detector = new BarcodeDetector({ formats: ['qr_code'] });
       } else {
-        setCameraError('QR scanning not supported on this browser. Please use Chrome or Safari.');
-        return;
+        try {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+          document.head.appendChild(script);
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+          });
+          jsQRFn = window.jsQR;
+        } catch (e) {
+          // noop
+        }
+        if (!jsQRFn && window.jsQR) jsQRFn = window.jsQR;
+        if (!jsQRFn) {
+          if (mountedRef.current) setCameraError('Could not load QR scanner. Please try refreshing.');
+          return;
+        }
       }
 
       try {
@@ -70,7 +87,7 @@ export default function QRScanner() {
         video.srcObject = stream;
         await video.play();
 
-        // Apply autofocus + zoom for distance scanning
+        // Apply autofocus + zoom
         const track = stream.getVideoTracks()[0];
         if (track) {
           try {
@@ -78,23 +95,34 @@ export default function QRScanner() {
             const advanced = [];
             if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
             else if (caps.focusMode?.includes('auto')) advanced.push({ focusMode: 'auto' });
-            // Auto-zoom to ~2.5x for better distance scanning
             if (caps.zoom) {
               const maxZoom = caps.zoom.max || 1;
               const targetZoom = Math.min(2.5, maxZoom);
               if (targetZoom > 1) advanced.push({ zoom: targetZoom });
             }
-            if (advanced.length) {
-              await track.applyConstraints({ advanced });
-            }
-          } catch (e) { /* some devices don't support */ }
+            if (advanced.length) await track.applyConstraints({ advanced });
+          } catch (e) { /* unsupported */ }
         }
 
         if (mountedRef.current) setCameraReady(true);
 
-        // Scan loop
+        // Canvas for jsQR fallback
+        let canvas = null;
+        let ctx = null;
+        if (!detector && jsQRFn) {
+          canvas = document.createElement('canvas');
+          ctx = canvas.getContext('2d', { willReadFrequently: true });
+        }
+
+        let frameCount = 0;
         const scanLoop = async () => {
           if (stopped || !video || video.readyState < 2) {
+            if (!stopped) animFrameId = requestAnimationFrame(scanLoop);
+            return;
+          }
+
+          frameCount++;
+          if (frameCount % 3 !== 0) {
             if (!stopped) animFrameId = requestAnimationFrame(scanLoop);
             return;
           }
@@ -102,13 +130,18 @@ export default function QRScanner() {
           if (!scanningRef.current) {
             scanningRef.current = true;
             try {
-              const barcodes = await detector.detect(video);
-              if (barcodes.length > 0) {
-                handleScan(barcodes[0].rawValue);
+              if (detector) {
+                const barcodes = await detector.detect(video);
+                if (barcodes.length > 0) handleScan(barcodes[0].rawValue);
+              } else if (jsQRFn && canvas && ctx) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQRFn(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+                if (code) handleScan(code.data);
               }
-            } catch (e) {
-              // detect() can fail on some frames
-            }
+            } catch (e) { /* scan error */ }
             scanningRef.current = false;
           }
 
@@ -165,13 +198,13 @@ export default function QRScanner() {
       return;
     }
 
-    const { t: ticketId, e: eventId, h: hash } = payload;
+    const { t: ticketId, h: hash } = payload;
     if (!ticketId || !hash) {
       setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Missing ticket data' });
       return;
     }
     if (hash === 'pending' || hash === 'temp') {
-      setResult({ type: 'error', title: 'Ticket Not Ready', subtitle: "This ticket's QR code hasn't been activated yet. Please ask an admin to fix it." });
+      setResult({ type: 'error', title: 'Ticket Not Ready', subtitle: "This ticket's QR code hasn't been activated yet." });
       return;
     }
 
@@ -203,7 +236,6 @@ export default function QRScanner() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Top bar */}
       <div className="flex items-center justify-center px-4 py-2.5 bg-card border-b border-border shrink-0">
         <div className="flex items-center gap-2 text-lg font-bold text-foreground">
           <Users className="h-5 w-5 text-primary" />
@@ -211,7 +243,6 @@ export default function QRScanner() {
         </div>
       </div>
 
-      {/* Camera viewport */}
       <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
         <video
           ref={videoRef}
@@ -220,7 +251,6 @@ export default function QRScanner() {
           muted
           autoPlay
         />
-        {/* Scan frame overlay */}
         {cameraReady && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-64 h-64 border-2 border-white/60 rounded-2xl relative">
@@ -243,7 +273,6 @@ export default function QRScanner() {
         )}
       </div>
 
-      {/* Result overlay */}
       {result && <ScanResultOverlay result={result} onDismiss={() => setResult(null)} />}
     </div>
   );
