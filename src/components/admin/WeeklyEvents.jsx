@@ -45,7 +45,7 @@ export default function WeeklyEvents({ events, tickets, ticketTypes }) {
     const businessOwners = evTickets.filter(t => ttMap[t.ticket_type_id]?.ticket_category === 'business_owner').length;
     const checkedIn = evTickets.filter(t => t.check_in_status === 'checked_in').length;
     return { ...ev, candidates, businessOwners, checkedIn, total: evTickets.length };
-  });
+  }).sort((a, b) => b.total - a.total);
 
   const monStr = monday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
   const sunStr = sunday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
