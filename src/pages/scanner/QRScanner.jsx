@@ -70,7 +70,7 @@ export default function QRScanner() {
         video.srcObject = stream;
         await video.play();
 
-        // Apply continuous autofocus
+        // Apply autofocus + zoom for distance scanning
         const track = stream.getVideoTracks()[0];
         if (track) {
           try {
@@ -78,6 +78,12 @@ export default function QRScanner() {
             const advanced = [];
             if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
             else if (caps.focusMode?.includes('auto')) advanced.push({ focusMode: 'auto' });
+            // Auto-zoom to ~2.5x for better distance scanning
+            if (caps.zoom) {
+              const maxZoom = caps.zoom.max || 1;
+              const targetZoom = Math.min(2.5, maxZoom);
+              if (targetZoom > 1) advanced.push({ zoom: targetZoom });
+            }
             if (advanced.length) {
               await track.applyConstraints({ advanced });
             }
