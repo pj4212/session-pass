@@ -46,8 +46,19 @@ export default function Dashboard() {
     const weekProfit = weekRevenue - weekFeesTotal;
 
     const upcoming = allEvents.filter(e => 
-      new Date(e.event_date) >= now && e.status !== 'cancelled'
-    ).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+      new Date(e.event_date) >= now && e.status === 'published'
+    ).sort((a, b) => new Date(a.start_datetime || a.event_date) - new Date(b.start_datetime || b.event_date));
+
+    // Gather next events: all published events within 2 hours of the earliest
+    let nextEvents = [];
+    if (upcoming.length > 0) {
+      const firstStart = new Date(upcoming[0].start_datetime || upcoming[0].event_date).getTime();
+      const twoHoursMs = 2 * 60 * 60 * 1000;
+      nextEvents = upcoming.filter(e => {
+        const eStart = new Date(e.start_datetime || e.event_date).getTime();
+        return eStart - firstStart <= twoHoursMs;
+      });
+    }
 
     const alertList = [];
     for (const ev of upcoming) {
@@ -72,7 +83,7 @@ export default function Dashboard() {
       avgFeePerTicket,
       weekProfit,
       upcomingCount: upcoming.length,
-      nextEvent: upcoming[0] || null
+      nextEvents
     });
     setAlerts(alertList);
     setAllEvents(allEvents);
@@ -127,15 +138,29 @@ export default function Dashboard() {
 
       <LiveSessionBanner events={allEvents} tickets={allTickets} />
 
-      {/* Next event */}
-      {stats.nextEvent && (
+      {/* Next events */}
+      {stats.nextEvents.length > 0 && (
         <div className="bg-primary/10 border border-primary/20 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Next Event</span>
+            <span className="text-sm font-medium text-primary">
+              {stats.nextEvents.length === 1 ? 'Next Event' : 'Next Events'}
+            </span>
           </div>
-          <p className="font-semibold text-foreground">{stats.nextEvent.name}</p>
-          <p className="text-sm text-muted-foreground">{new Date(stats.nextEvent.event_date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <div className={`grid gap-3 ${stats.nextEvents.length > 1 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}`}>
+            {stats.nextEvents.map(ev => {
+              const startTime = ev.start_datetime ? new Date(ev.start_datetime).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+              return (
+                <div key={ev.id} className={`${stats.nextEvents.length > 1 ? 'bg-background/40 rounded-lg p-3 border border-primary/10' : ''}`}>
+                  <p className="font-semibold text-foreground">{ev.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(ev.event_date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {startTime ? ` · ${startTime}` : ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
