@@ -237,12 +237,36 @@ Deno.serve(async (req) => {
     }
     await base44.asServiceRole.entities.Ticket.update(ticket.id, updateData);
 
+    // If converting to online, register with Zoom webinar
+    let joinUrl = null;
+    if (newMode === 'online' && occurrence.zoom_meeting_id) {
+      try {
+        const zoomRes = await base44.asServiceRole.functions.invoke('registerZoomAttendee', {
+          tickets: [{
+            id: ticket.id,
+            attendance_mode: 'online',
+            attendee_first_name: ticket.attendee_first_name,
+            attendee_last_name: ticket.attendee_last_name,
+            attendee_email: ticket.attendee_email
+          }],
+          occurrence_id: occurrenceId
+        });
+        if (zoomRes?.registrations?.[0]?.join_url) {
+          joinUrl = zoomRes.registrations[0].join_url;
+        }
+        console.log(`Zoom registration for converted ticket: joinUrl=${joinUrl}`);
+      } catch (err) {
+        console.error('Zoom registration during conversion failed (non-blocking):', err.message);
+      }
+    }
+
     // Send email
     const html = buildConversionEmailHtml(
       { ...ticket, ...updateData },
       occurrence,
       newMode,
-      newMode === 'in_person' ? qrHash : null
+      newMode === 'in_person' ? qrHash : null,
+      joinUrl
     );
 
     const modeLabel = newMode === 'online' ? 'Online' : 'In-Person';
