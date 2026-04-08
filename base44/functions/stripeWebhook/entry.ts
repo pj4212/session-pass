@@ -7,16 +7,31 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
 // Retry wrapper with exponential backoff for email sending and DB ops
-async function sendWithRetry(fn, maxRetries = 5) {
+async function sendWithRetry(fn, maxRetries = 5, base44, label = 'email') {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const result = await fn();
       return result;
     } catch (err) {
-      const isRateLimit = err?.statusCode === 429 || err?.message?.includes('rate');
-      const isServerError = err?.statusCode >= 500;
+      const msg = err?.message || '';
+      const status = err?.statusCode || err?.status || 0;
+      const isRateLimit = status === 429 || msg.includes('rate');
+      const isServerError = status >= 500;
       const isRetryable = isRateLimit || isServerError || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET';
       
+      if (isRateLimit && base44) {
+        try {
+          await base44.asServiceRole.entities.RateLimitLog.create({
+            operation_label: label,
+            error_message: msg,
+            status_code: status,
+            attempt: attempt,
+          });
+        } catch (logErr) {
+          console.error(`Failed to log rate limit event for ${label}:`, logErr.message);
+        }
+      }
+
       if (!isRetryable || attempt === maxRetries) {
         console.error(`sendWithRetry failed after ${attempt} attempts:`, err.message);
         throw err;
@@ -467,7 +482,7 @@ async function sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketT
     to: order.buyer_email,
     subject: `Booking Confirmed — ${occurrence.name} | Order #${order.order_number}`,
     html: html
-  }));
+  }), 5, base44, 'send order receipt');
   console.log(`Order receipt email sent to ${order.buyer_email} for order ${order.order_number}`);
 }
 
@@ -480,7 +495,7 @@ async function sendTicketEmail(base44, ticket, occurrence, ticketType, joinUrl) 
     to: ticket.attendee_email,
     subject: `Your ${isOnline ? 'Online' : 'In-Person'} Ticket — ${occurrence.name}`,
     html: html
-  }));
+  }), 5, base44, `send ticket to ${ticket.attendee_email}`);
   console.log(`Ticket email sent to ${ticket.attendee_email} for ticket ${ticket.id}`);
 }
 
@@ -648,6 +663,6 @@ async function sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMa
     to: order.buyer_email,
     subject: `Your ${tickets.length} Ticket${tickets.length > 1 ? 's' : ''} — ${occurrence.name}`,
     html: html
-  }));
+  }), 5, base44, 'send combined tickets');
   console.log(`Combined tickets email sent to ${order.buyer_email} for order ${order.order_number}`);
 }

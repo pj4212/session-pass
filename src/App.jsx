@@ -26,7 +26,7 @@ import SeriesPage from './pages/SeriesPage';
 import Home from './pages/Home';
 import EmailTesting from './pages/admin/EmailTesting';
 import LoadTest from './pages/admin/LoadTest';
-import PastSessions from './pages/admin/PastSessions';
+import RateLimitLogs from './pages/admin/RateLimitLogs';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -71,7 +71,7 @@ const AuthenticatedApp = () => {
         <Route path="settings/users" element={<UserManagement />} />
         <Route path="settings/email-testing" element={<EmailTesting />} />
         <Route path="settings/load-test" element={<LoadTest />} />
-        <Route path="past-sessions" element={<PastSessions />} />
+        <Route path="settings/rate-limit-logs" element={<RateLimitLogs />} />
       </Route>
       <Route path="/scanner" element={<ScannerLayout />}>
         <Route index element={<ScannerHome />} />

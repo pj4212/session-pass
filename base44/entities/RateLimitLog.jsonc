@@ -1,0 +1,26 @@
+{
+  "name": "RateLimitLog",
+  "type": "object",
+  "properties": {
+    "operation_label": {
+      "type": "string",
+      "title": "Operation Label"
+    },
+    "error_message": {
+      "type": "string",
+      "title": "Error Message"
+    },
+    "status_code": {
+      "type": "number",
+      "title": "Status Code"
+    },
+    "attempt": {
+      "type": "number",
+      "title": "Attempt"
+    }
+  },
+  "required": [
+    "operation_label",
+    "attempt"
+  ]
+}
