@@ -33,99 +33,95 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
-  // Initialize camera scanner with continuous autofocus
+  // Initialize camera scanner with high-res + continuous autofocus
   useEffect(() => {
     let html5QrCode = null;
     let stopped = false;
 
-    async function applyFocusConstraints(html5QrCodeInstance) {
+    async function applyFocusAndZoom(videoEl) {
       try {
-        // Access the underlying video track to apply focus constraints
-        const videoElement = document.querySelector('#qr-reader video');
-        if (!videoElement || !videoElement.srcObject) return;
-
-        const track = videoElement.srcObject.getVideoTracks()[0];
+        if (!videoEl?.srcObject) return;
+        const track = videoEl.srcObject.getVideoTracks()[0];
         if (!track) return;
-
-        const capabilities = track.getCapabilities?.();
-        if (capabilities?.focusMode?.includes('continuous')) {
-          await track.applyConstraints({
-            advanced: [{ focusMode: 'continuous' }]
-          });
-          console.log('Applied continuous autofocus');
-        } else if (capabilities?.focusMode?.includes('auto')) {
-          await track.applyConstraints({
-            advanced: [{ focusMode: 'auto' }]
-          });
-          console.log('Applied auto focus');
+        const caps = track.getCapabilities?.() || {};
+        const constraints = [];
+        if (caps.focusMode?.includes('continuous')) constraints.push({ focusMode: 'continuous' });
+        else if (caps.focusMode?.includes('auto')) constraints.push({ focusMode: 'auto' });
+        // Zoom out slightly if device supports it to widen field of view
+        if (caps.zoom && caps.zoom.min) constraints.push({ zoom: caps.zoom.min });
+        if (constraints.length) {
+          await track.applyConstraints({ advanced: constraints });
+          console.log('Applied camera constraints:', constraints);
         }
       } catch (err) {
-        console.warn('Could not apply focus constraints:', err.message);
+        console.warn('Could not apply camera constraints:', err.message);
       }
     }
 
     async function startScanner() {
-      // Small delay to ensure DOM element is ready
       await new Promise(r => setTimeout(r, 300));
       if (stopped) return;
 
-      html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode = new Html5Qrcode("qr-reader", {
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        verbose: false,
+      });
       scannerRef.current = html5QrCode;
 
+      const containerEl = document.getElementById("qr-reader");
+      if (!containerEl) return;
+
+      // Use a smaller qrbox relative to viewport — scans more of the frame
+      // so QR codes don't need to fill the screen
+      const size = Math.min(containerEl.clientWidth, containerEl.clientHeight);
+      const qrboxSize = Math.max(Math.floor(size * 0.85), 200);
+
+      const scanConfig = {
+        fps: 15,
+        qrbox: { width: qrboxSize, height: qrboxSize },
+        aspectRatio: 1.0,
+        disableFlip: false,
+        formatsToSupport: [0], // QR_CODE only
+      };
+
+      // Request high-resolution back camera for better distance reading
+      const cameraConstraints = {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        focusMode: { ideal: "continuous" },
+      };
+
       try {
-        const containerEl = document.getElementById("qr-reader");
-        if (!containerEl) return;
-
-        // Calculate a square qrbox that fits the container
-        const size = Math.min(containerEl.clientWidth, containerEl.clientHeight);
-        const qrboxSize = Math.max(Math.floor(size * 0.7), 150);
-
         await html5QrCode.start(
-          { facingMode: { exact: "environment" } },
-          {
-            fps: 15,
-            qrbox: { width: qrboxSize, height: qrboxSize },
-            aspectRatio: 1.0,
-            disableFlip: false,
-            focusMode: 'continuous',
-            formatsToSupport: [0], // QR_CODE only
-          },
-          (decodedText) => {
-            handleScan(decodedText);
-          },
-          () => {} // ignore scan failures
+          cameraConstraints,
+          scanConfig,
+          (decodedText) => { handleScan(decodedText); },
+          () => {}
         );
-
-        // Apply continuous autofocus after camera starts
-        await new Promise(r => setTimeout(r, 500));
-        if (!stopped) await applyFocusConstraints(html5QrCode);
-
-        if (mountedRef.current) setCameraReady(true);
       } catch (err) {
-        console.error("Camera error with exact facingMode, retrying without exact:", err);
-        // Fallback: some devices don't support exact facingMode
+        console.warn("High-res camera failed, using fallback:", err.message);
         if (stopped) return;
         try {
           await html5QrCode.start(
             { facingMode: "environment" },
-            {
-              fps: 15,
-              qrbox: 200,
-              aspectRatio: 1.0,
-              formatsToSupport: [0],
-            },
-            (decodedText) => {
-              handleScan(decodedText);
-            },
+            scanConfig,
+            (decodedText) => { handleScan(decodedText); },
             () => {}
           );
-          await new Promise(r => setTimeout(r, 500));
-          if (!stopped) await applyFocusConstraints(html5QrCode);
-          if (mountedRef.current) setCameraReady(true);
         } catch (err2) {
-          console.error("Camera error (fallback):", err2);
+          console.error("Camera error:", err2);
+          return;
         }
       }
+
+      // Apply autofocus + min zoom after camera starts
+      await new Promise(r => setTimeout(r, 500));
+      if (!stopped) {
+        const videoEl = document.querySelector('#qr-reader video');
+        await applyFocusAndZoom(videoEl);
+      }
+      if (mountedRef.current) setCameraReady(true);
     }
 
     startScanner();
