@@ -33,10 +33,36 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
-  // Initialize camera scanner
+  // Initialize camera scanner with continuous autofocus
   useEffect(() => {
     let html5QrCode = null;
     let stopped = false;
+
+    async function applyFocusConstraints(html5QrCodeInstance) {
+      try {
+        // Access the underlying video track to apply focus constraints
+        const videoElement = document.querySelector('#qr-reader video');
+        if (!videoElement || !videoElement.srcObject) return;
+
+        const track = videoElement.srcObject.getVideoTracks()[0];
+        if (!track) return;
+
+        const capabilities = track.getCapabilities?.();
+        if (capabilities?.focusMode?.includes('continuous')) {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+          console.log('Applied continuous autofocus');
+        } else if (capabilities?.focusMode?.includes('auto')) {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'auto' }]
+          });
+          console.log('Applied auto focus');
+        }
+      } catch (err) {
+        console.warn('Could not apply focus constraints:', err.message);
+      }
+    }
 
     async function startScanner() {
       // Small delay to ensure DOM element is ready
@@ -55,23 +81,50 @@ export default function QRScanner() {
         const qrboxSize = Math.max(Math.floor(size * 0.7), 150);
 
         await html5QrCode.start(
-          { facingMode: "environment" },
+          { facingMode: { exact: "environment" } },
           {
             fps: 15,
             qrbox: { width: qrboxSize, height: qrboxSize },
             aspectRatio: 1.0,
             disableFlip: false,
-            formatsToSupport: [0], // QR_CODE only for faster detection
+            focusMode: 'continuous',
+            formatsToSupport: [0], // QR_CODE only
           },
           (decodedText) => {
-            // Inline callback ensures it always has latest refs
             handleScan(decodedText);
           },
           () => {} // ignore scan failures
         );
+
+        // Apply continuous autofocus after camera starts
+        await new Promise(r => setTimeout(r, 500));
+        if (!stopped) await applyFocusConstraints(html5QrCode);
+
         if (mountedRef.current) setCameraReady(true);
       } catch (err) {
-        console.error("Camera error:", err);
+        console.error("Camera error with exact facingMode, retrying without exact:", err);
+        // Fallback: some devices don't support exact facingMode
+        if (stopped) return;
+        try {
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 15,
+              qrbox: 200,
+              aspectRatio: 1.0,
+              formatsToSupport: [0],
+            },
+            (decodedText) => {
+              handleScan(decodedText);
+            },
+            () => {}
+          );
+          await new Promise(r => setTimeout(r, 500));
+          if (!stopped) await applyFocusConstraints(html5QrCode);
+          if (mountedRef.current) setCameraReady(true);
+        } catch (err2) {
+          console.error("Camera error (fallback):", err2);
+        }
       }
     }
 
