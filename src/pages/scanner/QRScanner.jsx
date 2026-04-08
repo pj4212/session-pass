@@ -168,9 +168,9 @@ export default function QRScanner() {
       </div>
 
       <div className="flex-1 relative bg-black overflow-hidden">
-        <div id="qr-reader" className="w-full h-full" />
+        <div id="qr-reader" style={{ width: '100%', height: '100%' }} />
         {!cameraReady && !cameraError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground">
+          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground z-10">
             <p>Starting camera...</p>
           </div>
         )}
