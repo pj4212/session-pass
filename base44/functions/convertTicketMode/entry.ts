@@ -48,18 +48,10 @@ function buildConversionEmailHtml(ticket, occurrence, newMode, qrHash, joinUrl) 
 
   let accessBlock = '';
   if (isNowOnline && (joinUrl || occurrence.zoom_link)) {
-    let joinBtnHtml = '';
-    if (joinUrl) {
-      joinBtnHtml = `
-        <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">You've been automatically registered. Use the link below to join the webinar directly:</p>
-        <a href="${joinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
-    }
-    let regBtnHtml = '';
-    if (occurrence.zoom_link) {
-      regBtnHtml = `
-        <p style="margin:${joinUrl ? '12px' : '0'} 0 8px;font-size:13px;color:#64748b;line-height:1.4;">${joinUrl ? 'You can also register via Zoom to receive their confirmation email:' : 'Click the button below to register for the webinar and receive your Zoom link:'}</p>
-        <a href="${occurrence.zoom_link}" style="display:inline-block;background:${joinUrl ? '#e2e8f0' : BRAND.buttonBg};color:${joinUrl ? '#334155' : '#ffffff'};text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Register via Zoom →</a>`;
-    }
+    const webinarUrl = joinUrl || occurrence.zoom_link;
+    const joinBtnHtml = `
+        <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">You've been registered for the webinar. Use the link below to join:</p>
+        <a href="${webinarUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
     accessBlock = `
       <tr><td style="padding:0 40px 24px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">

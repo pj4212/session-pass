@@ -473,25 +473,16 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
 
   let accessBlock = '';
   if (isOnline && (joinUrl || occurrence.zoom_link)) {
-    let joinBtnHtml = '';
-    if (joinUrl) {
-      joinBtnHtml = `
-        <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">You've been automatically registered. Use the link below to join the webinar directly:</p>
-        <a href="${joinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
-    }
-    let regBtnHtml = '';
-    if (occurrence.zoom_link) {
-      regBtnHtml = `
-        <p style="margin:${joinUrl ? '12px' : '0'} 0 8px;font-size:13px;color:#64748b;line-height:1.4;">${joinUrl ? 'You can also register via Zoom to receive their confirmation email:' : 'Click the button below to register for the webinar and receive your Zoom link:'}</p>
-        <a href="${occurrence.zoom_link}" style="display:inline-block;background:${joinUrl ? '#e2e8f0' : BRAND.buttonBg};color:${joinUrl ? '#334155' : '#ffffff'};text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Register via Zoom →</a>`;
-    }
+    const webinarUrl = joinUrl || occurrence.zoom_link;
+    const joinBtnHtml = `
+        <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">You've been registered for the webinar. Use the link below to join:</p>
+        <a href="${webinarUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
     accessBlock = `
       <tr><td style="padding:0 40px 24px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Join Online</h3>
             ${joinBtnHtml}
-            ${regBtnHtml}
           </td></tr>
         </table>
       </td></tr>`;
@@ -637,23 +628,13 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
 
   let zoomBlock = '';
   if (hasOnlineTickets && (hasJoinUrls || occurrence.zoom_link)) {
-    let joinHtml = '';
-    if (hasJoinUrls) {
-      joinHtml = `<p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">Your online attendees have been automatically registered. Each ticket below includes a direct join link.</p>`;
-    }
-    let regHtml = '';
-    if (occurrence.zoom_link) {
-      regHtml = `
-        <p style="margin:8px 0 8px;font-size:13px;color:#64748b;line-height:1.4;">${hasJoinUrls ? 'You can also register via Zoom:' : 'Click below to register for the webinar:'}</p>
-        <a href="${occurrence.zoom_link}" style="display:inline-block;background:${hasJoinUrls ? '#e2e8f0' : BRAND.buttonBg};color:${hasJoinUrls ? '#334155' : '#ffffff'};text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Register via Zoom \u2192</a>`;
-    }
+    const joinHtml = `<p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">Your online attendees have been registered. Each ticket below includes a direct join link.</p>`;
     zoomBlock = `
       <tr><td style="padding:0 40px 24px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">\ud83d\udda5 Join Online</h3>
             ${joinHtml}
-            ${regHtml}
           </td></tr>
         </table>
       </td></tr>`;
@@ -690,10 +671,11 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
     const ticketJoinUrl = zoomJoinUrls[ticket.id];
 
     let joinHtml = '';
-    if (isOnline && ticketJoinUrl) {
+    const ticketWebinarUrl = ticketJoinUrl || occurrence.zoom_link;
+    if (isOnline && ticketWebinarUrl) {
       joinHtml = `
         <div style="margin-top:12px;">
-          <a href="${ticketJoinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Join Webinar →</a>
+          <a href="${ticketWebinarUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Join Webinar →</a>
         </div>`;
     }
 
