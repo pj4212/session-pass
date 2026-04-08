@@ -68,44 +68,86 @@ function buildReminderEmailHtml(ticket, occurrence, reminderType) {
   const startTime = formatTime(occurrence.start_datetime);
   const endTime = formatTime(occurrence.end_datetime);
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
+  const isOnline = ticket.attendance_mode === 'online';
   
   const isOneHour = reminderType === '1hour';
+  const timeLabel = isOneHour ? '1 hour' : '5 minutes';
   const title = isOneHour ? '⏰ Starting in 1 Hour' : '🔴 Starting in 5 Minutes!';
-  const subtitle = isOneHour
-    ? 'Your online session is about to begin'
-    : 'Your session is about to start — join now!';
-  const bodyText = isOneHour
-    ? 'Your online session starts in <strong>1 hour</strong>. Make sure you\'re ready to join on time.'
-    : 'Your session starts in just <strong>5 minutes</strong>! Click the button below to join now.';
-  const buttonText = isOneHour ? 'Register for Webinar →' : 'Join Session Now →';
+  const subtitle = isOnline
+    ? (isOneHour ? 'Your online session is about to begin' : 'Your session is about to start — join now!')
+    : (isOneHour ? 'Your session is about to begin' : 'Your session is about to start!');
+  const bodyText = isOnline
+    ? `Your online session starts in <strong>${timeLabel}</strong>. ${isOneHour ? 'Make sure you\'re ready to join on time.' : 'Click the button below to join now.'}`
+    : `Your in-person session starts in <strong>${timeLabel}</strong>. ${isOneHour ? 'Make sure you have your QR code ready for check-in.' : 'Head to the venue now — present your QR code at the door for fast entry.'}`;
+  
   const urgencyColor = isOneHour ? '#4338ca' : '#dc2626';
   const urgencyBg = isOneHour ? '#eef2ff' : '#fef2f2';
   const urgencyBorder = isOneHour ? '#c7d2fe' : '#fecaca';
 
-  const zoomLink = occurrence.zoom_link || '';
+  let accessBlock = '';
   
-  let joinBlock = '';
-  if (zoomLink) {
-    joinBlock = `
-      <tr><td style="padding:0 40px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:${urgencyBg};border-radius:8px;padding:24px;border:1px solid ${urgencyBorder};">
-          <tr><td style="text-align:center;">
-            <h3 style="margin:0 0 12px;font-size:18px;color:${urgencyColor};">🖥 ${isOneHour ? 'Get Ready to Join' : 'Join Now!'}</h3>
-            <p style="margin:0 0 16px;font-size:14px;color:#64748b;line-height:1.5;">${isOneHour ? 'Click below to register for the webinar and receive your unique Zoom link.' : 'The session is about to start. Click below to join immediately.'}</p>
-            <a href="${zoomLink}" style="display:inline-block;background:${isOneHour ? BRAND.buttonBg : '#dc2626'};color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:8px;font-size:16px;font-weight:700;letter-spacing:0.3px;">${buttonText}</a>
-          </td></tr>
-        </table>
-      </td></tr>`;
+  if (isOnline) {
+    // Online: show Zoom join link or fallback
+    const zoomLink = ticket.zoom_join_url || occurrence.zoom_link || '';
+    if (zoomLink) {
+      const buttonText = isOneHour ? 'Get Ready to Join →' : 'Join Session Now →';
+      accessBlock = `
+        <tr><td style="padding:0 40px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:${urgencyBg};border-radius:8px;padding:24px;border:1px solid ${urgencyBorder};">
+            <tr><td style="text-align:center;">
+              <h3 style="margin:0 0 12px;font-size:18px;color:${urgencyColor};">🖥 ${isOneHour ? 'Get Ready to Join' : 'Join Now!'}</h3>
+              <p style="margin:0 0 16px;font-size:14px;color:#64748b;line-height:1.5;">${isOneHour ? 'Use the link below to join the webinar when it starts.' : 'The session is about to start. Click below to join immediately.'}</p>
+              <a href="${zoomLink}" style="display:inline-block;background:${isOneHour ? BRAND.buttonBg : '#dc2626'};color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:8px;font-size:16px;font-weight:700;letter-spacing:0.3px;">${buttonText}</a>
+            </td></tr>
+          </table>
+        </td></tr>`;
+    } else {
+      accessBlock = `
+        <tr><td style="padding:0 40px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:${urgencyBg};border-radius:8px;padding:20px;border:1px solid ${urgencyBorder};">
+            <tr><td>
+              <h3 style="margin:0 0 4px;font-size:15px;color:${urgencyColor};">🖥 Online Event</h3>
+              <p style="margin:0;font-size:13px;color:#64748b;">Please check your inbox for the Zoom join link from your original ticket email.</p>
+            </td></tr>
+          </table>
+        </td></tr>`;
+    }
   } else {
-    joinBlock = `
+    // In-person: show venue + QR code
+    const venueText = occurrence.venue_details || occurrence.venue_name || 'Check your ticket email for venue details.';
+    const venueLink = occurrence.venue_link;
+    const parkingLink = occurrence.parking_link;
+
+    let venueLinksHtml = '';
+    if (venueLink) {
+      venueLinksHtml += `<a href="${venueLink}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;margin-right:8px;">Get Directions →</a>`;
+    }
+    if (parkingLink) {
+      venueLinksHtml += `<a href="${parkingLink}" style="display:inline-block;background:#64748b;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Parking Info</a>`;
+    }
+
+    accessBlock = `
       <tr><td style="padding:0 40px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:${urgencyBg};border-radius:8px;padding:20px;border:1px solid ${urgencyBorder};">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:8px;padding:20px;border:1px solid #bbf7d0;">
           <tr><td>
-            <h3 style="margin:0 0 4px;font-size:15px;color:${urgencyColor};">🖥 Online Event</h3>
-            <p style="margin:0;font-size:13px;color:#64748b;">The webinar link will be available shortly. Please check your inbox for the Zoom registration link from your original ticket email.</p>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#166534;">📍 Venue</h3>
+            <p style="margin:0 0 ${venueLinksHtml ? '12px' : '0'};font-size:14px;color:#334155;">${venueText}</p>
+            ${venueLinksHtml ? `<div>${venueLinksHtml}</div>` : ''}
           </td></tr>
         </table>
       </td></tr>`;
+
+    // Add QR code block
+    if (ticket.qr_code_hash && ticket.qr_code_hash !== 'pending' && ticket.qr_code_hash !== 'temp') {
+      const qrPayload = JSON.stringify({ t: ticket.id, e: ticket.occurrence_id || occurrence.id, h: ticket.qr_code_hash });
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrPayload)}`;
+      accessBlock += `
+        <tr><td style="padding:0 40px 24px;text-align:center;">
+          <h3 style="margin:0 0 8px;font-size:15px;color:${BRAND.headingColor};text-transform:uppercase;letter-spacing:0.5px;">Your Check-In QR Code</h3>
+          <p style="margin:0 0 16px;font-size:13px;color:#94a3b8;">Show this at the door for fast entry.</p>
+          <img src="${qrCodeUrl}" alt="QR Code" width="200" height="200" style="border:1px solid ${BRAND.cardBorder};border-radius:8px;padding:8px;background:#fff;" />
+        </td></tr>`;
+    }
   }
 
   return `
@@ -145,7 +187,7 @@ function buildReminderEmailHtml(ticket, occurrence, reminderType) {
           </table>
         </td></tr>
 
-        ${joinBlock}
+        ${accessBlock}
 
         <tr><td style="padding:0 40px 24px;">
           <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;text-align:center;">If you can no longer attend, no action is needed. We hope to see you there!</p>
@@ -178,63 +220,61 @@ Deno.serve(async (req) => {
       if (user?.role !== 'admin') {
         return Response.json({ error: 'Forbidden' }, { status: 403 });
       }
-      const { recipient_email, reminder_type } = body;
+      const { recipient_email, reminder_type, attendance_mode } = body;
+      const testMode = attendance_mode || 'online';
       const mockOccurrence = {
         name: 'Test Event — Saturday Session',
         event_date: '2026-04-18',
         start_datetime: '2026-04-18T09:00:00+10:00',
         end_datetime: '2026-04-18T11:00:00+10:00',
         timezone: 'Australia/Brisbane',
-        zoom_link: 'https://zoom.us/webinar/register/test-link',
-        event_mode: 'online_stream'
+        zoom_link: testMode === 'online' ? 'https://zoom.us/webinar/register/test-link' : '',
+        event_mode: testMode === 'online' ? 'online_stream' : 'in_person',
+        venue_details: testMode === 'in_person' ? '123 Example Street, Brisbane QLD 4000' : '',
+        venue_link: testMode === 'in_person' ? 'https://maps.google.com' : '',
+        parking_link: testMode === 'in_person' ? 'https://maps.google.com/parking' : '',
       };
       const mockTicket = {
+        id: 'test-ticket-id',
         attendee_first_name: 'Test',
         attendee_last_name: 'Attendee',
         attendee_email: recipient_email,
-        attendance_mode: 'online'
+        attendance_mode: testMode,
+        occurrence_id: 'test-occ-id',
+        qr_code_hash: testMode === 'in_person' ? 'abc123def456' : '',
+        zoom_join_url: testMode === 'online' ? 'https://zoom.us/j/test-join' : '',
       };
       const html = buildReminderEmailHtml(mockTicket, mockOccurrence, reminder_type);
       const label = reminder_type === '1hour' ? '1-Hour' : '5-Minute';
+      const modeLabel = testMode === 'online' ? 'Online' : 'In-Person';
       const result = await resend.emails.send({
         from: 'Session Pass <noreply@session-pass.com>',
         to: recipient_email,
-        subject: `[TEST] ${label} Reminder — ${mockOccurrence.name}`,
+        subject: `[TEST] ${label} ${modeLabel} Reminder — ${mockOccurrence.name}`,
         html
       });
-      return Response.json({ success: true, sent: [{ type: `${label} Reminder`, id: result.data?.id }] });
+      return Response.json({ success: true, sent: [{ type: `${label} ${modeLabel} Reminder`, id: result.data?.id }] });
     }
 
-    // ── Scheduled job: find online sessions starting soon and send reminders ──
+    // ── Scheduled job: find sessions starting soon and send reminders ──
     const now = new Date();
-    
-    // Window: check for events starting between 57-63 min from now (1-hour reminder)
-    // and between 3-7 min from now (5-minute reminder)
-    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-    const fiveMinFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-
     const todayStr = now.toISOString().slice(0, 10);
     
-    // Get all published events for today that have online component
+    // Get all published events for today
     const allOccurrences = await base44.asServiceRole.entities.EventOccurrence.filter({
       event_date: todayStr,
       is_published: true,
       status: 'published'
     });
 
-    // Filter to online/hybrid events only
-    const onlineOccurrences = allOccurrences.filter(o => 
-      o.event_mode === 'online_stream' || o.event_mode === 'hybrid'
-    );
-
-    if (!onlineOccurrences.length) {
-      console.log('No online sessions today, skipping reminders.');
+    if (!allOccurrences.length) {
+      console.log('No published sessions today, skipping reminders.');
       return Response.json({ sent: 0 });
     }
 
     let totalSent = 0;
 
-    for (const occ of onlineOccurrences) {
+    for (const occ of allOccurrences) {
       const startTime = new Date(occ.start_datetime);
       const minsUntilStart = (startTime - now) / (60 * 1000);
 
@@ -249,19 +289,19 @@ Deno.serve(async (req) => {
 
       if (!reminders.length) continue;
 
-      // Get all active online tickets for this occurrence
+      // Get all active tickets for this occurrence (both online and in-person)
       const tickets = await base44.asServiceRole.entities.Ticket.filter({
         occurrence_id: occ.id,
-        attendance_mode: 'online',
         ticket_status: 'active'
       });
 
       if (!tickets.length) {
-        console.log(`No online tickets for ${occ.name}, skipping.`);
+        console.log(`No active tickets for ${occ.name}, skipping.`);
         continue;
       }
 
-      // Group tickets by email so we send one email per unique email
+      // Group tickets by email so we send one email per unique attendee
+      // If someone has multiple tickets, use the first one for the greeting
       const ticketsByEmail = {};
       for (const ticket of tickets) {
         const email = ticket.attendee_email.toLowerCase();
@@ -270,7 +310,7 @@ Deno.serve(async (req) => {
       }
 
       const uniqueEmails = Object.keys(ticketsByEmail);
-      console.log(`Sending ${reminders.join(', ')} reminders for "${occ.name}" to ${uniqueEmails.length} unique emails (${tickets.length} tickets).`);
+      console.log(`Sending ${reminders.join(', ')} reminders for "${occ.name}" to ${uniqueEmails.length} attendees (${tickets.length} tickets).`);
 
       for (const reminderType of reminders) {
         const label = reminderType === '1hour' ? '1-Hour' : '5-Minute';
@@ -281,8 +321,10 @@ Deno.serve(async (req) => {
           const batch = uniqueEmails.slice(i, i + batchSize);
           const promises = batch.map(email => {
             const emailTickets = ticketsByEmail[email];
-            // Use the first ticket's name for the greeting
-            const html = buildReminderEmailHtml(emailTickets[0], occ, reminderType);
+            // Use the first ticket for the email (contains attendee name + mode)
+            const primaryTicket = emailTickets[0];
+            const html = buildReminderEmailHtml(primaryTicket, occ, reminderType);
+            const modeLabel = primaryTicket.attendance_mode === 'online' ? 'Online' : 'In-Person';
             return sendWithRetry(() => resend.emails.send({
               from: 'Session Pass <noreply@session-pass.com>',
               to: email,
@@ -291,7 +333,7 @@ Deno.serve(async (req) => {
             }))
             .then(() => {
               totalSent++;
-              console.log(`✓ ${label} reminder sent to ${email} (${emailTickets.length} ticket${emailTickets.length > 1 ? 's' : ''})`);
+              console.log(`✓ ${label} ${modeLabel} reminder sent to ${email}`);
             })
             .catch(err => {
               console.error(`✗ Failed ${label} reminder to ${email}:`, err.message);
