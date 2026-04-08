@@ -126,3 +126,12 @@
 #qr-reader__header_message {
   display: none !important;
 }
+
+@keyframes scan-flash {
+  0% { opacity: 0.8; }
+  50% { opacity: 0.3; }
+  100% { opacity: 0; }
+}
+.animate-scan-flash {
+  animation: scan-flash 0.5s ease-out forwards;
+}

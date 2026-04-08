@@ -14,6 +14,7 @@ export default function QRScanner() {
   const [result, setResult] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [scanning, setScanning] = useState(false);
   const lastScanRef = useRef({});
   const mountedRef = useRef(true);
   const occurrenceIdRef = useRef(occurrenceId);
@@ -177,6 +178,9 @@ export default function QRScanner() {
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 3000) return;
     lastScanRef.current[decodedText] = now;
 
+    // Immediate visual feedback — flash the guide green
+    setScanning(true);
+
     // Support both new format (plain hash string) and legacy JSON format
     let ticketId = null;
     let hash = null;
@@ -273,12 +277,28 @@ export default function QRScanner() {
         {cameraReady && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <div className="relative" style={{ width: '65vw', height: '65vw', maxWidth: '280px', maxHeight: '280px' }}>
-              <div className="absolute inset-0 border-2 border-white/25 rounded-lg" />
-              <div className="absolute -top-0.5 -left-0.5 w-10 h-10 border-t-4 border-l-4 border-primary rounded-tl-lg" />
-              <div className="absolute -top-0.5 -right-0.5 w-10 h-10 border-t-4 border-r-4 border-primary rounded-tr-lg" />
-              <div className="absolute -bottom-0.5 -left-0.5 w-10 h-10 border-b-4 border-l-4 border-primary rounded-bl-lg" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-10 h-10 border-b-4 border-r-4 border-primary rounded-br-lg" />
-              <div className="absolute left-3 right-3 top-1/2 h-0.5 bg-primary/50 animate-pulse" />
+              {/* Background border */}
+              <div className={`absolute inset-0 border-2 rounded-lg transition-colors duration-150 ${
+                scanning ? 'border-green-400/60' : 'border-white/25'
+              }`} />
+              {/* Corner accents */}
+              {[['top-0 left-0 border-t-4 border-l-4 rounded-tl-lg', '-top-0.5 -left-0.5'],
+                ['top-0 right-0 border-t-4 border-r-4 rounded-tr-lg', '-top-0.5 -right-0.5'],
+                ['bottom-0 left-0 border-b-4 border-l-4 rounded-bl-lg', '-bottom-0.5 -left-0.5'],
+                ['bottom-0 right-0 border-b-4 border-r-4 rounded-br-lg', '-bottom-0.5 -right-0.5']
+              ].map(([cls, pos], i) => (
+                <div key={i} className={`absolute ${pos} w-10 h-10 ${cls} transition-all duration-150 ${
+                  scanning ? 'border-green-400 scale-110' : 'border-primary'
+                }`} style={scanning ? { filter: 'drop-shadow(0 0 6px rgba(74,222,128,0.7))' } : {}} />
+              ))}
+              {/* Scan line */}
+              <div className={`absolute left-3 right-3 top-1/2 h-0.5 transition-colors duration-150 ${
+                scanning ? 'bg-green-400 animate-none' : 'bg-primary/50 animate-pulse'
+              }`} />
+              {/* Scanning flash */}
+              {scanning && (
+                <div className="absolute inset-0 rounded-lg bg-green-400/15 animate-scan-flash" />
+              )}
             </div>
           </div>
         )}
