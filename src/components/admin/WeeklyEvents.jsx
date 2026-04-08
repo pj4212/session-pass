@@ -75,8 +75,8 @@ export default function WeeklyEvents({ events, tickets, ticketTypes }) {
               <ModeIcon mode={ev.event_mode} />
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <Stat icon={Users} label="Candidates" value={ev.candidates} color="text-blue-400" />
               <Stat icon={Briefcase} label="Business" value={ev.businessOwners} color="text-amber-400" />
+              <Stat icon={Users} label="Candidates" value={ev.candidates} color="text-blue-400" />
               <Stat icon={CheckCircle2} label="Checked In" value={ev.checkedIn} color="text-emerald-400" />
             </div>
           </Link>

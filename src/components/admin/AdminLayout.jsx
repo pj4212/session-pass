@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, Calendar, Users, Settings, BarChart3, 
-  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine, Ticket, Zap, History
+  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine, Ticket, Zap, History, ShieldAlert
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { path: '/admin/settings/platinum-leaders', label: 'Platinum Leaders', icon: Settings, roles: ['super_admin'] },
   { path: '/admin/settings/email-testing', label: 'Email Testing', icon: Mail, roles: ['admin'] },
   { path: '/admin/settings/load-test', label: 'Load Testing', icon: Zap, roles: ['admin'] },
+  { path: '/admin/settings/rate-limit-logs', label: 'Rate Limit Logs', icon: ShieldAlert, roles: ['admin'] },
 ];
 
 export default function AdminLayout() {
