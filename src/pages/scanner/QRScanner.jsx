@@ -177,17 +177,20 @@ export default function QRScanner() {
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 3000) return;
     lastScanRef.current[decodedText] = now;
 
-    let payload;
+    // Support both new format (plain hash string) and legacy JSON format
+    let ticketId = null;
+    let hash = null;
     try {
-      payload = JSON.parse(decodedText);
+      const payload = JSON.parse(decodedText);
+      ticketId = payload.t;
+      hash = payload.h;
     } catch {
-      setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Not a valid ticket QR code' });
-      return;
+      // New simple format — the QR code IS the hash
+      hash = decodedText.trim();
     }
 
-    const { t: ticketId, h: hash } = payload;
-    if (!ticketId || !hash) {
-      setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Missing ticket data' });
+    if (!hash) {
+      setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Not a valid ticket QR code' });
       return;
     }
     if (hash === 'pending' || hash === 'temp') {
@@ -197,19 +200,20 @@ export default function QRScanner() {
 
     // Offline queue
     if (!navigator.onLine) {
-      await queueScan({ ticket_id: ticketId, occurrence_id: currentOccurrenceId, qr_hash: hash });
+      await queueScan({ ticket_id: ticketId || null, occurrence_id: currentOccurrenceId, qr_hash: hash });
       setResult({ type: 'success', title: 'Queued Offline', subtitle: 'Will sync when back online' });
       setCheckedIn(prev => prev + 1);
       return;
     }
 
     try {
-      const res = await base44.functions.invoke('checkin', {
+      const checkinPayload = {
         action: 'checkin',
-        ticket_id: ticketId,
         occurrence_id: currentOccurrenceId,
         qr_hash: hash
-      });
+      };
+      if (ticketId) checkinPayload.ticket_id = ticketId;
+      const res = await base44.functions.invoke('checkin', checkinPayload);
       const data = res.data;
 
       if (data.status === 'success') {
@@ -228,7 +232,7 @@ export default function QRScanner() {
         setResult({ type: 'error', title: name || 'Error', subtitle: data.reason || 'Check-in failed' });
       }
     } catch (err) {
-      await queueScan({ ticket_id: ticketId, occurrence_id: currentOccurrenceId, qr_hash: hash });
+      await queueScan({ ticket_id: ticketId || null, occurrence_id: currentOccurrenceId, qr_hash: hash });
       setResult({ type: 'success', title: 'Queued Offline', subtitle: 'Will sync when back online' });
       setCheckedIn(prev => prev + 1);
     }

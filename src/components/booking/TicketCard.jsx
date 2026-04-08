@@ -2,8 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Monitor, MapPin } from "lucide-react";
 
 export default function TicketCard({ ticket, occurrence, ticketType }) {
-  const qrPayload = JSON.stringify({ t: ticket.id, e: ticket.occurrence_id, h: ticket.qr_code_hash });
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.qr_code_hash)}`;
 
   return (
     <div className="border rounded-lg p-4 bg-card">

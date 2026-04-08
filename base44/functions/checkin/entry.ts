@@ -34,10 +34,17 @@ Deno.serve(async (req) => {
     const { action, ticket_id, occurrence_id, qr_hash } = body;
 
     if (action === 'checkin') {
-      // Fetch ticket
+      // Fetch ticket — support lookup by ticket_id or by qr_code_hash
       let ticket;
       try {
-        const tickets = await base44.asServiceRole.entities.Ticket.filter({ id: ticket_id });
+        let tickets;
+        if (ticket_id) {
+          tickets = await base44.asServiceRole.entities.Ticket.filter({ id: ticket_id });
+        } else if (qr_hash) {
+          tickets = await base44.asServiceRole.entities.Ticket.filter({ qr_code_hash: qr_hash });
+        } else {
+          return Response.json({ status: 'error', reason: 'No ticket identifier provided' });
+        }
         if (!tickets.length) {
           return Response.json({ status: 'error', reason: 'Ticket not found' });
         }
@@ -47,8 +54,8 @@ Deno.serve(async (req) => {
         return Response.json({ status: 'error', reason: 'Ticket not found' });
       }
 
-      // Validate QR hash if provided
-      if (qr_hash && ticket.qr_code_hash !== qr_hash) {
+      // Validate QR hash if looked up by ticket_id
+      if (ticket_id && qr_hash && ticket.qr_code_hash !== qr_hash) {
         return Response.json({ status: 'error', reason: 'Invalid ticket' });
       }
 

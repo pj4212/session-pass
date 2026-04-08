@@ -468,8 +468,7 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
   const isOnline = ticket.attendance_mode === 'online';
   const mode = isOnline ? 'Online' : 'In-Person';
-  const qrPayload = JSON.stringify({ t: ticket.id, e: ticket.occurrence_id, h: ticket.qr_code_hash });
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrPayload)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(ticket.qr_code_hash)}`;
 
   let accessBlock = '';
   if (isOnline && joinUrl) {
@@ -679,8 +678,7 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
 
     let qrHtml = '';
     if (!isOnline) {
-      const qrPayload = JSON.stringify({ t: ticket.id, e: ticket.occurrence_id, h: ticket.qr_code_hash });
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.qr_code_hash)}`;
       qrHtml = `
         <div style="text-align:center;margin-top:16px;">
           <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Check-In QR Code</p>
