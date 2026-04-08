@@ -3,7 +3,6 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Users, WifiOff, Loader2 } from 'lucide-react';
 import ScanResultOverlay from '@/components/scanner/ScanResultOverlay';
-import ScannerGuideOverlay from '@/components/scanner/ScannerGuideOverlay';
 import useOfflineSync from '@/hooks/useOfflineSync';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -20,12 +19,13 @@ export default function QRScanner() {
   const occurrenceIdRef = useRef(occurrenceId);
   const scannerRef = useRef(null);
   const trackRef = useRef(null);
+  const containerRef = useRef(null);
 
   const handleSyncResult = useCallback((data) => {
     if (data.status === 'success') setCheckedIn(prev => prev + 1);
   }, []);
 
-  const { online, pendingCount, syncing } = useOfflineSync(occurrenceId, handleSyncResult);
+  const { online, pendingCount, syncing, queueScan } = useOfflineSync(occurrenceId, handleSyncResult);
 
   useEffect(() => { occurrenceIdRef.current = occurrenceId; }, [occurrenceId]);
 
@@ -36,7 +36,7 @@ export default function QRScanner() {
     return () => { mountedRef.current = false; clearInterval(interval); };
   }, [occurrenceId]);
 
-  // html5-qrcode scanner
+  // Scanner
   useEffect(() => {
     let scanner = null;
     let stopped = false;
@@ -46,12 +46,17 @@ export default function QRScanner() {
         scanner = new Html5Qrcode('qr-reader');
         scannerRef.current = scanner;
 
+        // Calculate a square qrbox based on container size
+        const qrboxFn = (viewfinderWidth, viewfinderHeight) => {
+          const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
+          return { width: Math.floor(size), height: Math.floor(size) };
+        };
+
         await scanner.start(
           { facingMode: 'environment' },
           {
             fps: 30,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
+            qrbox: qrboxFn,
             disableFlip: false,
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           },
@@ -62,7 +67,7 @@ export default function QRScanner() {
         if (stopped) { scanner.stop().catch(() => {}); return; }
         if (mountedRef.current) setCameraReady(true);
 
-        // Enhance camera: zoom + continuous autofocus
+        // Enhance camera
         try {
           const videoElem = document.querySelector('#qr-reader video');
           if (videoElem?.srcObject) {
@@ -81,6 +86,12 @@ export default function QRScanner() {
             }
           }
         } catch (e) { /* optional */ }
+
+        // Hide the library's built-in shaded region border to use our own overlay
+        try {
+          const shadedRegion = document.getElementById('qr-shaded-region');
+          if (shadedRegion) shadedRegion.style.display = 'none';
+        } catch (e) {}
 
       } catch (err) {
         console.error('Scanner start error:', err);
@@ -101,24 +112,23 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
-  // Tap-to-focus handler
+  // Tap-to-focus
   const handleTapFocus = useCallback(async () => {
     const track = trackRef.current;
     if (!track) return;
     try {
       const caps = track.getCapabilities?.() || {};
-      if (caps.focusMode?.includes('manual') || caps.focusMode?.includes('auto')) {
+      if (caps.focusMode) {
         await track.applyConstraints({ advanced: [{ focusMode: 'auto' }] });
-        // After a short delay, switch back to continuous
         setTimeout(async () => {
           try {
             if (caps.focusMode?.includes('continuous')) {
               await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
             }
-          } catch (e) { /* ok */ }
+          } catch (e) {}
         }, 2000);
       }
-    } catch (e) { /* not supported */ }
+    } catch (e) {}
   }, []);
 
   const loadCounts = async () => {
@@ -127,7 +137,7 @@ export default function QRScanner() {
       if (!mountedRef.current) return;
       setTotal(tickets.length);
       setCheckedIn(tickets.filter(t => t.check_in_status === 'checked_in').length);
-    } catch (e) { /* offline */ }
+    } catch (e) {}
   };
 
   const pollCounts = async () => {
@@ -140,13 +150,12 @@ export default function QRScanner() {
         setTotal(data.tickets.length);
         setCheckedIn(data.tickets.filter(t => t.check_in_status === 'checked_in').length);
       }
-    } catch (e) { /* offline */ }
+    } catch (e) {}
   };
 
   const handleScan = async (decodedText) => {
     const currentOccurrenceId = occurrenceIdRef.current;
     const now = Date.now();
-    // Shorter cooldown for speed — 3s per unique QR
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 3000) return;
     lastScanRef.current[decodedText] = now;
 
@@ -168,9 +177,8 @@ export default function QRScanner() {
       return;
     }
 
-    // If offline, queue and show optimistic result
+    // Offline queue
     if (!navigator.onLine) {
-      const { queueScan } = await import('@/lib/offlineCheckinQueue');
       await queueScan({ ticket_id: ticketId, occurrence_id: currentOccurrenceId, qr_hash: hash });
       setResult({ type: 'success', title: 'Queued Offline', subtitle: 'Will sync when back online' });
       setCheckedIn(prev => prev + 1);
@@ -202,9 +210,7 @@ export default function QRScanner() {
         setResult({ type: 'error', title: name || 'Error', subtitle: data.reason || 'Check-in failed' });
       }
     } catch (err) {
-      // Network failed mid-request — queue it
-      const { enqueue } = await import('@/lib/offlineCheckinQueue');
-      await enqueue({ ticket_id: ticketId, occurrence_id: currentOccurrenceId, qr_hash: hash });
+      await queueScan({ ticket_id: ticketId, occurrence_id: currentOccurrenceId, qr_hash: hash });
       setResult({ type: 'success', title: 'Queued Offline', subtitle: 'Will sync when back online' });
       setCheckedIn(prev => prev + 1);
     }
@@ -212,7 +218,7 @@ export default function QRScanner() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Header with counts + offline indicator */}
+      {/* Header */}
       <div className="flex items-center justify-center px-4 py-2.5 bg-card border-b border-border shrink-0 gap-3">
         <div className="flex items-center gap-2 text-lg font-bold text-foreground">
           <Users className="h-5 w-5 text-primary" />
@@ -230,26 +236,41 @@ export default function QRScanner() {
             <span>Syncing...</span>
           </div>
         )}
-        {online && !syncing && pendingCount > 0 && (
-          <div className="text-yellow-400 text-xs font-medium">{pendingCount} pending</div>
-        )}
       </div>
 
-      {/* Camera area */}
+      {/* Camera */}
       <div
+        ref={containerRef}
         className="flex-1 relative bg-black overflow-hidden"
         onTouchStart={handleTapFocus}
         onClick={handleTapFocus}
       >
-        <div id="qr-reader" className="qr-square-container" style={{ width: '100%', height: '100%' }} />
-        {cameraReady && <ScannerGuideOverlay />}
+        <div id="qr-reader" className="qr-scanner-container" />
+
+        {/* Custom square guide overlay */}
+        {cameraReady && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <div className="relative" style={{ width: '65vw', height: '65vw', maxWidth: '280px', maxHeight: '280px' }}>
+              <div className="absolute inset-0 border-2 border-white/25 rounded-lg" />
+              <div className="absolute -top-0.5 -left-0.5 w-10 h-10 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+              <div className="absolute -top-0.5 -right-0.5 w-10 h-10 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+              <div className="absolute -bottom-0.5 -left-0.5 w-10 h-10 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-10 h-10 border-b-4 border-r-4 border-primary rounded-br-lg" />
+              <div className="absolute left-3 right-3 top-1/2 h-0.5 bg-primary/50 animate-pulse" />
+            </div>
+          </div>
+        )}
+
         {!cameraReady && !cameraError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground z-10">
-            <p>Starting camera...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground z-30">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Starting camera...</p>
+            </div>
           </div>
         )}
         {cameraError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground p-6 text-center z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground p-6 text-center z-30">
             <p className="text-destructive">{cameraError}</p>
           </div>
         )}

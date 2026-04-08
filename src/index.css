@@ -88,13 +88,41 @@
   }
 }
 
-/* Force QR scanner video to square */
-.qr-square-container video {
+/* QR Scanner: fill container, hide library chrome */
+.qr-scanner-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+}
+.qr-scanner-container video {
   object-fit: cover !important;
   width: 100% !important;
   height: 100% !important;
 }
-
-.qr-square-container #qr-shaded-region {
-  border-width: 0 !important;
+.qr-scanner-container #qr-shaded-region {
+  display: none !important;
+}
+.qr-scanner-container > div:not(:first-child) {
+  display: none !important;
+}
+#qr-reader {
+  border: none !important;
+}
+#qr-reader img {
+  display: none !important;
+}
+#qr-reader__scan_region {
+  min-height: 0 !important;
+}
+#qr-reader__dashboard {
+  display: none !important;
+}
+#qr-reader__dashboard_section {
+  display: none !important;
+}
+#qr-reader__dashboard_section_swaplink {
+  display: none !important;
+}
+#qr-reader__header_message {
+  display: none !important;
 }
