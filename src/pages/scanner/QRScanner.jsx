@@ -103,10 +103,28 @@ export default function QRScanner() {
 
     return () => {
       stopped = true;
-      if (scanner) {
-        scanner.stop().catch(() => {});
-        scanner.clear().catch(() => {});
-      }
+      const cleanup = async () => {
+        try {
+          if (scanner) {
+            const state = scanner.getState?.();
+            // Only stop if currently scanning (state 2 = SCANNING)
+            if (state === 2) {
+              await scanner.stop();
+            }
+          }
+        } catch (e) {
+          console.warn('Scanner stop error (safe to ignore):', e);
+        }
+        try {
+          if (scanner) scanner.clear();
+        } catch (e) {}
+        // Clean up any leftover DOM content
+        try {
+          const el = document.getElementById('qr-reader');
+          if (el) el.innerHTML = '';
+        } catch (e) {}
+      };
+      cleanup();
       scannerRef.current = null;
       trackRef.current = null;
     };
