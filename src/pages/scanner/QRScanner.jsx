@@ -178,8 +178,9 @@ export default function QRScanner() {
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 3000) return;
     lastScanRef.current[decodedText] = now;
 
-    // Immediate visual feedback — flash the guide green
+    // Immediate visual feedback — flash the guide green, then reset
     setScanning(true);
+    setTimeout(() => setScanning(false), 500);
 
     // Support both new format (plain hash string) and legacy JSON format
     let ticketId = null;
