@@ -454,7 +454,7 @@ export default function EventForm() {
             )}
             <div>
               <Label>Zoom Meeting ID</Label>
-              <Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value)} placeholder="Auto-filled when creating webinar" />
+              <Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value.replace(/\s/g, ''))} placeholder="Auto-filled when creating webinar" />
             </div>
             {isEdit && form.zoom_meeting_id && (
               <div className="border-t pt-4">

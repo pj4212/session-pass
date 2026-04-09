@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     const occurrence = occs[0];
 
     // Determine webinar ID — prefer zoom_meeting_id, fallback to extracting from zoom_link
-    let webinarId = occurrence.zoom_meeting_id;
+    let webinarId = occurrence.zoom_meeting_id ? occurrence.zoom_meeting_id.replace(/\s/g, '') : '';
     if (!webinarId && occurrence.zoom_link) {
       const wnMatch = occurrence.zoom_link.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
       const numericMatch = occurrence.zoom_link.match(/\/w\/(\d+)/);
@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
       console.log(`No Zoom webinar ID for occurrence ${occurrence_id}, skipping registration`);
       return Response.json({ success: true, registrations: [], skipped: true, reason: 'no_webinar_id' });
     }
+    console.log(`Using webinar ID: ${webinarId} for occurrence ${occurrence_id}`);
     const accessToken = await getZoomAccessToken();
 
     // For manual webinars, strip custom registration questions that would block our API registration
