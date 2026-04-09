@@ -52,7 +52,7 @@ export default function UserManagement() {
 
   const inviteUser = async () => {
     setSaving(true);
-    await base44.users.inviteUser(inviteEmail, inviteRole === 'super_admin' ? 'admin' : 'user');
+    await base44.users.inviteUser(inviteEmail, ['super_admin', 'event_admin'].includes(inviteRole) ? 'admin' : 'user');
     // After invite, reload users
     const u = await base44.entities.User.list();
     setUsers(u);
