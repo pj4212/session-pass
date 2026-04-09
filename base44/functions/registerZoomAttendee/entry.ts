@@ -100,23 +100,19 @@ Deno.serve(async (req) => {
     const occurrence = occs[0];
 
     // Determine webinar ID for Zoom API registration
-    // For manual webinars, prefer the WN_ token from the registration URL (it's the correct API identifier)
-    // The numeric meeting ID shown in Zoom UI often doesn't work with the registrants API
+    // Prefer numeric meeting ID (works with Server-to-Server OAuth on the account that owns the webinar)
+    // The WN_ token from registration URLs often fails with 404 via S2S OAuth
     let webinarId = '';
-    if (occurrence.zoom_link) {
-      const wnMatch = occurrence.zoom_link.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
-      if (wnMatch) webinarId = wnMatch[1];
-    }
-    if (!webinarId && occurrence.zoom_meeting_id) {
+    if (occurrence.zoom_meeting_id) {
       webinarId = occurrence.zoom_meeting_id.replace(/\s/g, '');
     }
     if (!webinarId && occurrence.zoom_link) {
       const numericMatch = occurrence.zoom_link.match(/\/w\/(\d+)/);
       if (numericMatch) webinarId = numericMatch[1];
     }
-    if (!webinarId) {
-      console.log(`No Zoom webinar ID for occurrence ${occurrence_id}, skipping registration`);
-      return Response.json({ success: true, registrations: [], skipped: true, reason: 'no_webinar_id' });
+    if (!webinarId && occurrence.zoom_link) {
+      const wnMatch = occurrence.zoom_link.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
+      if (wnMatch) webinarId = wnMatch[1];
     }
     console.log(`Using webinar ID: ${webinarId} for occurrence ${occurrence_id}`);
     const accessToken = await getZoomAccessToken();

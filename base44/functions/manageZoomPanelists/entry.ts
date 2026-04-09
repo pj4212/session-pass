@@ -39,14 +39,19 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, panelists, zoom_link } = body;
-    // Prefer WN_ token from zoom_link for manual webinars, fallback to numeric ID
+    // Prefer numeric meeting ID (works with Server-to-Server OAuth)
+    // WN_ tokens from registration URLs fail with 404 via S2S OAuth
     let webinar_id = '';
-    if (zoom_link) {
+    if (body.webinar_id) {
+      webinar_id = body.webinar_id.replace(/\s/g, '');
+    }
+    if (!webinar_id && zoom_link) {
+      const numericMatch = zoom_link.match(/\/w\/(\d+)/);
+      if (numericMatch) webinar_id = numericMatch[1];
+    }
+    if (!webinar_id && zoom_link) {
       const wnMatch = zoom_link.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
       if (wnMatch) webinar_id = wnMatch[1];
-    }
-    if (!webinar_id && body.webinar_id) {
-      webinar_id = body.webinar_id.replace(/\s/g, '');
     }
 
     if (!webinar_id) {
