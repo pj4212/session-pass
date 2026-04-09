@@ -2,11 +2,24 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarPlus } from 'lucide-react';
 
+// Normalize a datetime string: ensure it's treated as UTC
+function normalizeDate(datetimeStr) {
+  let s = datetimeStr;
+  if (!/Z|[+-]\d{2}:\d{2}$/.test(s)) s = s + 'Z';
+  return new Date(s);
+}
+
+// Format a local time in the given IANA timezone as YYYYMMDDTHHMMSS (for TZID-based ICS)
 function formatICSDate(datetimeStr, tz) {
-  // Format as YYYYMMDDTHHMMSS for TZID-based times
-  const d = new Date(datetimeStr);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const d = normalizeDate(datetimeStr);
+  // Use Intl to get parts in the target timezone
+  const parts = new Intl.DateTimeFormat('en-AU', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).formatToParts(d);
+  const p = {};
+  parts.forEach(({ type, value }) => { p[type] = value; });
+  return `${p.year}${p.month}${p.day}T${p.hour}${p.minute}${p.second}`;
 }
 
 function buildDescription(occurrence, ticket) {
@@ -48,9 +61,8 @@ function buildLocation(occurrence, ticket) {
 
 function generateGoogleUrl(occurrence, ticket) {
   const tz = occurrence.timezone || 'Australia/Brisbane';
-  // Google Calendar wants dates in UTC or with ctz param
-  const start = new Date(occurrence.start_datetime);
-  const end = new Date(occurrence.end_datetime);
+  const start = normalizeDate(occurrence.start_datetime);
+  const end = normalizeDate(occurrence.end_datetime);
   const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
   const params = new URLSearchParams({
@@ -66,8 +78,8 @@ function generateGoogleUrl(occurrence, ticket) {
 }
 
 function generateOutlookUrl(occurrence, ticket) {
-  const start = new Date(occurrence.start_datetime).toISOString();
-  const end = new Date(occurrence.end_datetime).toISOString();
+  const start = normalizeDate(occurrence.start_datetime).toISOString();
+  const end = normalizeDate(occurrence.end_datetime).toISOString();
 
   const params = new URLSearchParams({
     path: '/calendar/action/compose',

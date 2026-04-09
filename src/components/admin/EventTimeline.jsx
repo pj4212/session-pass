@@ -45,8 +45,19 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-function formatTime(dateStr) {
-  return new Date(dateStr).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+function formatTime(dateStr, timezone) {
+  if (!dateStr) return '';
+  // Normalize: if the string has no Z or offset, treat it as UTC by appending Z
+  // (all stored datetimes should be UTC; some are missing the Z suffix)
+  let normalized = dateStr;
+  if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
+    normalized = dateStr + 'Z';
+  }
+  const d = new Date(normalized);
+  if (timezone) {
+    return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: timezone });
+  }
+  return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
 }
 
 function buildProjectedTimeline(sessions, months) {
@@ -333,7 +344,7 @@ export default function EventTimeline({ events, locations, ticketCounts, checkin
 
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
-                        {formatTime(session.start_datetime)} – {formatTime(session.end_datetime)}
+                        {formatTime(session.start_datetime, session.timezone)} – {formatTime(session.end_datetime, session.timezone)}
                       </span>
                       {loc && (
                         <span className="flex items-center gap-1">

@@ -95,13 +95,22 @@ export default function OrderConfirmation() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+    const local = new Date(y, m - 1, d, 12, 0, 0);
+    return local.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    let normalized = dateStr;
+    if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
+      normalized = dateStr + 'Z';
+    }
+    const d = new Date(normalized);
+    const tz = occurrence?.timezone;
+    if (tz) {
+      return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: tz });
+    }
     return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
   };
 
