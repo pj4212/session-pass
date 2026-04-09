@@ -300,7 +300,8 @@ Deno.serve(async (req) => {
             attendance_mode: t.attendance_mode,
             attendee_first_name: t.attendee_first_name,
             attendee_last_name: t.attendee_last_name,
-            attendee_email: t.attendee_email
+            attendee_email: t.attendee_email,
+            platinum_leader_id: t.platinum_leader_id || ''
           })),
           occurrence_id: occurrence.id
         });

@@ -28,20 +28,43 @@ async function getZoomAccessToken() {
   return tokenData.access_token;
 }
 
+// Fetch custom registration questions for a webinar so we know exact titles
+async function getWebinarQuestions(accessToken, webinarId) {
+  try {
+    const res = await fetch(`https://api.zoom.us/v2/webinars/${webinarId}/registrants/questions`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res.ok) {
+      console.warn(`Failed to fetch webinar questions: ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    return data.custom_questions || [];
+  } catch (e) {
+    console.warn('Error fetching webinar questions:', e.message);
+    return [];
+  }
+}
+
 // Register a single attendee for a Zoom webinar
 // Returns { registrant_id, join_url, topic } or null if registration fails
-async function registerAttendee(accessToken, webinarId, firstName, lastName, email) {
+async function registerAttendee(accessToken, webinarId, firstName, lastName, email, customAnswers) {
+  const body = {
+    first_name: firstName,
+    last_name: lastName,
+    email: email
+  };
+  if (customAnswers && customAnswers.length > 0) {
+    body.custom_questions = customAnswers;
+  }
+
   const res = await fetch(`https://api.zoom.us/v2/webinars/${webinarId}/registrants`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${accessToken}`
     },
-    body: JSON.stringify({
-      first_name: firstName,
-      last_name: lastName,
-      email: email
-    })
+    body: JSON.stringify(body)
   });
 
   if (!res.ok) {
@@ -98,27 +121,20 @@ Deno.serve(async (req) => {
     console.log(`Using webinar ID: ${webinarId} for occurrence ${occurrence_id}`);
     const accessToken = await getZoomAccessToken();
 
-    // For manual webinars, strip custom registration questions that would block our API registration
-    if (occurrence.zoom_webinar_mode === 'manual') {
+    // Fetch custom questions for the webinar so we can answer them
+    const customQuestions = await getWebinarQuestions(accessToken, webinarId);
+    console.log(`Webinar has ${customQuestions.length} custom questions: ${customQuestions.map(q => q.title).join(', ')}`);
+
+    // Load platinum leaders if any custom question might need them
+    let platinumLeaderMap = {};
+    if (customQuestions.length > 0) {
       try {
-        const stripRes = await fetch(`https://api.zoom.us/v2/webinars/${webinarId}/registrants/questions`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            questions: [{ field_name: 'last_name', required: true }],
-            custom_questions: []
-          })
-        });
-        if (!stripRes.ok) {
-          console.warn('Failed to strip custom questions:', stripRes.status, await stripRes.text());
-        } else {
-          console.log('Stripped custom registration questions for manual webinar');
+        const leaders = await base44.asServiceRole.entities.PlatinumLeader.filter({});
+        for (const l of leaders) {
+          platinumLeaderMap[l.id] = l.name;
         }
       } catch (e) {
-        console.warn('Error stripping custom questions (non-blocking):', e.message);
+        console.warn('Failed to load platinum leaders:', e.message);
       }
     }
 
@@ -130,12 +146,25 @@ Deno.serve(async (req) => {
 
     const results = [];
     for (const ticket of onlineTickets) {
+      // Build custom question answers from ticket data
+      const customAnswers = [];
+      for (const q of customQuestions) {
+        const titleLower = (q.title || '').toLowerCase();
+        if (titleLower.includes('platinum') || titleLower.includes('leader')) {
+          const leaderName = platinumLeaderMap[ticket.platinum_leader_id] || '';
+          if (leaderName) {
+            customAnswers.push({ title: q.title, value: leaderName });
+          }
+        }
+      }
+
       const result = await registerAttendee(
         accessToken,
         webinarId,
         ticket.attendee_first_name,
         ticket.attendee_last_name,
-        ticket.attendee_email
+        ticket.attendee_email,
+        customAnswers
       );
 
       if (result) {
