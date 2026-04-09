@@ -42,10 +42,9 @@ export default function SeriesPage() {
       const s = allSeries[0];
       setSeries(s);
 
-      const [occs, locs, tts] = await Promise.all([
+      const [occs, locs] = await Promise.all([
         base44.entities.EventOccurrence.filter({ series_id: s.id }),
-        base44.entities.Location.filter({}),
-        base44.entities.TicketType.filter({})
+        base44.entities.Location.filter({})
       ]);
 
       const locMap = {};
@@ -55,6 +54,12 @@ export default function SeriesPage() {
       const published = occs.filter(o => o.is_published && o.status === 'published')
         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
       setSessions(published);
+
+      // Fetch ticket types only for published sessions (parallel, scoped queries)
+      const ttResults = await Promise.all(
+        published.map(o => base44.entities.TicketType.filter({ occurrence_id: o.id }))
+      );
+      const tts = ttResults.flat();
       setTicketTypes(tts);
 
       pageCache[slug] = { series: s, locations: locMap, sessions: published, ticketTypes: tts };
