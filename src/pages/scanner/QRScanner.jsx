@@ -47,18 +47,19 @@ export default function QRScanner() {
         scanner = new Html5Qrcode('qr-reader');
         scannerRef.current = scanner;
 
-        // Calculate a square qrbox based on container size
+        // Use a large scan region so the QR code is detected even if not perfectly centered
         const qrboxFn = (viewfinderWidth, viewfinderHeight) => {
-          const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
+          const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.85;
           return { width: Math.floor(size), height: Math.floor(size) };
         };
 
         await scanner.start(
-          { facingMode: 'environment' },
+          { facingMode: { exact: 'environment' } },
           {
-            fps: 30,
+            fps: 10,
             qrbox: qrboxFn,
             disableFlip: false,
+            aspectRatio: 1,
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           },
           (decodedText) => handleScan(decodedText),
@@ -68,7 +69,7 @@ export default function QRScanner() {
         if (stopped) { scanner.stop().catch(() => {}); return; }
         if (mountedRef.current) setCameraReady(true);
 
-        // Enhance camera
+        // Enhance camera — request high resolution and continuous autofocus, no zoom
         try {
           const videoElem = document.querySelector('#qr-reader video');
           if (videoElem?.srcObject) {
@@ -79,10 +80,7 @@ export default function QRScanner() {
               const advanced = [];
               if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
               else if (caps.focusMode?.includes('auto')) advanced.push({ focusMode: 'auto' });
-              if (caps.zoom) {
-                const targetZoom = Math.min(2.0, caps.zoom.max || 1);
-                if (targetZoom > 1) advanced.push({ zoom: targetZoom });
-              }
+              // No zoom — keep native resolution for better QR decoding
               if (advanced.length) await track.applyConstraints({ advanced });
             }
           }
@@ -131,13 +129,9 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
-  // Resume scanner after processing
+  // Reset scanning state after processing
   const resumeScanner = useCallback(() => {
     setScanning(false);
-    try {
-      const videoElem = document.querySelector('#qr-reader video');
-      if (videoElem) videoElem.play();
-    } catch (e) {}
   }, []);
 
   // Tap-to-focus
@@ -187,12 +181,9 @@ export default function QRScanner() {
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 3000) return;
     lastScanRef.current[decodedText] = now;
 
-    // Freeze camera frame + turn green while processing
+    // Brief green flash feedback — camera stays live
     setScanning(true);
-    try {
-      const videoElem = document.querySelector('#qr-reader video');
-      if (videoElem) videoElem.pause();
-    } catch (e) {}
+    setTimeout(() => setScanning(false), 500);
 
     // Support both new format (plain hash string) and legacy JSON format
     let ticketId = null;
