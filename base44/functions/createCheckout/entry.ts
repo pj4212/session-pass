@@ -470,6 +470,7 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
   const isOnline = ticket.attendance_mode === 'online';
   const mode = isOnline ? 'Online' : 'In-Person';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(ticket.qr_code_hash)}`;
+  const registrationLink = occurrence.zoom_link || '';
 
   let accessBlock = '';
   if (isOnline && joinUrl) {
@@ -482,6 +483,17 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Join Online</h3>
             ${joinBtnHtml}
+          </td></tr>
+        </table>
+      </td></tr>`;
+  } else if (isOnline && registrationLink) {
+    accessBlock = `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
+          <tr><td>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Register for Webinar</h3>
+            <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">Please register using the link below to get your webinar access:</p>
+            <a href="${registrationLink}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar →</a>
           </td></tr>
         </table>
       </td></tr>`;
@@ -627,6 +639,7 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
   const hasOnlineTickets = tickets.some(t => t.attendance_mode === 'online');
   const hasInPersonTickets = tickets.some(t => t.attendance_mode !== 'online');
   const hasJoinUrls = Object.keys(zoomJoinUrls).length > 0;
+  const registrationLink = occurrence.zoom_link || '';
 
   let zoomBlock = '';
   if (hasOnlineTickets && hasJoinUrls) {
@@ -637,6 +650,17 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">\ud83d\udda5 Join Online</h3>
             ${joinHtml}
+          </td></tr>
+        </table>
+      </td></tr>`;
+  } else if (hasOnlineTickets && registrationLink) {
+    zoomBlock = `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:20px;border:1px solid #c7d2fe;">
+          <tr><td>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">\ud83d\udda5 Register for Webinar</h3>
+            <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">Please register using the link below to get your webinar access:</p>
+            <a href="${registrationLink}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar →</a>
           </td></tr>
         </table>
       </td></tr>`;
@@ -677,6 +701,11 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
       joinHtml = `
         <div style="margin-top:12px;">
           <a href="${ticketJoinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Join Webinar →</a>
+        </div>`;
+    } else if (isOnline && registrationLink) {
+      joinHtml = `
+        <div style="margin-top:12px;">
+          <a href="${registrationLink}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Register for Webinar →</a>
         </div>`;
     }
 

@@ -35,7 +35,18 @@ export default function TicketCard({ ticket, occurrence, ticketType }) {
         </div>
       )}
 
-      {ticket.attendance_mode === 'online' && !ticket.zoom_join_url && (
+      {ticket.attendance_mode === 'online' && !ticket.zoom_join_url && occurrence.zoom_link && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3 mt-3">
+          <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Register for Webinar</p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Please register using the link below to get your webinar access:</p>
+          <a href={occurrence.zoom_link} target="_blank" rel="noopener noreferrer"
+             className="inline-block bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-blue-700">
+            Register for Webinar →
+          </a>
+        </div>
+      )}
+
+      {ticket.attendance_mode === 'online' && !ticket.zoom_join_url && !occurrence.zoom_link && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3 mt-3">
           <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Online Event</p>
           <p className="text-xs text-blue-600 dark:text-blue-400">The webinar join link will be sent to your email before the event.</p>
