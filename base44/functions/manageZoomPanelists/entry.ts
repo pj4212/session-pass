@@ -38,8 +38,16 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, panelists } = body;
-    const webinar_id = body.webinar_id ? body.webinar_id.replace(/\s/g, '') : '';
+    const { action, panelists, zoom_link } = body;
+    // Prefer WN_ token from zoom_link for manual webinars, fallback to numeric ID
+    let webinar_id = '';
+    if (zoom_link) {
+      const wnMatch = zoom_link.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
+      if (wnMatch) webinar_id = wnMatch[1];
+    }
+    if (!webinar_id && body.webinar_id) {
+      webinar_id = body.webinar_id.replace(/\s/g, '');
+    }
 
     if (!webinar_id) {
       return Response.json({ error: "webinar_id is required" }, { status: 400 });

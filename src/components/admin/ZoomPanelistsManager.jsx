@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Plus, Trash2, Video, RefreshCw } from 'lucide-react';
 
-export default function ZoomPanelistsManager({ webinarId }) {
+export default function ZoomPanelistsManager({ webinarId, zoomLink }) {
   const [panelists, setPanelists] = useState([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -20,7 +20,8 @@ export default function ZoomPanelistsManager({ webinarId }) {
     try {
       const res = await base44.functions.invoke('manageZoomPanelists', {
         action: 'list',
-        webinar_id: webinarId
+        webinar_id: webinarId,
+        zoom_link: zoomLink
       });
       setPanelists(res.data.panelists || []);
     } catch (err) {
@@ -41,6 +42,7 @@ export default function ZoomPanelistsManager({ webinarId }) {
       await base44.functions.invoke('manageZoomPanelists', {
         action: 'add',
         webinar_id: webinarId,
+        zoom_link: zoomLink,
         panelists: [{ name: newName.trim(), email: newEmail.trim() }]
       });
       setNewName('');
@@ -58,6 +60,7 @@ export default function ZoomPanelistsManager({ webinarId }) {
       await base44.functions.invoke('manageZoomPanelists', {
         action: 'remove',
         webinar_id: webinarId,
+        zoom_link: zoomLink,
         panelists: [{ id: panelistId }]
       });
       await loadPanelists();

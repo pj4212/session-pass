@@ -456,9 +456,9 @@ export default function EventForm() {
               <Label>Zoom Meeting ID</Label>
               <Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value.replace(/\s/g, ''))} placeholder="Auto-filled when creating webinar" />
             </div>
-            {isEdit && form.zoom_meeting_id && (
+            {isEdit && (form.zoom_meeting_id || form.zoom_link) && (
               <div className="border-t pt-4">
-                <ZoomPanelistsManager webinarId={form.zoom_meeting_id} />
+                <ZoomPanelistsManager webinarId={form.zoom_meeting_id} zoomLink={form.zoom_link} />
               </div>
             )}
           </CardContent>
