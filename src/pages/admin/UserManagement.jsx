@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit, Shield, Loader2 } from 'lucide-react';
+import { Plus, Edit, Shield, Loader2, Search } from 'lucide-react';
 
 const ROLES = ['super_admin', 'event_admin', 'scanner', 'user'];
 
@@ -21,6 +21,7 @@ export default function UserManagement() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('user');
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Scanner location restrictions
   const [scannerDialogUser, setScannerDialogUser] = useState(null);
@@ -93,9 +94,15 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">User Management</h1>
-        <Button onClick={() => setInviteOpen(true)}><Plus className="h-4 w-4 mr-1.5" />Invite User</Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button onClick={() => setInviteOpen(true)}><Plus className="h-4 w-4 mr-1.5" />Invite</Button>
+        </div>
       </div>
 
       <div className="border rounded-lg overflow-auto">
@@ -110,7 +117,11 @@ export default function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map(u => (
+            {users.filter(u => {
+              if (!search) return true;
+              const q = search.toLowerCase();
+              return (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.role || '').toLowerCase().includes(q);
+            }).map(u => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.full_name || '—'}</TableCell>
                 <TableCell>{u.email}</TableCell>
