@@ -456,6 +456,30 @@ export default function EventForm() {
               <Label>Zoom Meeting ID</Label>
               <Input value={form.zoom_meeting_id} onChange={e => updateForm('zoom_meeting_id', e.target.value.replace(/\s/g, ''))} placeholder="Auto-filled when creating webinar" />
             </div>
+            {form.zoom_meeting_id && (
+              <div>
+                <Label>Zoom Webinar Join Link</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`https://zoom.us/w/${form.zoom_meeting_id}`}
+                    className="text-muted-foreground"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://zoom.us/w/${form.zoom_meeting_id}`);
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Direct webinar link for attendees to join.</p>
+              </div>
+            )}
             {isEdit && (form.zoom_meeting_id || form.zoom_link) && (
               <div className="border-t pt-4">
                 <ZoomPanelistsManager webinarId={form.zoom_meeting_id} zoomLink={form.zoom_link} />
