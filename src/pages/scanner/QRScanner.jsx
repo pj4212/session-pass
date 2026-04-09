@@ -47,19 +47,11 @@ export default function QRScanner() {
         scanner = new Html5Qrcode('qr-reader');
         scannerRef.current = scanner;
 
-        // Use a large scan region so the QR code is detected even if not perfectly centered
-        const qrboxFn = (viewfinderWidth, viewfinderHeight) => {
-          const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.85;
-          return { width: Math.floor(size), height: Math.floor(size) };
-        };
-
         await scanner.start(
           { facingMode: { exact: 'environment' } },
           {
-            fps: 10,
-            qrbox: qrboxFn,
+            fps: 15,
             disableFlip: false,
-            aspectRatio: 1,
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           },
           (decodedText) => handleScan(decodedText),
