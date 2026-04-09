@@ -148,7 +148,16 @@ function buildProjectedTimeline(sessions, months) {
     const fortnightlyTemplates = weekIsA ? aT : bT;
     const allTemplates = [...weeklyT, ...fortnightlyTemplates];
     const actualNames = new Set(actual.map(s => s.name));
-    const missing = allTemplates.filter(t => !actualNames.has(t.name));
+    // Also track which days of the week already have actual sessions
+    const actualDays = new Set(actual.map(s => localDate(s.event_date).getDay()));
+    const missing = allTemplates.filter(t => {
+      // Don't project if a session with this name already exists
+      if (actualNames.has(t.name)) return false;
+      // Don't project onto a day that already has actual sessions
+      // (means the admin already set up what they need for that day)
+      if (actualDays.has(t.dayOfWeek)) return false;
+      return true;
+    });
     const projected = missing.map(t => projectTemplate(t, mondayStr));
     const all = [...actual, ...projected].sort((a, b) => {
       const aOnline = a.event_mode === 'online_stream' ? 0 : 1;
