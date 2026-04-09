@@ -30,8 +30,8 @@ export default function UserManagement() {
 
   useEffect(() => {
     async function load() {
-      const u = await base44.entities.User.list();
-      setUsers(u);
+      const res = await base44.functions.invoke('manageUsers', { action: 'list' });
+      setUsers(res.data.users);
       setLoading(false);
     }
     load();
@@ -44,7 +44,7 @@ export default function UserManagement() {
 
   const saveEdit = async () => {
     setSaving(true);
-    await base44.entities.User.update(editing, form);
+    await base44.functions.invoke('manageUsers', { action: 'update', user_id: editing, data: form });
     setUsers(prev => prev.map(u => u.id === editing ? { ...u, ...form } : u));
     setEditing(null);
     setSaving(false);
@@ -54,8 +54,8 @@ export default function UserManagement() {
     setSaving(true);
     await base44.users.inviteUser(inviteEmail, ['super_admin', 'event_admin'].includes(inviteRole) ? 'admin' : 'user');
     // After invite, reload users
-    const u = await base44.entities.User.list();
-    setUsers(u);
+    const res = await base44.functions.invoke('manageUsers', { action: 'list' });
+    setUsers(res.data.users);
     setInviteOpen(false);
     setInviteEmail('');
     setSaving(false);
