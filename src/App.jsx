@@ -27,6 +27,7 @@ import Home from './pages/Home';
 import EmailTesting from './pages/admin/EmailTesting';
 import LoadTest from './pages/admin/LoadTest';
 import RateLimitLogs from './pages/admin/RateLimitLogs';
+import PastSessions from './pages/admin/PastSessions';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -65,6 +66,7 @@ const AuthenticatedApp = () => {
         <Route path="events/new" element={<EventForm />} />
         <Route path="events/:id/edit" element={<EventForm />} />
         <Route path="events/:id/attendees" element={<AttendeeList />} />
+        <Route path="past-sessions" element={<PastSessions />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings/mentors" element={<MentorManagement />} />
         <Route path="settings/platinum-leaders" element={<PlatinumLeaderManagement />} />
