@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       duration: durationMins,
       timezone: eventTz,
       agenda: occurrence.description || `Webinar for ${occurrence.name}`,
+      password: '',
       settings: {
         approval_type: 0, // Automatically approve registrants
         registration_type: 1, // Register once, attend one time
@@ -89,6 +90,7 @@ Deno.serve(async (req) => {
         show_share_button: false,
         allow_multiple_devices: true,
         on_demand: false,
+        meeting_authentication: false,
         question_and_answer: {
           enable: true,
           allow_submit_questions: true,
