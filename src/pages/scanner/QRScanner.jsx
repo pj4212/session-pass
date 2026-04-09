@@ -131,6 +131,21 @@ export default function QRScanner() {
     };
   }, [occurrenceId]);
 
+  // Resume scanner after processing
+  const resumeScanner = useCallback(() => {
+    setScanning(false);
+    try {
+      const scanner = scannerRef.current;
+      if (scanner) {
+        const state = scanner.getState?.();
+        // state 3 = PAUSED
+        if (state === 3) {
+          scanner.resume();
+        }
+      }
+    } catch (e) {}
+  }, []);
+
   // Tap-to-focus
   const handleTapFocus = useCallback(async () => {
     const track = trackRef.current;
@@ -178,9 +193,14 @@ export default function QRScanner() {
     if (lastScanRef.current[decodedText] && now - lastScanRef.current[decodedText] < 3000) return;
     lastScanRef.current[decodedText] = now;
 
-    // Immediate visual feedback — flash the guide green, then reset
+    // Freeze camera frame + turn green while processing
     setScanning(true);
-    setTimeout(() => setScanning(false), 500);
+    try {
+      const scanner = scannerRef.current;
+      if (scanner && scanner.getState?.() === 2) {
+        await scanner.pause(true); // pause with frozen frame
+      }
+    } catch (e) {}
 
     // Support both new format (plain hash string) and legacy JSON format
     let ticketId = null;
@@ -196,10 +216,12 @@ export default function QRScanner() {
 
     if (!hash) {
       setResult({ type: 'error', title: 'Invalid QR Code', subtitle: 'Not a valid ticket QR code' });
+      resumeScanner();
       return;
     }
     if (hash === 'pending' || hash === 'temp') {
       setResult({ type: 'error', title: 'Ticket Not Ready', subtitle: "QR code hasn't been activated yet." });
+      resumeScanner();
       return;
     }
 
@@ -208,6 +230,7 @@ export default function QRScanner() {
       await queueScan({ ticket_id: ticketId || null, occurrence_id: currentOccurrenceId, qr_hash: hash });
       setResult({ type: 'success', title: 'Queued Offline', subtitle: 'Will sync when back online' });
       setCheckedIn(prev => prev + 1);
+      resumeScanner();
       return;
     }
 
@@ -236,10 +259,12 @@ export default function QRScanner() {
         const name = data.ticket ? `${data.ticket.attendee_first_name} ${data.ticket.attendee_last_name}` : null;
         setResult({ type: 'error', title: name || 'Error', subtitle: data.reason || 'Check-in failed' });
       }
+      resumeScanner();
     } catch (err) {
       await queueScan({ ticket_id: ticketId || null, occurrence_id: currentOccurrenceId, qr_hash: hash });
       setResult({ type: 'success', title: 'Queued Offline', subtitle: 'Will sync when back online' });
       setCheckedIn(prev => prev + 1);
+      resumeScanner();
     }
   };
 
