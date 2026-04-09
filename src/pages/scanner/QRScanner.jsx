@@ -52,6 +52,12 @@ export default function QRScanner() {
           {
             fps: 15,
             disableFlip: false,
+            videoConstraints: {
+              facingMode: { exact: 'environment' },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              focusMode: 'continuous',
+            },
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           },
           (decodedText) => handleScan(decodedText),
@@ -61,7 +67,7 @@ export default function QRScanner() {
         if (stopped) { scanner.stop().catch(() => {}); return; }
         if (mountedRef.current) setCameraReady(true);
 
-        // Enhance camera — request high resolution and continuous autofocus, no zoom
+        // Enhance camera — force continuous autofocus + high resolution for sharp QR decoding
         try {
           const videoElem = document.querySelector('#qr-reader video');
           if (videoElem?.srcObject) {
@@ -69,14 +75,23 @@ export default function QRScanner() {
             trackRef.current = track;
             if (track) {
               const caps = track.getCapabilities?.() || {};
-              const advanced = [];
-              if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
-              else if (caps.focusMode?.includes('auto')) advanced.push({ focusMode: 'auto' });
-              // No zoom — keep native resolution for better QR decoding
-              if (advanced.length) await track.applyConstraints({ advanced });
+              // Apply focus + resolution constraints directly on the track
+              const constraints = {};
+              if (caps.focusMode?.includes('continuous')) {
+                constraints.focusMode = 'continuous';
+              } else if (caps.focusMode?.includes('auto')) {
+                constraints.focusMode = 'auto';
+              }
+              if (caps.width) constraints.width = { ideal: 1920 };
+              if (caps.height) constraints.height = { ideal: 1080 };
+              if (caps.focusDistance) {
+                // Set a near focus distance for close-range QR scanning
+                constraints.focusDistance = caps.focusDistance.min || 0;
+              }
+              await track.applyConstraints(constraints);
             }
           }
-        } catch (e) { /* optional */ }
+        } catch (e) { console.warn('Camera enhance failed:', e); }
 
         // Hide the library's built-in shaded region border to use our own overlay
         try {
@@ -126,21 +141,24 @@ export default function QRScanner() {
     setScanning(false);
   }, []);
 
-  // Tap-to-focus
+  // Tap-to-focus — trigger a single autofocus then return to continuous
   const handleTapFocus = useCallback(async () => {
     const track = trackRef.current;
     if (!track) return;
     try {
       const caps = track.getCapabilities?.() || {};
       if (caps.focusMode) {
-        await track.applyConstraints({ advanced: [{ focusMode: 'auto' }] });
+        // Force a single-shot autofocus
+        await track.applyConstraints({ focusMode: 'manual' }).catch(() => {});
+        await track.applyConstraints({ focusMode: 'auto' });
+        // Return to continuous after the auto-focus locks
         setTimeout(async () => {
           try {
             if (caps.focusMode?.includes('continuous')) {
-              await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+              await track.applyConstraints({ focusMode: 'continuous' });
             }
           } catch (e) {}
-        }, 2000);
+        }, 1500);
       }
     } catch (e) {}
   }, []);
