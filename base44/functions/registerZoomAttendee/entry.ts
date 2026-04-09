@@ -90,6 +90,30 @@ Deno.serve(async (req) => {
     }
     const accessToken = await getZoomAccessToken();
 
+    // For manual webinars, strip custom registration questions that would block our API registration
+    if (occurrence.zoom_webinar_mode === 'manual') {
+      try {
+        const stripRes = await fetch(`https://api.zoom.us/v2/webinars/${webinarId}/registrants/questions`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            questions: [{ field_name: 'last_name', required: true }],
+            custom_questions: []
+          })
+        });
+        if (!stripRes.ok) {
+          console.warn('Failed to strip custom questions:', stripRes.status, await stripRes.text());
+        } else {
+          console.log('Stripped custom registration questions for manual webinar');
+        }
+      } catch (e) {
+        console.warn('Error stripping custom questions (non-blocking):', e.message);
+      }
+    }
+
     // Only register online tickets
     const onlineTickets = tickets.filter(t => t.attendance_mode === 'online');
     if (!onlineTickets.length) {
