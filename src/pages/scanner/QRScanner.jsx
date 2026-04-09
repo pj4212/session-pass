@@ -135,14 +135,8 @@ export default function QRScanner() {
   const resumeScanner = useCallback(() => {
     setScanning(false);
     try {
-      const scanner = scannerRef.current;
-      if (scanner) {
-        const state = scanner.getState?.();
-        // state 3 = PAUSED
-        if (state === 3) {
-          scanner.resume();
-        }
-      }
+      const videoElem = document.querySelector('#qr-reader video');
+      if (videoElem) videoElem.play();
     } catch (e) {}
   }, []);
 
@@ -196,10 +190,8 @@ export default function QRScanner() {
     // Freeze camera frame + turn green while processing
     setScanning(true);
     try {
-      const scanner = scannerRef.current;
-      if (scanner && scanner.getState?.() === 2) {
-        await scanner.pause(true); // pause with frozen frame
-      }
+      const videoElem = document.querySelector('#qr-reader video');
+      if (videoElem) videoElem.pause();
     } catch (e) {}
 
     // Support both new format (plain hash string) and legacy JSON format
