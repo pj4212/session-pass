@@ -37,7 +37,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { action, webinar_id, panelists } = await req.json();
+    const body = await req.json();
+    const { action, panelists } = body;
+    const webinar_id = body.webinar_id ? body.webinar_id.replace(/\s/g, '') : '';
 
     if (!webinar_id) {
       return Response.json({ error: "webinar_id is required" }, { status: 400 });
