@@ -291,7 +291,8 @@ Deno.serve(async (req) => {
     // Register online attendees with Zoom webinar
     let zoomJoinUrls = {};
     const onlineTickets = tickets.filter(t => t.attendance_mode === 'online');
-    if (onlineTickets.length > 0 && occurrence.zoom_meeting_id) {
+    const hasZoomWebinar = occurrence.zoom_meeting_id || (occurrence.zoom_link && /\/register\/WN_|\/w\/\d+/.test(occurrence.zoom_link));
+    if (onlineTickets.length > 0 && hasZoomWebinar) {
       try {
         const zoomRes = await base44.asServiceRole.functions.invoke('registerZoomAttendee', {
           tickets: onlineTickets.map(t => ({

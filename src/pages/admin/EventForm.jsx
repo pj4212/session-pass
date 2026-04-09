@@ -405,8 +405,22 @@ export default function EventForm() {
               <Label>Zoom Registration Link</Label>
               <Input
                 value={form.zoom_link}
-                onChange={e => updateForm('zoom_link', e.target.value)}
-                placeholder={form.zoom_webinar_mode === 'auto' ? 'Will be auto-filled on publish...' : 'https://zoom.us/webinar/register/...'}
+                onChange={e => {
+                  const url = e.target.value;
+                  updateForm('zoom_link', url);
+                  // Auto-extract webinar ID from registration URL
+                  if (form.zoom_webinar_mode === 'manual' && url) {
+                    // Match patterns like /webinar/register/WN_xxx or /w/12345/register
+                    const wnMatch = url.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
+                    const numericMatch = url.match(/\/w\/(\d+)/);
+                    if (wnMatch) {
+                      updateForm('zoom_meeting_id', wnMatch[1]);
+                    } else if (numericMatch) {
+                      updateForm('zoom_meeting_id', numericMatch[1]);
+                    }
+                  }
+                }}
+                placeholder={form.zoom_webinar_mode === 'auto' ? 'Will be auto-filled on publish...' : 'https://zoom.us/webinar/register/WN_...'}
                 disabled={form.zoom_webinar_mode === 'auto' && !form.zoom_link}
               />
               <p className="text-xs text-muted-foreground mt-1">This link is sent to online ticket holders in their confirmation email.</p>

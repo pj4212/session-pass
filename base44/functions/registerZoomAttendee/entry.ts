@@ -76,12 +76,18 @@ Deno.serve(async (req) => {
     }
     const occurrence = occs[0];
 
-    if (!occurrence.zoom_meeting_id) {
+    // Determine webinar ID — prefer zoom_meeting_id, fallback to extracting from zoom_link
+    let webinarId = occurrence.zoom_meeting_id;
+    if (!webinarId && occurrence.zoom_link) {
+      const wnMatch = occurrence.zoom_link.match(/\/register\/(WN_[A-Za-z0-9_-]+)/);
+      const numericMatch = occurrence.zoom_link.match(/\/w\/(\d+)/);
+      if (wnMatch) webinarId = wnMatch[1];
+      else if (numericMatch) webinarId = numericMatch[1];
+    }
+    if (!webinarId) {
       console.log(`No Zoom webinar ID for occurrence ${occurrence_id}, skipping registration`);
       return Response.json({ success: true, registrations: [], skipped: true, reason: 'no_webinar_id' });
     }
-
-    const webinarId = occurrence.zoom_meeting_id;
     const accessToken = await getZoomAccessToken();
 
     // Only register online tickets
