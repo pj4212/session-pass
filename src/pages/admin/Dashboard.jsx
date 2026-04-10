@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight, RefreshCw } from 'lucide-react';
@@ -7,6 +8,7 @@ import LiveSessionBanner from '@/components/admin/LiveSessionBanner';
 import WeeklyEvents from '@/components/admin/WeeklyEvents';
 
 export default function Dashboard() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
@@ -20,10 +22,10 @@ export default function Dashboard() {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const [allTickets, allOrders, allEvents, allTicketTypes] = await Promise.all([
-      base44.entities.Ticket.filter({ ticket_status: 'active' }, '-created_date', 500),
-      base44.entities.Order.filter({}, '-created_date', 500),
-      base44.entities.EventOccurrence.filter({}, '-created_date', 500),
-      base44.entities.TicketType.filter({}, '-created_date', 500)
+      base44.entities.Ticket.filter({ ...wsFilter, ticket_status: 'active' }, '-created_date', 500),
+      base44.entities.Order.filter({ ...wsFilter }, '-created_date', 500),
+      base44.entities.EventOccurrence.filter({ ...wsFilter }, '-created_date', 500),
+      base44.entities.TicketType.filter({ ...wsFilter }, '-created_date', 500)
     ]);
 
     const weekTickets = allTickets.filter(t => new Date(t.created_date) >= weekAgo);
@@ -94,7 +96,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [workspaceId]);
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;

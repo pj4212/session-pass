@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Plus, Edit, Loader2 } from 'lucide-react';
 
 export default function MentorManagement() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [mentors, setMentors] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,15 +22,15 @@ export default function MentorManagement() {
   useEffect(() => {
     async function load() {
       const [m, l] = await Promise.all([
-        base44.entities.UplineMentor.filter({}),
-        base44.entities.PlatinumLeader.filter({})
+        base44.entities.UplineMentor.filter({ ...wsFilter }),
+        base44.entities.PlatinumLeader.filter({ ...wsFilter })
       ]);
       setMentors(m.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
       setLeaders(l);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [workspaceId]);
 
   const openNew = () => {
     setEditing('new');
@@ -43,7 +45,7 @@ export default function MentorManagement() {
   const save = async () => {
     setSaving(true);
     if (editing === 'new') {
-      const created = await base44.entities.UplineMentor.create(form);
+      const created = await base44.entities.UplineMentor.create({ ...form, ...wsFilter });
       setMentors(prev => [...prev, created].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
     } else {
       await base44.entities.UplineMentor.update(editing, form);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ const TIMEZONES = [
 export default function EventForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const isEdit = !!id;
   const urlParams = new URLSearchParams(window.location.search);
   const duplicateId = urlParams.get('duplicate');
@@ -63,9 +65,9 @@ export default function EventForm() {
   useEffect(() => {
     async function load() {
       const [locs, tmps, series] = await Promise.all([
-        base44.entities.Location.filter({}),
-        base44.entities.EventTemplate.filter({ is_active: true }),
-        base44.entities.EventSeries.filter({})
+        base44.entities.Location.filter({ ...wsFilter }),
+        base44.entities.EventTemplate.filter({ ...wsFilter, is_active: true }),
+        base44.entities.EventSeries.filter({ ...wsFilter })
       ]);
       setLocations(locs);
       setTemplates(tmps);
@@ -195,7 +197,7 @@ export default function EventForm() {
       await base44.entities.EventOccurrence.update(id, eventData);
       eventId = id;
     } else {
-      const created = await base44.entities.EventOccurrence.create(eventData);
+      const created = await base44.entities.EventOccurrence.create({ ...eventData, ...wsFilter });
       eventId = created.id;
     }
 
@@ -212,7 +214,7 @@ export default function EventForm() {
       if (tt._existing && tt.id) {
         await base44.entities.TicketType.update(tt.id, ttData);
       } else if (!tt._existing || !tt.id) {
-        await base44.entities.TicketType.create(ttData);
+        await base44.entities.TicketType.create({ ...ttData, ...wsFilter });
       }
     }
 

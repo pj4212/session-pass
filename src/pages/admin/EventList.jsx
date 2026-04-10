@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ const STATUS_COLORS = {
 };
 
 export default function EventList() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [events, setEvents] = useState([]);
   const [locations, setLocations] = useState({});
   const [tickets, setTickets] = useState([]);
@@ -40,11 +42,11 @@ export default function EventList() {
   async function load() {
     setLoading(true);
     const [evs, locs, tix, series, tts] = await Promise.all([
-      base44.entities.EventOccurrence.filter({}),
-      base44.entities.Location.filter({}),
-      base44.entities.Ticket.filter({ ticket_status: 'active' }),
-      base44.entities.EventSeries.filter({}),
-      base44.entities.TicketType.filter({})
+      base44.entities.EventOccurrence.filter({ ...wsFilter }),
+      base44.entities.Location.filter({ ...wsFilter }),
+      base44.entities.Ticket.filter({ ...wsFilter, ticket_status: 'active' }),
+      base44.entities.EventSeries.filter({ ...wsFilter }),
+      base44.entities.TicketType.filter({ ...wsFilter })
     ]);
     const locMap = {};
     locs.forEach(l => { locMap[l.id] = l; });
@@ -58,7 +60,7 @@ export default function EventList() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [workspaceId]);
 
   const togglePublish = async (ev) => {
     const updated = { is_published: !ev.is_published, status: ev.is_published ? 'draft' : 'published' };
@@ -116,12 +118,13 @@ export default function EventList() {
       status: 'draft',
     };
 
-    const created = await base44.entities.EventOccurrence.create(newData);
+    const created = await base44.entities.EventOccurrence.create({ ...newData, ...wsFilter });
 
     // Copy ticket types from source
     const sourceTTs = ticketTypesList.filter(tt => tt.occurrence_id === sourceId);
     for (const tt of sourceTTs) {
       await base44.entities.TicketType.create({
+        ...wsFilter,
         occurrence_id: created.id,
         name: tt.name,
         attendance_mode: tt.attendance_mode,
@@ -136,7 +139,7 @@ export default function EventList() {
     }
 
     // Refresh events list so the timeline updates with the new real session
-    const evs = await base44.entities.EventOccurrence.filter({});
+    const evs = await base44.entities.EventOccurrence.filter({ ...wsFilter });
     setEvents(evs.sort((a, b) => new Date(b.event_date) - new Date(a.event_date)));
     setCreatingProjected(null);
     toast.success(`Session created: ${created.name} on ${projectedSession.event_date}`);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ const STATUS_COLORS = {
 };
 
 export default function SeriesManagement() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [seriesList, setSeriesList] = useState([]);
   const [occurrences, setOccurrences] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,15 +42,15 @@ export default function SeriesManagement() {
   useEffect(() => {
     async function load() {
       const [s, o] = await Promise.all([
-        base44.entities.EventSeries.filter({}),
-        base44.entities.EventOccurrence.filter({})
+        base44.entities.EventSeries.filter({ ...wsFilter }),
+        base44.entities.EventOccurrence.filter({ ...wsFilter })
       ]);
       setSeriesList(s.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
       setOccurrences(o);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [workspaceId]);
 
   // Get unique source templates per series (deduplicated by name)
   const getSourceTemplates = (seriesId) => {
@@ -79,7 +81,7 @@ export default function SeriesManagement() {
       await base44.entities.EventSeries.update(editing.id, form);
       setSeriesList(prev => prev.map(s => s.id === editing.id ? { ...s, ...form } : s));
     } else {
-      const created = await base44.entities.EventSeries.create(form);
+      const created = await base44.entities.EventSeries.create({ ...form, ...wsFilter });
       setSeriesList(prev => [created, ...prev]);
     }
     setSaving(false);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +21,7 @@ function exportCsv(headers, rows, filename) {
 }
 
 export default function Reports() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [tickets, setTickets] = useState([]);
   const [orders, setOrders] = useState([]);
   const [occurrences, setOccurrences] = useState([]);
@@ -36,13 +38,13 @@ export default function Reports() {
   useEffect(() => {
     async function load() {
       const [tix, ords, occs, tts, locs, mList, lList] = await Promise.all([
-        base44.entities.Ticket.filter({}),
-        base44.entities.Order.filter({}),
-        base44.entities.EventOccurrence.filter({}),
-        base44.entities.TicketType.filter({}),
-        base44.entities.Location.filter({}),
-        base44.entities.UplineMentor.filter({}),
-        base44.entities.PlatinumLeader.filter({})
+        base44.entities.Ticket.filter({ ...wsFilter }),
+        base44.entities.Order.filter({ ...wsFilter }),
+        base44.entities.EventOccurrence.filter({ ...wsFilter }),
+        base44.entities.TicketType.filter({ ...wsFilter }),
+        base44.entities.Location.filter({ ...wsFilter }),
+        base44.entities.UplineMentor.filter({ ...wsFilter }),
+        base44.entities.PlatinumLeader.filter({ ...wsFilter })
       ]);
       setTickets(tix);
       setOrders(ords);
@@ -60,7 +62,7 @@ export default function Reports() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [workspaceId]);
 
   const filteredOccurrences = useMemo(() => {
     return occurrences.filter(o => {

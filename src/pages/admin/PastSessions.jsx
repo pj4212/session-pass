@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import moment from 'moment';
 import PastSessionDetail from '../../components/admin/PastSessionDetail';
 
 export default function PastSessions() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [events, setEvents] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,10 +21,9 @@ export default function PastSessions() {
   useEffect(() => {
     async function load() {
       const [evts, locs] = await Promise.all([
-        base44.entities.EventOccurrence.filter({}, '-event_date', 500),
-        base44.entities.Location.list()
+        base44.entities.EventOccurrence.filter({ ...wsFilter }, '-event_date', 500),
+        base44.entities.Location.filter({ ...wsFilter })
       ]);
-      // Past events = event_date is before today
       const todayStr = new Date().toISOString().slice(0, 10);
       const pastEvents = evts.filter(e => e.event_date && e.event_date.slice(0, 10) < todayStr);
       setEvents(pastEvents);
@@ -30,7 +31,7 @@ export default function PastSessions() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [workspaceId]);
 
   const getLocation = (id) => locations.find(l => l.id === id);
 

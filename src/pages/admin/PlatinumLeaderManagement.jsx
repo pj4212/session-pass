@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Plus, Edit, Loader2 } from 'lucide-react';
 
 export default function PlatinumLeaderManagement() {
+  const { wsFilter, workspaceId } = useWorkspaceFilter();
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -17,12 +19,12 @@ export default function PlatinumLeaderManagement() {
 
   useEffect(() => {
     async function load() {
-      const l = await base44.entities.PlatinumLeader.filter({});
+      const l = await base44.entities.PlatinumLeader.filter({ ...wsFilter });
       setLeaders(l.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       setLoading(false);
     }
     load();
-  }, []);
+  }, [workspaceId]);
 
   const openNew = () => {
     setEditing('new');
@@ -37,7 +39,7 @@ export default function PlatinumLeaderManagement() {
   const save = async () => {
     setSaving(true);
     if (editing === 'new') {
-      const created = await base44.entities.PlatinumLeader.create(form);
+      const created = await base44.entities.PlatinumLeader.create({ ...form, ...wsFilter });
       setLeaders(prev => [...prev, created].sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     } else {
       await base44.entities.PlatinumLeader.update(editing, form);
