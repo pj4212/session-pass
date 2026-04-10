@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Edit, Shield, Loader2, Search, Building2 } from 'lucide-react';
 
 const ROLES = ['super_admin', 'event_admin', 'scanner', 'user'];
+const MULTI_WORKSPACE_EMAILS = ['mmci1525@gmail.com'];
 
 export default function UserManagement() {
   const { user: currentUser } = useOutletContext();
@@ -138,8 +139,17 @@ export default function UserManagement() {
               const q = search.toLowerCase();
               return (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.role || '').toLowerCase().includes(q);
             }).map(u => (
-              <TableRow key={u.id}>
-                <TableCell className="font-medium">{u.full_name || '—'}</TableCell>
+              <TableRow key={u.id} className={MULTI_WORKSPACE_EMAILS.includes(u.email?.toLowerCase()) ? 'bg-primary/5 border-l-2 border-l-primary' : ''}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {u.full_name || '—'}
+                    {MULTI_WORKSPACE_EMAILS.includes(u.email?.toLowerCase()) && (
+                      <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary border border-primary/30">
+                        <Building2 className="h-3 w-3 mr-0.5" />Multi-WS
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{u.email}</TableCell>
                 <TableCell><Badge variant="outline" className="capitalize">{(u.role || 'user').replace(/_/g, ' ')}</Badge></TableCell>
                 <TableCell>
