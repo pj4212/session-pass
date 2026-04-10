@@ -8,7 +8,16 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 // Page transitions are handled inside each layout (PublicLayout, AdminLayout, ScannerLayout)
 
-// Lazy-loaded pages
+// Eager imports for frequently-used admin pages (avoids slow first-load)
+import Dashboard from './pages/admin/Dashboard';
+import EventList from './pages/admin/EventList';
+import Reports from './pages/admin/Reports';
+import PlatinumLeaderManagement from './pages/admin/PlatinumLeaderManagement';
+import MentorManagement from './pages/admin/MentorManagement';
+import SeriesManagement from './pages/admin/SeriesManagement';
+import PastSessions from './pages/admin/PastSessions';
+
+// Lazy-loaded pages (less frequently accessed)
 const EventPage = React.lazy(() => import('./pages/EventPage'));
 const OrderConfirmation = React.lazy(() => import('./pages/OrderConfirmation'));
 const PublicLayout = React.lazy(() => import('./components/PublicLayout'));
@@ -18,21 +27,14 @@ const ScannerHome = React.lazy(() => import('./pages/scanner/ScannerHome'));
 const ScannerDashboard = React.lazy(() => import('./pages/scanner/ScannerDashboard'));
 const QRScanner = React.lazy(() => import('./pages/scanner/QRScanner'));
 const ManualCheckinList = React.lazy(() => import('./pages/scanner/ManualCheckinList'));
-const Dashboard = React.lazy(() => import('./pages/admin/Dashboard'));
-const EventList = React.lazy(() => import('./pages/admin/EventList'));
 const EventForm = React.lazy(() => import('./pages/admin/EventForm'));
 const AttendeeList = React.lazy(() => import('./pages/admin/AttendeeList'));
-const MentorManagement = React.lazy(() => import('./pages/admin/MentorManagement'));
-const PlatinumLeaderManagement = React.lazy(() => import('./pages/admin/PlatinumLeaderManagement'));
 const UserManagement = React.lazy(() => import('./pages/admin/UserManagement'));
-const Reports = React.lazy(() => import('./pages/admin/Reports'));
-const SeriesManagement = React.lazy(() => import('./pages/admin/SeriesManagement'));
 const SeriesPage = React.lazy(() => import('./pages/SeriesPage'));
 const Home = React.lazy(() => import('./pages/Home'));
 const EmailTesting = React.lazy(() => import('./pages/admin/EmailTesting'));
 const LoadTest = React.lazy(() => import('./pages/admin/LoadTest'));
 const RateLimitLogs = React.lazy(() => import('./pages/admin/RateLimitLogs'));
-const PastSessions = React.lazy(() => import('./pages/admin/PastSessions'));
 const WorkspaceManagement = React.lazy(() => import('./pages/admin/WorkspaceManagement'));
 const AccountSettings = React.lazy(() => import('./components/AccountSettings'));
 
