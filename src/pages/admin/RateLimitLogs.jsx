@@ -88,7 +88,7 @@ export default function RateLimitLogs() {
                 logs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="whitespace-nowrap">
-                      {format(new Date(log.created_date), "dd MMM yyyy, hh:mm:ss a")}
+                      {new Date(log.created_date).toLocaleString('en-AU', { timeZone: 'Australia/Brisbane', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                     </TableCell>
                     <TableCell>{log.operation_label}</TableCell>
                     <TableCell>{log.attempt}</TableCell>
