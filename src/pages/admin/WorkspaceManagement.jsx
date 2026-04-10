@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Loader2, Building2, Trash2, Eye, EyeOff, Database } from 'lucide-react';
 import { toast } from 'sonner';
@@ -152,7 +153,24 @@ export default function WorkspaceManagement() {
               </div>
               <div>
                 <Label>Default Timezone</Label>
-                <Input value={editWs.default_timezone || ''} onChange={e => setEditWs(prev => ({ ...prev, default_timezone: e.target.value }))} placeholder="Australia/Brisbane" />
+                <Select value={editWs.default_timezone || 'Australia/Brisbane'} onValueChange={v => setEditWs(prev => ({ ...prev, default_timezone: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Australia/Brisbane">Australia/Brisbane (AEST)</SelectItem>
+                    <SelectItem value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</SelectItem>
+                    <SelectItem value="Australia/Melbourne">Australia/Melbourne (AEST/AEDT)</SelectItem>
+                    <SelectItem value="Australia/Adelaide">Australia/Adelaide (ACST/ACDT)</SelectItem>
+                    <SelectItem value="Australia/Darwin">Australia/Darwin (ACST)</SelectItem>
+                    <SelectItem value="Australia/Perth">Australia/Perth (AWST)</SelectItem>
+                    <SelectItem value="Australia/Hobart">Australia/Hobart (AEST/AEDT)</SelectItem>
+                    <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
+                    <SelectItem value="Asia/Singapore">Singapore (SGT)</SelectItem>
+                    <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                    <SelectItem value="America/New_York">New York (EST/EDT)</SelectItem>
+                    <SelectItem value="America/Los_Angeles">Los Angeles (PST/PDT)</SelectItem>
+                    <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="border-t pt-4">
