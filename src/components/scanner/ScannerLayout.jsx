@@ -56,7 +56,7 @@ export default function ScannerLayout() {
   const isAdmin = user && ['super_admin', 'event_admin', 'admin'].includes(user.role);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col safe-area-top">
       {isAdmin && (
         <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
           <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
@@ -75,7 +75,7 @@ export default function ScannerLayout() {
           Offline — reconnect to continue scanning
         </div>
       )}
-      <main className="flex-1 overflow-auto pb-16">
+      <main className="flex-1 overflow-auto pb-20 overscroll-none">
         <Outlet context={{ user, assignments, workspaceId }} />
       </main>
       <ScannerBottomNav occurrenceId={occurrenceId} />

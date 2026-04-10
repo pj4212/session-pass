@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, BarChart3, ScanLine, ClipboardList } from 'lucide-react';
 
 const tabs = [
@@ -10,6 +10,7 @@ const tabs = [
 
 export default function ScannerBottomNav({ occurrenceId }) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const getPath = (tab) => {
     if (tab.id === 'home') return '/scanner';
@@ -24,28 +25,42 @@ export default function ScannerBottomNav({ occurrenceId }) {
     return path === `/scanner/${occurrenceId}${tab.pathSuffix}`;
   };
 
+  const handleTabPress = (tab, e) => {
+    e.preventDefault();
+    const disabled = tab.id !== 'home' && !occurrenceId;
+    if (disabled) return;
+    const targetPath = getPath(tab);
+    // If already on this tab, reset to root of that tab
+    if (isActive(tab)) {
+      navigate(targetPath, { replace: true });
+    } else {
+      navigate(targetPath);
+    }
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-area-bottom">
-      <div className="flex items-center h-16">
+      <div className="flex items-center" style={{ minHeight: '56px' }}>
         {tabs.map(tab => {
           const active = isActive(tab);
           const disabled = tab.id !== 'home' && !occurrenceId;
           const Icon = tab.icon;
           return (
-            <Link
+            <button
               key={tab.id}
-              to={disabled ? '/scanner' : getPath(tab)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 h-full transition-colors ${
+              onClick={(e) => handleTabPress(tab, e)}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors touch-target ${
                 active 
                   ? 'text-primary' 
                   : disabled 
                     ? 'text-muted-foreground/30 pointer-events-none' 
                     : 'text-muted-foreground hover:text-foreground'
               }`}
+              style={{ minHeight: '56px' }}
             >
               <Icon className={`h-5 w-5 ${active ? 'drop-shadow-sm' : ''}`} />
-              <span className="text-[10px] font-medium">{tab.label}</span>
-            </Link>
+              <span className="text-[11px] font-medium">{tab.label}</span>
+            </button>
           );
         })}
       </div>

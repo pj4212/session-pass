@@ -73,10 +73,10 @@ export default function AdminLayout() {
           </div>
         )}
         {collapsed && <Ticket className="h-5 w-5 text-primary mx-auto" />}
-        <Button variant="ghost" size="icon" className="hidden md:flex text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent" onClick={() => setCollapsed(!collapsed)}>
+        <Button variant="ghost" size="icon" className="hidden md:flex text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent touch-target" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
-        <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground hover:text-foreground" onClick={() => setMobileOpen(false)}>
+        <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground hover:text-foreground touch-target" onClick={() => setMobileOpen(false)}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -158,7 +158,7 @@ export default function AdminLayout() {
             <span className="font-semibold">Session Pass</span>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto overscroll-none p-4 md:p-6">
           <Outlet context={{ user, workspaceId, activeWorkspace }} />
         </main>
       </div>

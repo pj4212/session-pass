@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Ticket, Shield, ScanLine, LogIn } from 'lucide-react';
+import { Ticket, Shield, ScanLine, LogIn, UserCog } from 'lucide-react';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -48,6 +48,9 @@ export default function Home() {
                   <Link to="/scanner">Scanner</Link>
                 </Button>
               )}
+              <Button asChild variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-white/10 touch-target">
+                <Link to="/account"><UserCog className="h-4 w-4" /></Link>
+              </Button>
               <span className="text-sm text-slate-400 hidden sm:inline">{user.full_name || user.email}</span>
               <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-white/10" onClick={() => base44.auth.logout()}>Logout</Button>
             </>
