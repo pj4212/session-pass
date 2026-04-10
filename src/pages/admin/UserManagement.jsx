@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,18 +9,23 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit, Shield, Loader2, Search } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Edit, Shield, Loader2, Search, Building2 } from 'lucide-react';
 
 const ROLES = ['super_admin', 'event_admin', 'scanner', 'user'];
 
 export default function UserManagement() {
+  const { user: currentUser } = useOutletContext();
+  const isAdmin = currentUser?.role === 'admin';
   const [users, setUsers] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ role: 'user', is_active: true });
+  const [form, setForm] = useState({ role: 'user', is_active: true, workspace_ids: [] });
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('user');
+  const [inviteWorkspaceIds, setInviteWorkspaceIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -29,24 +35,33 @@ export default function UserManagement() {
   const [locations, setLocations] = useState([]);
   const [selectedLocationId, setSelectedLocationId] = useState('');
 
-  useEffect(() => {
-    async function load() {
-      const res = await base44.functions.invoke('manageUsers', { action: 'list' });
-      setUsers(res.data.users);
-      setLoading(false);
-    }
-    load();
-  }, []);
+  async function loadUsers() {
+    setLoading(true);
+    const res = await base44.functions.invoke('manageUsers', { action: 'list' });
+    setUsers(res.data.users);
+    setWorkspaces(res.data.workspaces || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadUsers(); }, []);
+
+  const getWsName = (id) => workspaces.find(w => w.id === id)?.name || id;
 
   const openEdit = (u) => {
     setEditing(u.id);
-    setForm({ role: u.role || 'user', is_active: u.is_active !== false });
+    setForm({ role: u.role || 'user', is_active: u.is_active !== false, workspace_ids: u.workspace_ids || [] });
+  };
+
+  const toggleWsId = (wsId, list, setter) => {
+    setter(list.includes(wsId) ? list.filter(id => id !== wsId) : [...list, wsId]);
   };
 
   const saveEdit = async () => {
     setSaving(true);
-    await base44.functions.invoke('manageUsers', { action: 'update', user_id: editing, data: form });
-    setUsers(prev => prev.map(u => u.id === editing ? { ...u, ...form } : u));
+    const updateData = { role: form.role, is_active: form.is_active };
+    if (isAdmin) updateData.workspace_ids = form.workspace_ids;
+    await base44.functions.invoke('manageUsers', { action: 'update', user_id: editing, data: updateData });
+    setUsers(prev => prev.map(u => u.id === editing ? { ...u, ...updateData } : u));
     setEditing(null);
     setSaving(false);
   };
@@ -54,11 +69,10 @@ export default function UserManagement() {
   const inviteUser = async () => {
     setSaving(true);
     await base44.users.inviteUser(inviteEmail, ['super_admin', 'event_admin'].includes(inviteRole) ? 'admin' : 'user');
-    // After invite, reload users
-    const res = await base44.functions.invoke('manageUsers', { action: 'list' });
-    setUsers(res.data.users);
+    await loadUsers();
     setInviteOpen(false);
     setInviteEmail('');
+    setInviteWorkspaceIds([]);
     setSaving(false);
   };
 
@@ -112,6 +126,7 @@ export default function UserManagement() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Workspaces</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -125,7 +140,17 @@ export default function UserManagement() {
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.full_name || '—'}</TableCell>
                 <TableCell>{u.email}</TableCell>
-                <TableCell><Badge variant="outline" className="capitalize">{u.role || 'user'}</Badge></TableCell>
+                <TableCell><Badge variant="outline" className="capitalize">{(u.role || 'user').replace(/_/g, ' ')}</Badge></TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {(u.workspace_ids || []).length > 0 
+                      ? (u.workspace_ids || []).map(wid => (
+                          <Badge key={wid} variant="secondary" className="text-xs">{getWsName(wid)}</Badge>
+                        ))
+                      : <span className="text-muted-foreground text-xs">None</span>
+                    }
+                  </div>
+                </TableCell>
                 <TableCell>{u.is_active !== false ? 'Active' : 'Inactive'}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
@@ -153,10 +178,31 @@ export default function UserManagement() {
               <Select value={form.role} onValueChange={v => setForm({ ...form, role: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace('_', ' ')}</SelectItem>)}
+                  {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, ' ')}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+            {isAdmin && (
+              <div>
+                <Label>Workspace Access</Label>
+                <div className="mt-2 space-y-2 border rounded-lg p-3">
+                  {workspaces.map(ws => (
+                    <div key={ws.id} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={form.workspace_ids.includes(ws.id)}
+                        onCheckedChange={() => {
+                          const updated = form.workspace_ids.includes(ws.id)
+                            ? form.workspace_ids.filter(id => id !== ws.id)
+                            : [...form.workspace_ids, ws.id];
+                          setForm({ ...form, workspace_ids: updated });
+                        }}
+                      />
+                      <span className="text-sm">{ws.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Active</Label>
             </div>

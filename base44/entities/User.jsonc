@@ -7,8 +7,10 @@
       "title": "Role",
       "enum": [
         "admin",
-        "user",
-        "scanner"
+        "super_admin",
+        "event_admin",
+        "scanner",
+        "user"
       ]
     },
     "workspace_ids": {
@@ -23,5 +25,6 @@
       "title": "Active Workspace",
       "relationType": "Workspace"
     }
-  }
+  },
+  "required": []
 }

@@ -15,8 +15,19 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     if (action === 'list') {
-      const users = await base44.asServiceRole.entities.User.list('-created_date', 500);
-      return Response.json({ users });
+      const allUsers = await base44.asServiceRole.entities.User.list('-created_date', 500);
+      const workspaces = await base44.asServiceRole.entities.Workspace.filter({ is_active: true });
+      
+      // Admin sees all users; super_admin/event_admin sees users in their workspace
+      let users = allUsers;
+      if (user.role !== 'admin') {
+        const wsId = user.active_workspace_id;
+        if (wsId) {
+          users = allUsers.filter(u => (u.workspace_ids || []).includes(wsId));
+        }
+      }
+      
+      return Response.json({ users, workspaces });
     }
 
     if (action === 'update') {
