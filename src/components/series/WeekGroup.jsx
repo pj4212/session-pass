@@ -33,7 +33,7 @@ function formatWeekLabel(mondayDate) {
   return `Week starting ${day} ${month} ${year}`;
 }
 
-export default function WeekGroup({ weekStart, sessions, locations, ticketTypes }) {
+export default function WeekGroup({ weekStart, sessions, locations, ticketTypes, isNext }) {
   const getLowestPrice = (occId) => {
     const tts = ticketTypes.filter(t => t.occurrence_id === occId && t.is_active);
     if (!tts.length) return null;
@@ -50,11 +50,14 @@ export default function WeekGroup({ weekStart, sessions, locations, ticketTypes 
   };
 
   return (
-    <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 pl-1">
-        {formatWeekLabel(weekStart)}
-      </h3>
-      <div className="space-y-2 mb-8">
+    <div className={isNext ? 'ring-2 ring-primary/50 rounded-xl p-4 -mx-1 bg-primary/5 mb-8' : 'mb-8'}>
+      <div className="flex items-center gap-2 mb-3 pl-1">
+        <h3 className={`text-sm font-semibold uppercase tracking-wider ${isNext ? 'text-primary' : 'text-muted-foreground'}`}>
+          {formatWeekLabel(weekStart)}
+        </h3>
+        {isNext && <span className="text-xs font-medium bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Next Up</span>}
+      </div>
+      <div className="space-y-2">
         {sessions.map(session => {
           const loc = locations[session.location_id];
           const price = getLowestPrice(session.id);

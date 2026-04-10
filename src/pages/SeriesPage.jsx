@@ -137,13 +137,14 @@ export default function SeriesPage() {
         ) : (
           <div>
             <h2 className="text-xl font-semibold mb-6">Upcoming Sessions</h2>
-            {weeklyTimeline.map(week => (
+            {weeklyTimeline.map((week, idx) => (
               <WeekGroup
                 key={week.weekStart}
                 weekStart={week.weekStart}
                 sessions={week.sessions}
                 locations={locations}
                 ticketTypes={ticketTypes}
+                isNext={idx === 0}
               />
             ))}
 
