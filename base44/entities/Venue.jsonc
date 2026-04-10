@@ -2,6 +2,11 @@
   "name": "Venue",
   "type": "object",
   "properties": {
+    "workspace_id": {
+      "type": "string",
+      "title": "Workspace",
+      "relationType": "Workspace"
+    },
     "name": {
       "type": "string",
       "title": "Venue Name"

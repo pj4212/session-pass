@@ -2,6 +2,11 @@
   "name": "TicketType",
   "type": "object",
   "properties": {
+    "workspace_id": {
+      "type": "string",
+      "title": "Workspace",
+      "relationType": "Workspace"
+    },
     "occurrence_id": {
       "type": "string",
       "title": "Event Occurrence",

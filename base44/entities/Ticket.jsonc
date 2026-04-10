@@ -2,6 +2,11 @@
   "name": "Ticket",
   "type": "object",
   "properties": {
+    "workspace_id": {
+      "type": "string",
+      "title": "Workspace",
+      "relationType": "Workspace"
+    },
     "order_id": {
       "type": "string",
       "title": "Order",

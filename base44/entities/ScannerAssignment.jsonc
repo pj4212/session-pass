@@ -2,6 +2,11 @@
   "name": "ScannerAssignment",
   "type": "object",
   "properties": {
+    "workspace_id": {
+      "type": "string",
+      "title": "Workspace",
+      "relationType": "Workspace"
+    },
     "user_id": {
       "type": "string",
       "title": "User",

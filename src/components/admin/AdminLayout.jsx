@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import useWorkspace from '@/hooks/useWorkspace';
+import WorkspaceSwitcher from '@/components/admin/WorkspaceSwitcher';
 import { 
   LayoutDashboard, Calendar, Users, Settings, BarChart3, 
-  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine, Ticket, Zap, History, ShieldAlert
+  ChevronLeft, ChevronRight, Menu, LogOut, X, FolderOpen, Mail, ScanLine, Ticket, Zap, History, ShieldAlert, Building2
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -18,6 +20,7 @@ const NAV_ITEMS = [
   { path: '/admin/settings/email-testing', label: 'Email Testing', icon: Mail, roles: ['admin'] },
   { path: '/admin/settings/load-test', label: 'Load Testing', icon: Zap, roles: ['admin'] },
   { path: '/admin/settings/rate-limit-logs', label: 'Rate Limit Logs', icon: ShieldAlert, roles: ['admin'] },
+  { path: '/admin/settings/workspaces', label: 'Workspaces', icon: Building2, roles: ['admin'] },
 ];
 
 export default function AdminLayout() {
@@ -27,6 +30,7 @@ export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { workspaces, activeWorkspace, workspaceId, loadWorkspaces, switchWorkspace } = useWorkspace();
 
   useEffect(() => {
     async function loadUser() {
@@ -36,6 +40,7 @@ export default function AdminLayout() {
         return;
       }
       setUser(me);
+      await loadWorkspaces(me);
       setLoading(false);
     }
     loadUser();
@@ -74,6 +79,16 @@ export default function AdminLayout() {
         <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground hover:text-foreground" onClick={() => setMobileOpen(false)}>
           <X className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Workspace Switcher */}
+      <div className="border-b border-sidebar-border">
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          activeWorkspace={activeWorkspace}
+          onSwitch={switchWorkspace}
+          collapsed={collapsed}
+        />
       </div>
 
       {/* Nav */}
@@ -144,7 +159,7 @@ export default function AdminLayout() {
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          <Outlet context={{ user }} />
+          <Outlet context={{ user, workspaceId, activeWorkspace }} />
         </main>
       </div>
     </div>

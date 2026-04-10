@@ -28,6 +28,7 @@ import EmailTesting from './pages/admin/EmailTesting';
 import LoadTest from './pages/admin/LoadTest';
 import RateLimitLogs from './pages/admin/RateLimitLogs';
 import PastSessions from './pages/admin/PastSessions';
+import WorkspaceManagement from './pages/admin/WorkspaceManagement';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -74,6 +75,7 @@ const AuthenticatedApp = () => {
         <Route path="settings/email-testing" element={<EmailTesting />} />
         <Route path="settings/load-test" element={<LoadTest />} />
         <Route path="settings/rate-limit-logs" element={<RateLimitLogs />} />
+        <Route path="settings/workspaces" element={<WorkspaceManagement />} />
       </Route>
       <Route path="/scanner" element={<ScannerLayout />}>
         <Route index element={<ScannerHome />} />

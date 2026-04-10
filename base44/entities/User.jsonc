@@ -6,18 +6,22 @@
       "type": "string",
       "title": "Role",
       "enum": [
-        "super_admin",
-        "event_admin",
-        "scanner",
-        "user"
-      ],
-      "default": "user"
+        "admin",
+        "user",
+        "scanner"
+      ]
     },
-    "is_active": {
-      "type": "boolean",
-      "title": "Is Active",
-      "default": true
+    "workspace_ids": {
+      "type": "array",
+      "title": "Workspace Access",
+      "items": {
+        "type": "string"
+      }
+    },
+    "active_workspace_id": {
+      "type": "string",
+      "title": "Active Workspace",
+      "relationType": "Workspace"
     }
-  },
-  "required": []
+  }
 }
