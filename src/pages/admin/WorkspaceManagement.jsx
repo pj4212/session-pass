@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Loader2, Building2, Trash2, Eye, EyeOff, Database } from 'lucide-react';
+import { Plus, Edit, Loader2, Building2, Trash2, Eye, EyeOff, Database, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 function slugify(text) {
@@ -20,6 +20,8 @@ export default function WorkspaceManagement() {
   const [editWs, setEditWs] = useState(null);
   const [saving, setSaving] = useState(false);
   const [migrating, setMigrating] = useState(null);
+  const [migrationResult, setMigrationResult] = useState(null);
+  const [slugError, setSlugError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -33,9 +35,21 @@ export default function WorkspaceManagement() {
   const handleSave = async () => {
     if (!editWs?.name) return;
     setSaving(true);
+    setSlugError('');
+
+    const targetSlug = editWs.slug || slugify(editWs.name);
+
+    // Check for duplicate slugs
+    const existing = workspaces.find(w => w.slug === targetSlug && w.id !== editWs.id);
+    if (existing) {
+      setSlugError(`Slug "${targetSlug}" is already used by workspace "${existing.name}". Please choose a different slug.`);
+      setSaving(false);
+      return;
+    }
+
     const data = {
       name: editWs.name,
-      slug: editWs.slug || slugify(editWs.name),
+      slug: targetSlug,
       description: editWs.description || '',
       default_timezone: editWs.default_timezone || 'Australia/Brisbane',
       support_email: editWs.support_email || '',
@@ -113,9 +127,15 @@ export default function WorkspaceManagement() {
                     disabled={migrating === ws.id}
                     onClick={async () => {
                       setMigrating(ws.id);
+                      setMigrationResult(null);
                       const res = await base44.functions.invoke('migrateToWorkspace', { workspace_id: ws.id });
-                      toast.success('Data migrated to ' + ws.name);
-                      console.log('Migration results:', res.data);
+                      const data = res.data;
+                      setMigrationResult(data);
+                      if (data.total_failed === 0) {
+                        toast.success(`Migration complete: ${data.total_migrated} records migrated to ${ws.name}`);
+                      } else {
+                        toast.warning(`Migration finished with ${data.total_failed} failures. Check results below.`);
+                      }
                       setMigrating(null);
                     }}
                   >
@@ -126,11 +146,51 @@ export default function WorkspaceManagement() {
               </TableRow>
             ))}
             {workspaces.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No workspaces yet. Create your first workspace to get started.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No workspaces yet. Create your first workspace to get started.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {migrationResult && (
+        <div className="border rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Migration Results</h3>
+            <Badge variant={migrationResult.total_failed === 0 ? 'default' : 'destructive'}>
+              {migrationResult.total_failed === 0 ? 'Success' : `${migrationResult.total_failed} Failed`}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Total migrated: {migrationResult.total_migrated} records
+            {migrationResult.total_failed > 0 && ` · ${migrationResult.total_failed} failed`}
+          </p>
+          <div className="overflow-auto max-h-60">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Entity</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Migrated</TableHead>
+                  <TableHead>Failed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(migrationResult.results || {}).map(([entity, r]) => (
+                  <TableRow key={entity}>
+                    <TableCell className="font-medium text-sm">{entity}</TableCell>
+                    <TableCell className="text-sm">{r.total ?? '—'}</TableCell>
+                    <TableCell className="text-sm">{r.migrated ?? '—'}</TableCell>
+                    <TableCell className="text-sm">
+                      {r.failed > 0 ? <span className="text-destructive">{r.failed}</span> : (r.failed ?? '—')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setMigrationResult(null)}>Dismiss</Button>
+        </div>
+      )}
 
       <Dialog open={!!editWs} onOpenChange={(open) => !open && setEditWs(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -145,7 +205,8 @@ export default function WorkspaceManagement() {
               </div>
               <div>
                 <Label>Slug</Label>
-                <Input value={editWs.slug} onChange={e => setEditWs(prev => ({ ...prev, slug: e.target.value }))} />
+                <Input value={editWs.slug} onChange={e => { setSlugError(''); setEditWs(prev => ({ ...prev, slug: e.target.value })); }} />
+                {slugError && <p className="text-sm text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{slugError}</p>}
               </div>
               <div>
                 <Label>Support Email</Label>
