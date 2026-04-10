@@ -251,42 +251,55 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FREE ORDER — create tickets immediately
+    // FREE ORDER — create tickets in parallel batches for speed
     const tickets = [];
+    const BATCH_SIZE = 4;
+    for (let i = 0; i < attendees.length; i += BATCH_SIZE) {
+      const batch = attendees.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(async (att) => {
+        const tt = ticketTypeMap[att.ticket_type_id];
+        const ticket = await withRetry(
+          () => base44.asServiceRole.entities.Ticket.create({
+            order_id: order.id,
+            occurrence_id: occurrence.id,
+            ticket_type_id: att.ticket_type_id,
+            attendance_mode: tt.attendance_mode,
+            attendee_first_name: att.first_name,
+            attendee_last_name: att.last_name,
+            attendee_email: att.email.toLowerCase(),
+            upline_mentor_id: att.upline_mentor_id || '',
+            platinum_leader_id: att.platinum_leader_id || '',
+            qr_code_hash: 'temp',
+            ticket_status: 'active'
+          }),
+          `create free ticket for ${att.email}`
+        );
+        // Generate QR hash and update ticket (must happen after create to get ticket.id)
+        const qrHash = await generateQrHash(ticket.id, occurrence.id);
+        await withRetry(
+          () => base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash }),
+          `update QR hash for ${att.email}`
+        );
+        ticket.qr_code_hash = qrHash;
+        return ticket;
+      }));
+      tickets.push(...batchResults);
+    }
+
+    // Batch quantity_sold updates — one update per ticket type instead of per ticket
+    const qtyCounts = {};
     for (const att of attendees) {
-      const tt = ticketTypeMap[att.ticket_type_id];
-      const ticket = await withRetry(
-        () => base44.asServiceRole.entities.Ticket.create({
-          order_id: order.id,
-          occurrence_id: occurrence.id,
-          ticket_type_id: att.ticket_type_id,
-          attendance_mode: tt.attendance_mode,
-          attendee_first_name: att.first_name,
-          attendee_last_name: att.last_name,
-          attendee_email: att.email.toLowerCase(),
-          upline_mentor_id: att.upline_mentor_id || '',
-          platinum_leader_id: att.platinum_leader_id || '',
-          qr_code_hash: 'temp',
-          ticket_status: 'active'
-        }),
-        `create free ticket for ${att.email}`
-      );
-
-      const qrHash = await generateQrHash(ticket.id, occurrence.id);
-      await withRetry(
-        () => base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash }),
-        `update QR hash for ${att.email}`
-      );
-      ticket.qr_code_hash = qrHash;
-      tickets.push(ticket);
-
-      await withRetry(
-        () => base44.asServiceRole.entities.TicketType.update(tt.id, {
-          quantity_sold: (tt.quantity_sold || 0) + 1
+      qtyCounts[att.ticket_type_id] = (qtyCounts[att.ticket_type_id] || 0) + 1;
+    }
+    await Promise.all(Object.entries(qtyCounts).map(([ttId, count]) => {
+      const tt = ticketTypeMap[ttId];
+      return withRetry(
+        () => base44.asServiceRole.entities.TicketType.update(ttId, {
+          quantity_sold: (tt.quantity_sold || 0) + count
         }),
         `update quantity_sold for ${tt.name}`
       );
-    }
+    }));
 
     // Register online attendees with Zoom webinar
     let zoomJoinUrls = {};

@@ -140,26 +140,31 @@ Deno.serve(async (req) => {
         ticketTypeMap[tt.id] = tt;
       }
 
+      // Update QR hashes in parallel batches for speed
+      const BATCH_SIZE = 4;
       const quantityUpdates = {};
-      for (const ticket of tickets) {
-        const qrHash = await generateQrHash(ticket.id, ticket.occurrence_id);
-        await base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash });
-        ticket.qr_code_hash = qrHash;
-
-        if (!quantityUpdates[ticket.ticket_type_id]) {
-          quantityUpdates[ticket.ticket_type_id] = 0;
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const batch = tickets.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async (ticket) => {
+          const qrHash = await generateQrHash(ticket.id, ticket.occurrence_id);
+          await base44.asServiceRole.entities.Ticket.update(ticket.id, { qr_code_hash: qrHash });
+          ticket.qr_code_hash = qrHash;
+        }));
+        // Count quantities while processing
+        for (const ticket of batch) {
+          quantityUpdates[ticket.ticket_type_id] = (quantityUpdates[ticket.ticket_type_id] || 0) + 1;
         }
-        quantityUpdates[ticket.ticket_type_id]++;
       }
 
-      for (const [ttId, count] of Object.entries(quantityUpdates)) {
+      // Batch quantity_sold updates — one update per ticket type
+      await Promise.all(Object.entries(quantityUpdates).map(([ttId, count]) => {
         const tt = ticketTypeMap[ttId];
         if (tt) {
-          await base44.asServiceRole.entities.TicketType.update(ttId, {
+          return base44.asServiceRole.entities.TicketType.update(ttId, {
             quantity_sold: (tt.quantity_sold || 0) + count
           });
         }
-      }
+      }));
 
       // Register online attendees with Zoom webinar
       let zoomJoinUrls = {};
