@@ -28,9 +28,12 @@ export default function useWorkspace() {
     setLoading(true);
     const allWs = await base44.entities.Workspace.filter({ is_active: true });
     
-    // Filter to workspaces the user has access to (admins see all)
+    // Filter to workspaces the user has access to
+    // Full access: admin role OR specifically authorized email
+    const WORKSPACE_SWITCHER_EMAILS = ['mmci1525@gmail.com'];
     const userWsIds = user?.workspace_ids || [];
-    const accessible = user?.role === 'admin' 
+    const hasFullAccess = user?.role === 'admin' || WORKSPACE_SWITCHER_EMAILS.includes(user?.email?.toLowerCase());
+    const accessible = hasFullAccess
       ? allWs 
       : allWs.filter(w => userWsIds.includes(w.id));
     

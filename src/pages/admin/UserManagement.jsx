@@ -133,6 +133,7 @@ export default function UserManagement() {
           </TableHeader>
           <TableBody>
             {users.filter(u => {
+              if ((u.email || '').toLowerCase().endsWith('@base44.com')) return false;
               if (!search) return true;
               const q = search.toLowerCase();
               return (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.role || '').toLowerCase().includes(q);
