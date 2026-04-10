@@ -10,7 +10,8 @@ export default function AttendeeForm({
   attendee, 
   onChange, 
   leaders,
-  isBuyerSlot = false
+  isBuyerSlot = false,
+  emailOptional = false
 }) {
   const update = (field, value) => {
     onChange({ ...attendee, [field]: value });
@@ -52,16 +53,18 @@ export default function AttendeeForm({
         </div>
       </div>
 
-      <div>
-        <Label>Email *</Label>
-        <Input
-          type="email"
-          value={attendee.email}
-          onChange={e => update('email', e.target.value)}
-          placeholder="attendee@example.com"
-          disabled={isFirstTicket}
-        />
-      </div>
+      {!emailOptional && (
+        <div>
+          <Label>Email *</Label>
+          <Input
+            type="email"
+            value={attendee.email}
+            onChange={e => update('email', e.target.value)}
+            placeholder="attendee@example.com"
+            disabled={isFirstTicket}
+          />
+        </div>
+      )}
 
       <div>
         <div>

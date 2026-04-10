@@ -171,8 +171,11 @@ export default function EventPage() {
 
     for (let i = 0; i < attendees.length; i++) {
       const a = attendees[i];
-      if (!a.first_name || !a.last_name || !a.email) return `Please fill in all details for Ticket ${i + 1}.`;
-      if (!/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
+      const isBuyer = i === buyerSlotIndex;
+      const needsEmail = isBuyer || !sendAllToBuyer;
+      if (!a.first_name || !a.last_name) return `Please fill in the name for Ticket ${i + 1}.`;
+      if (needsEmail && !a.email) return `Please fill in the email for Ticket ${i + 1}.`;
+      if (needsEmail && !/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
       if (!a.platinum_leader_id) return `Please select a Platinum Leader for Ticket ${i + 1}.`;
     }
 
@@ -206,7 +209,7 @@ export default function EventPage() {
     const validation = await base44.functions.invoke('validateTickets', {
       occurrence_id: occurrence.id,
       attendees: attendees.map(a => ({
-        email: a.email,
+        email: a.email || buyer.email,
         attendance_mode: a.attendance_mode
       }))
     });
@@ -223,7 +226,7 @@ export default function EventPage() {
       attendees: attendees.map(a => ({
         first_name: a.first_name,
         last_name: a.last_name,
-        email: a.email,
+        email: a.email || buyer.email,
         ticket_type_id: a.ticket_type_id,
         platinum_leader_id: a.platinum_leader_id
       })),
@@ -403,6 +406,7 @@ export default function EventPage() {
                       onChange={(data) => updateAttendee(i, data)}
                       leaders={leaders}
                       isBuyerSlot={i === buyerSlotIndex}
+                      emailOptional={sendAllToBuyer && i !== buyerSlotIndex}
                     />
                   ))}
                 </div>
