@@ -95,6 +95,17 @@ export default function AttendeeList() {
   const handleDelete = async (ticket) => {
     if (!confirm(`Permanently delete ticket for ${ticket.attendee_first_name} ${ticket.attendee_last_name}? This cannot be undone.`)) return;
     setActionLoading(true);
+    // If online ticket on a webinar event, deregister from Zoom first
+    if (ticket.attendance_mode === 'online' && occurrence && (occurrence.zoom_meeting_id || (occurrence.zoom_link && /\/register\/WN_|\/w\/\d+/.test(occurrence.zoom_link)))) {
+      try {
+        await base44.functions.invoke('deregisterZoomAttendee', {
+          ticket_id: ticket.id,
+          occurrence_id: occurrence.id
+        });
+      } catch (err) {
+        console.error('Zoom deregistration failed (non-blocking):', err.message);
+      }
+    }
     await base44.entities.Ticket.delete(ticket.id);
     setTickets(prev => prev.filter(t => t.id !== ticket.id));
     setActionLoading(false);
