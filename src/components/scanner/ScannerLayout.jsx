@@ -5,6 +5,8 @@ import { WifiOff, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ScannerBottomNav from './ScannerBottomNav';
+import useWorkspace from '../../hooks/useWorkspace';
+import WorkspaceSwitcher from '../admin/WorkspaceSwitcher';
 
 const SCANNER_ROLES = ['scanner', 'super_admin', 'event_admin', 'admin'];
 
@@ -12,6 +14,7 @@ export default function ScannerLayout() {
   const [user, setUser] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { workspaces, activeWorkspace, workspaceId, loadWorkspaces, switchWorkspace } = useWorkspace();
   const [online, setOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +30,7 @@ export default function ScannerLayout() {
         return;
       }
       setUser(me);
+      await loadWorkspaces(me);
       setLoading(false);
     }
     load();
@@ -54,10 +58,15 @@ export default function ScannerLayout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {isAdmin && (
-        <div className="bg-card border-b border-border px-4 py-2 flex items-center">
+        <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
           <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
             <Link to="/admin"><Shield className="h-4 w-4" />Back to Admin</Link>
           </Button>
+          {workspaces.length > 1 && (
+            <div className="w-48">
+              <WorkspaceSwitcher workspaces={workspaces} activeWorkspace={activeWorkspace} onSwitch={switchWorkspace} collapsed={false} />
+            </div>
+          )}
         </div>
       )}
       {!online && (
@@ -67,7 +76,7 @@ export default function ScannerLayout() {
         </div>
       )}
       <main className="flex-1 overflow-auto pb-16">
-        <Outlet context={{ user, assignments }} />
+        <Outlet context={{ user, assignments, workspaceId }} />
       </main>
       <ScannerBottomNav occurrenceId={occurrenceId} />
     </div>
