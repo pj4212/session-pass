@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { WifiOff, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -77,17 +76,7 @@ export default function ScannerLayout() {
         </div>
       )}
       <main className="flex-1 overflow-auto pb-20 overscroll-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ type: 'tween', ease: 'easeOut', duration: 0.15 }}
-          >
-            <Outlet context={{ user, assignments, workspaceId }} />
-          </motion.div>
-        </AnimatePresence>
+        <Outlet context={{ user, assignments, workspaceId }} />
       </main>
       <ScannerBottomNav occurrenceId={occurrenceId} />
     </div>
