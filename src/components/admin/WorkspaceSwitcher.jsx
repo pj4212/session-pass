@@ -31,7 +31,7 @@ export default function WorkspaceSwitcher({ workspaces, activeWorkspace, onSwitc
             <SelectValue placeholder="Select workspace" />
           </div>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[60]">
           {workspaces.map(ws => (
             <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
           ))}

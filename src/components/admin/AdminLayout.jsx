@@ -143,7 +143,7 @@ export default function AdminLayout() {
       <div className="hidden md:flex">{sidebar}</div>
       {/* Mobile sidebar */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <div className="relative z-10 h-full w-60">{sidebar}</div>
         </div>

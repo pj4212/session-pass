@@ -16,10 +16,10 @@ export default function PublicLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <main className="flex-1 overflow-auto overscroll-none pb-16 md:pb-0">
+    <div className="min-h-screen bg-background">
+      <div className="pb-16 md:pb-0">
         <Outlet context={{ user }} />
-      </main>
+      </div>
       <BottomTabNav user={user} />
     </div>
   );
