@@ -6,7 +6,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import AnimatedRoutes from './components/AnimatedRoutes';
+// Page transitions are handled inside each layout (PublicLayout, AdminLayout, ScannerLayout)
 
 // Lazy-loaded pages
 const EventPage = React.lazy(() => import('./pages/EventPage'));
@@ -69,7 +69,6 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Suspense fallback={<LazyFallback />}>
-      <AnimatedRoutes>
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
@@ -103,7 +102,6 @@ const AuthenticatedApp = () => {
           </Route>
           <Route path="*" element={<PageNotFound />} />
         </Routes>
-      </AnimatedRoutes>
     </Suspense>
   );
 };
