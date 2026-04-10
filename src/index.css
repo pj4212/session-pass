@@ -74,6 +74,23 @@
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+/* Prevent text selection on interactive elements during touch */
+button,
+nav,
+nav *,
+[role="button"],
+.touch-target {
+  -webkit-user-select: none;
+  user-select: none;
+}
+button svg,
+nav svg,
+a svg {
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
 /* Minimum touch target for interactive elements */
 .touch-target {
   min-width: 44px;
