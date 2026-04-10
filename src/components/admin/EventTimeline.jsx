@@ -65,7 +65,8 @@ function buildProjectedTimeline(sessions, months) {
 
   const fortnightlyA = sessions.filter(s => s.recurrence_pattern === 'fortnightly_A');
   const fortnightlyB = sessions.filter(s => s.recurrence_pattern === 'fortnightly_B');
-  const weeklySessions = sessions.filter(s => s.recurrence_pattern === 'weekly' || !s.recurrence_pattern);
+  // Only explicitly weekly sessions become weekly templates (not "no recurrence" one-offs)
+  const weeklySessions = sessions.filter(s => s.recurrence_pattern === 'weekly');
 
   let refAMonday = null;
   let refBMonday = null;
@@ -76,6 +77,15 @@ function buildProjectedTimeline(sessions, months) {
     if (refAMonday) return Math.round((mondayDate - refAMonday) / (7 * 86400000)) % 2 === 0;
     if (refBMonday) return Math.round((mondayDate - refBMonday) / (7 * 86400000)) % 2 !== 0;
     return true;
+  }
+
+  // Extract the literal HH:MM from a datetime string, ignoring timezone suffix
+  // e.g. "2026-04-08T20:00:00" → "20:00", "2026-04-22T20:00:00.000Z" → "20:00"
+  function extractTime(dtStr) {
+    if (!dtStr) return { hours: 20, minutes: 0 };
+    const match = dtStr.match(/T(\d{2}):(\d{2})/);
+    if (match) return { hours: parseInt(match[1], 10), minutes: parseInt(match[2], 10) };
+    return { hours: 20, minutes: 0 };
   }
 
   function buildTemplates(list) {
@@ -93,6 +103,9 @@ function buildProjectedTimeline(sessions, months) {
       location_id: s.location_id,
       start_datetime: s.start_datetime,
       end_datetime: s.end_datetime,
+      _startTime: extractTime(s.start_datetime),
+      _endTime: extractTime(s.end_datetime),
+      timezone: s.timezone,
       id: s.id,
       recurrence_pattern: s.recurrence_pattern,
     }));
@@ -116,19 +129,20 @@ function buildProjectedTimeline(sessions, months) {
     const sessionDate = new Date(mondayDate);
     sessionDate.setDate(sessionDate.getDate() + dayOffset);
     const dateStr = toLocalDateStr(sessionDate);
-    const origStart = new Date(tmpl.start_datetime);
-    const origEnd = new Date(tmpl.end_datetime);
-    const newStart = new Date(sessionDate);
-    newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
-    const newEnd = new Date(sessionDate);
-    newEnd.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
+    // Use extracted literal time (not parsed Date which is affected by Z suffix)
+    const st = tmpl._startTime;
+    const et = tmpl._endTime;
+    // Build datetime strings WITHOUT Z suffix so they display correctly via formatTime
+    const pad = (n) => String(n).padStart(2, '0');
+    const startDt = `${dateStr}T${pad(st.hours)}:${pad(st.minutes)}:00`;
+    const endDt = `${dateStr}T${pad(et.hours)}:${pad(et.minutes)}:00`;
     return {
       ...tmpl,
       id: `projected-${tmpl.id}-${dateStr}`,
       _sourceId: tmpl.id,
       event_date: dateStr,
-      start_datetime: newStart.toISOString(),
-      end_datetime: newEnd.toISOString(),
+      start_datetime: startDt,
+      end_datetime: endDt,
       _projected: true
     };
   }
@@ -148,16 +162,7 @@ function buildProjectedTimeline(sessions, months) {
     const fortnightlyTemplates = weekIsA ? aT : bT;
     const allTemplates = [...weeklyT, ...fortnightlyTemplates];
     const actualNames = new Set(actual.map(s => s.name));
-    // Also track which days of the week already have actual sessions
-    const actualDays = new Set(actual.map(s => localDate(s.event_date).getDay()));
-    const missing = allTemplates.filter(t => {
-      // Don't project if a session with this name already exists
-      if (actualNames.has(t.name)) return false;
-      // Don't project onto a day that already has actual sessions
-      // (means the admin already set up what they need for that day)
-      if (actualDays.has(t.dayOfWeek)) return false;
-      return true;
-    });
+    const missing = allTemplates.filter(t => !actualNames.has(t.name));
     const projected = missing.map(t => projectTemplate(t, mondayStr));
     const all = [...actual, ...projected].sort((a, b) => {
       const aOnline = a.event_mode === 'online_stream' ? 0 : 1;
