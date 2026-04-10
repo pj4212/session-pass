@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import useWorkspace from '@/hooks/useWorkspace';
@@ -159,7 +160,17 @@ export default function AdminLayout() {
           </div>
         </header>
         <main className="flex-1 overflow-auto overscroll-none p-4 md:p-6">
-          <Outlet context={{ user, workspaceId, activeWorkspace }} />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ type: 'tween', ease: 'easeOut', duration: 0.15 }}
+            >
+              <Outlet context={{ user, workspaceId, activeWorkspace }} />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

@@ -11,6 +11,7 @@ import AnimatedRoutes from './components/AnimatedRoutes';
 // Lazy-loaded pages
 const EventPage = React.lazy(() => import('./pages/EventPage'));
 const OrderConfirmation = React.lazy(() => import('./pages/OrderConfirmation'));
+const PublicLayout = React.lazy(() => import('./components/PublicLayout'));
 const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
 const ScannerLayout = React.lazy(() => import('./components/scanner/ScannerLayout'));
 const ScannerHome = React.lazy(() => import('./pages/scanner/ScannerHome'));
@@ -70,11 +71,13 @@ const AuthenticatedApp = () => {
     <Suspense fallback={<LazyFallback />}>
       <AnimatedRoutes>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/event/:slug" element={<EventPage />} />
-          <Route path="/series/:slug" element={<SeriesPage />} />
-          <Route path="/order/:orderNumber" element={<OrderConfirmation />} />
-          <Route path="/account" element={<AccountSettings />} />
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/event/:slug" element={<EventPage />} />
+            <Route path="/series/:slug" element={<SeriesPage />} />
+            <Route path="/order/:orderNumber" element={<OrderConfirmation />} />
+            <Route path="/account" element={<AccountSettings />} />
+          </Route>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="series" element={<SeriesManagement />} />
