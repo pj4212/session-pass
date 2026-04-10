@@ -47,13 +47,21 @@ function formatDate(dateStr) {
 
 function formatTime(dateStr, timezone) {
   if (!dateStr) return '';
-  // Normalize: if the string has no Z or offset, treat it as UTC by appending Z
-  // (all stored datetimes should be UTC; some are missing the Z suffix)
-  let normalized = dateStr;
-  if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
-    normalized = dateStr + 'Z';
+  // If the datetime has no Z or offset suffix, it's stored as local time in the event's timezone.
+  // Extract the literal HH:MM directly — no Date parsing needed.
+  const hasOffset = /Z|[+-]\d{2}:\d{2}/.test(dateStr);
+  if (!hasOffset) {
+    const match = dateStr.match(/T(\d{2}):(\d{2})/);
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = match[2];
+      const period = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      return `${h12}:${m} ${period}`;
+    }
   }
-  const d = new Date(normalized);
+  // If it has a Z/offset, parse and convert to the event's timezone
+  const d = new Date(dateStr);
   if (timezone) {
     return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: timezone });
   }

@@ -14,11 +14,19 @@ function formatDate(dateStr) {
 
 function formatTime(dateStr, timezone) {
   if (!dateStr) return '';
-  let normalized = dateStr;
-  if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
-    normalized = dateStr + 'Z';
+  // If no Z/offset suffix, it's stored as local time — extract literally
+  const hasOffset = /Z|[+-]\d{2}:\d{2}/.test(dateStr);
+  if (!hasOffset) {
+    const match = dateStr.match(/T(\d{2}):(\d{2})/);
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = match[2];
+      const period = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      return `${h12}:${m} ${period}`;
+    }
   }
-  const d = new Date(normalized);
+  const d = new Date(dateStr);
   if (timezone) {
     return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: timezone });
   }
