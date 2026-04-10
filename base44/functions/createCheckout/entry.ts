@@ -182,6 +182,7 @@ Deno.serve(async (req) => {
         const tempHash = 'pending';
         await withRetry(
           () => base44.asServiceRole.entities.Ticket.create({
+            workspace_id: occurrence.workspace_id || '',
             order_id: order.id,
             occurrence_id: occurrence.id,
             ticket_type_id: att.ticket_type_id,
@@ -260,6 +261,7 @@ Deno.serve(async (req) => {
         const tt = ticketTypeMap[att.ticket_type_id];
         const ticket = await withRetry(
           () => base44.asServiceRole.entities.Ticket.create({
+            workspace_id: occurrence.workspace_id || '',
             order_id: order.id,
             occurrence_id: occurrence.id,
             ticket_type_id: att.ticket_type_id,

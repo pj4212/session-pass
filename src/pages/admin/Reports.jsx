@@ -37,8 +37,8 @@ export default function Reports() {
 
   useEffect(() => {
     async function load() {
-      const [tix, ords, occs, tts, locs, mList, lList] = await Promise.all([
-        base44.entities.Ticket.filter({ ...wsFilter }),
+      const [rawTix, ords, occs, tts, locs, mList, lList] = await Promise.all([
+        base44.entities.Ticket.filter({}),
         base44.entities.Order.filter({ ...wsFilter }),
         base44.entities.EventOccurrence.filter({ ...wsFilter }),
         base44.entities.TicketType.filter({ ...wsFilter }),
@@ -46,6 +46,9 @@ export default function Reports() {
         base44.entities.UplineMentor.filter({ ...wsFilter }),
         base44.entities.PlatinumLeader.filter({ ...wsFilter })
       ]);
+      // Filter tickets to workspace events (tickets may lack workspace_id)
+      const wsEventIds = new Set(occs.map(o => o.id));
+      const tix = rawTix.filter(t => wsEventIds.has(t.occurrence_id));
       setTickets(tix);
       setOrders(ords);
       setOccurrences(occs);
