@@ -334,26 +334,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send emails with retry — fire all in parallel for speed, but with individual retry protection
+    // Send emails with controlled concurrency to avoid rate limits
     if (!skip_emails) {
       if (send_all_to_buyer) {
-        const emailPromises = [
+        // Only 2 emails — send in parallel
+        await Promise.all([
           sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
             .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
           sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls)
             .catch(err => console.error(`Failed to send combined tickets email to ${order.buyer_email}:`, err.message))
-        ];
-        await Promise.all(emailPromises);
+        ]);
       } else {
-        const emailPromises = [
-          sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
-            .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
-          ...tickets.map(ticket =>
+        // Send order receipt first
+        await sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
+          .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message));
+        // Send individual ticket emails in batches of 5 to avoid rate limits
+        const EMAIL_BATCH = 5;
+        for (let i = 0; i < tickets.length; i += EMAIL_BATCH) {
+          const batch = tickets.slice(i, i + EMAIL_BATCH);
+          await Promise.all(batch.map(ticket =>
             sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id], zoomJoinUrls[ticket.id])
               .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
-          )
-        ];
-        await Promise.all(emailPromises);
+          ));
+        }
       }
     }
 

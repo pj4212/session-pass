@@ -46,9 +46,9 @@ async function getWebinarQuestions(accessToken, webinarId) {
   }
 }
 
-// Register a single attendee for a Zoom webinar
-// Returns { registrant_id, join_url, topic } or null if registration fails
-async function registerAttendee(accessToken, webinarId, firstName, lastName, email, customAnswers) {
+// Register a single attendee for a Zoom webinar with retry logic
+// Returns { registrant_id, join_url, topic } or null if all attempts fail
+async function registerAttendee(accessToken, webinarId, firstName, lastName, email, customAnswers, maxRetries = 3) {
   const body = {
     first_name: firstName,
     last_name: lastName,
@@ -58,28 +58,45 @@ async function registerAttendee(accessToken, webinarId, firstName, lastName, ema
     body.custom_questions = customAnswers;
   }
 
-  const res = await fetch(`https://api.zoom.us/v2/webinars/${webinarId}/registrants`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${accessToken}`
-    },
-    body: JSON.stringify(body)
-  });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const res = await fetch(`https://api.zoom.us/v2/webinars/${webinarId}/registrants`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(body)
+    });
 
-  if (!res.ok) {
+    if (res.ok) {
+      const data = await res.json();
+      console.log(`Zoom registrant created for ${email}: registrant_id=${data.registrant_id}, join_url=${data.join_url}`);
+      return {
+        registrant_id: data.registrant_id,
+        join_url: data.join_url,
+        topic: data.topic
+      };
+    }
+
     const errText = await res.text();
-    console.error(`Zoom registrant error for ${email}: ${res.status} ${errText}`);
-    return null;
-  }
+    const status = res.status;
 
-  const data = await res.json();
-  console.log(`Zoom registrant created for ${email}: registrant_id=${data.registrant_id}, join_url=${data.join_url}`);
-  return {
-    registrant_id: data.registrant_id,
-    join_url: data.join_url,
-    topic: data.topic
-  };
+    // Don't retry on client errors (400, 404, etc.) — only on 429 or 5xx
+    if (status < 429 && status >= 400) {
+      console.error(`Zoom registrant error for ${email} (non-retryable ${status}): ${errText}`);
+      return null;
+    }
+
+    if (attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000) + Math.random() * 500;
+      console.warn(`Zoom registration for ${email} attempt ${attempt} failed (${status}), retrying in ${Math.round(delay)}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+    } else {
+      console.error(`Zoom registrant error for ${email} after ${maxRetries} attempts: ${status} ${errText}`);
+      return null;
+    }
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
