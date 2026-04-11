@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, Briefcase, CheckCircle2, MapPin, Wifi } from 'lucide-react';
+import { Calendar, Users, Briefcase, CheckCircle2, MapPin, Wifi, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-function getWeekBounds() {
+function getWeekBounds(weekOffset = 0) {
   const now = new Date();
   const day = now.getDay();
   const diffToMon = day === 0 ? -6 : 1 - day;
   const monday = new Date(now);
-  monday.setDate(now.getDate() + diffToMon);
+  monday.setDate(now.getDate() + diffToMon + weekOffset * 7);
   monday.setHours(0, 0, 0, 0);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
@@ -26,7 +28,8 @@ function ModeIcon({ mode }) {
 }
 
 export default function WeeklyEvents({ events, tickets, ticketTypes }) {
-  const { monday, sunday } = getWeekBounds();
+  const [weekOffset, setWeekOffset] = useState(0);
+  const { monday, sunday } = getWeekBounds(weekOffset);
   const ttMap = {};
   ticketTypes.forEach(tt => { ttMap[tt.id] = tt; });
 
@@ -37,7 +40,35 @@ export default function WeeklyEvents({ events, tickets, ticketTypes }) {
     })
     .sort((a, b) => a.event_date.localeCompare(b.event_date));
 
-  if (weekEvents.length === 0) return null;
+  const weekLabel = weekOffset === 0 ? 'This Week' : weekOffset === 1 ? 'Next Week' : `Week of ${monday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
+  const monStr = monday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  const sunStr = sunday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+
+  if (weekEvents.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              {weekLabel} <span className="normal-case font-normal">({monStr} – {sunStr})</span>
+            </h2>
+          </div>
+          <div className="flex items-center gap-1">
+            {weekOffset > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setWeekOffset(weekOffset - 1)} className="h-7 px-2 text-xs">
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" />{weekOffset === 1 ? 'This Week' : 'Prev'}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setWeekOffset(weekOffset + 1)} className="h-7 px-2 text-xs">
+              {weekOffset === 0 ? 'Next Week' : 'Next'}<ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">No events scheduled for this week.</p>
+      </div>
+    );
+  }
 
   const eventsWithStats = weekEvents.map(ev => {
     const evTickets = tickets.filter(t => t.occurrence_id === ev.id);
@@ -47,16 +78,25 @@ export default function WeeklyEvents({ events, tickets, ticketTypes }) {
     return { ...ev, candidates, businessOwners, checkedIn, total: evTickets.length };
   }).sort((a, b) => b.total - a.total);
 
-  const monStr = monday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-  const sunStr = sunday.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          This Week <span className="normal-case font-normal">({monStr} – {sunStr})</span>
-        </h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            {weekLabel} <span className="normal-case font-normal">({monStr} – {sunStr})</span>
+          </h2>
+        </div>
+        <div className="flex items-center gap-1">
+          {weekOffset > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setWeekOffset(weekOffset - 1)} className="h-7 px-2 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" />{weekOffset === 1 ? 'This Week' : 'Prev'}
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(weekOffset + 1)} className="h-7 px-2 text-xs">
+            {weekOffset === 0 ? 'Next Week' : 'Next'}<ChevronRight className="h-3.5 w-3.5 ml-1" />
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {eventsWithStats.map(ev => (
