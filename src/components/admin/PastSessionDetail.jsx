@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { ArrowLeft, Users, Video, ExternalLink, Calendar, Clock, MapPin, Monitor, Loader2, Copy } from 'lucide-react';
+import ZoomAttendancePanel from './ZoomAttendancePanel';
 import moment from 'moment';
 import { toast } from 'sonner';
 
@@ -182,6 +183,11 @@ export default function PastSessionDetail({ event, locations, onBack }) {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Zoom Attendance */}
+      {event.zoom_meeting_id && !loadingTickets && (
+        <ZoomAttendancePanel webinarId={event.zoom_meeting_id} tickets={tickets} />
       )}
 
       {/* Attendee List */}
