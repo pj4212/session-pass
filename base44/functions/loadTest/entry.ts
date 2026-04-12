@@ -281,35 +281,40 @@ Deno.serve(async (req) => {
     }
 
     if (test_type === 'cleanup') {
+      // Wait a bit for rate limits to cool down after a load test
+      await sleep(3000);
       console.log('Cleaning up load test data...');
       
-      // Fetch all tickets (up to 500 to be safe)
-      const allTickets = await base44.asServiceRole.entities.Ticket.filter({ occurrence_id }, '-created_date', 500);
+      // Fetch all tickets with retry (rate limits may still be active from prior test)
+      const allTickets = await withRetry(
+        () => base44.asServiceRole.entities.Ticket.filter({ occurrence_id }, '-created_date', 500),
+        5, 3000
+      );
       const testTickets = allTickets.filter(t => t.attendee_email?.includes('loadtest') && t.attendee_email?.includes('@test.com'));
       
       const orderIds = [...new Set(testTickets.map(t => t.order_id).filter(Boolean))];
 
       console.log(`Found ${testTickets.length} test tickets and ${orderIds.length} test orders to clean up`);
 
-      // Delete test tickets in batches of 5 with 300ms delay
-      const ticketsDeleted = await batchProcess(testTickets, 5, 300, async (t) => {
-        await base44.asServiceRole.entities.Ticket.delete(t.id);
+      // Delete test tickets in batches of 3 with longer delay to avoid rate limits
+      const ticketsDeleted = await batchProcess(testTickets, 3, 1000, async (t) => {
+        await withRetry(() => base44.asServiceRole.entities.Ticket.delete(t.id), 5, 3000);
       });
 
-      // Delete test orders in batches of 5 with 300ms delay
-      const ordersDeleted = await batchProcess(orderIds, 5, 300, async (orderId) => {
-        await base44.asServiceRole.entities.Order.delete(orderId);
+      // Delete test orders in batches of 3 with delay
+      const ordersDeleted = await batchProcess(orderIds, 3, 1000, async (orderId) => {
+        await withRetry(() => base44.asServiceRole.entities.Order.delete(orderId), 5, 3000);
       });
 
       // Reset check-in statuses on remaining tickets in batches
       const remaining = allTickets.filter(t => !testTickets.some(tt => tt.id === t.id));
       const checkedIn = remaining.filter(t => t.check_in_status === 'checked_in');
-      const resetCount = await batchProcess(checkedIn, 5, 300, async (t) => {
-        await base44.asServiceRole.entities.Ticket.update(t.id, {
+      const resetCount = await batchProcess(checkedIn, 3, 1000, async (t) => {
+        await withRetry(() => base44.asServiceRole.entities.Ticket.update(t.id, {
           check_in_status: 'not_checked_in',
           checked_in_at: '',
           checked_in_by: ''
-        });
+        }), 5, 3000);
       });
 
       console.log(`Cleanup: ${ticketsDeleted} test tickets deleted, ${ordersDeleted} test orders deleted, ${resetCount} check-ins reset`);
