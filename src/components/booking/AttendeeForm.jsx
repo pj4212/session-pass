@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown } from "lucide-react";
 
 export default function AttendeeForm({ 
   index, 
@@ -69,19 +69,19 @@ export default function AttendeeForm({
       <div>
         <div>
           <Label>Platinum Leader *</Label>
-          <Select
-            value={leaders.length > 0 && leaders.some(l => l.id === attendee.platinum_leader_id) ? attendee.platinum_leader_id : undefined}
-            onValueChange={v => update('platinum_leader_id', v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select leader..." />
-            </SelectTrigger>
-            <SelectContent>
+          <div className="relative">
+            <select
+              value={attendee.platinum_leader_id || ''}
+              onChange={e => update('platinum_leader_id', e.target.value)}
+              className="flex h-9 w-full appearance-none items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="" disabled>Select leader...</option>
               {leaders.map(l => (
-                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                <option key={l.id} value={l.id}>{l.name}</option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+          </div>
         </div>
       </div>
     </div>
