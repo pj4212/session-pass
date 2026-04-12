@@ -19,7 +19,16 @@ export default function Dashboard() {
   async function load() {
     setLoading(true);
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Calculate current week boundaries (Monday 00:00 to Sunday 23:59)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() + mondayOffset);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
 
     const [allTickets, allOrders, allEvents, allTicketTypes] = await Promise.all([
       base44.entities.Ticket.filter({ ...wsFilter, ticket_status: 'active' }, '-created_date', 500),
@@ -28,10 +37,23 @@ export default function Dashboard() {
       base44.entities.TicketType.filter({ ...wsFilter }, '-created_date', 500)
     ]);
 
-    const weekTickets = allTickets.filter(t => new Date(t.created_date) >= weekAgo);
-    
-    const weekOrders = allOrders.filter(o => 
-      new Date(o.created_date) >= weekAgo && 
+    // Events happening this week (by event_date falling within Mon-Sun)
+    const weekEventIds = new Set(
+      allEvents
+        .filter(e => {
+          const d = new Date(e.event_date + 'T00:00:00');
+          return d >= weekStart && d <= weekEnd;
+        })
+        .map(e => e.id)
+    );
+
+    // Tickets sold for this week's events (regardless of when purchased)
+    const weekTickets = allTickets.filter(t => weekEventIds.has(t.occurrence_id));
+
+    // Orders for this week's events
+    const weekOrderIds = new Set(weekTickets.map(t => t.order_id));
+    const weekOrders = allOrders.filter(o =>
+      weekOrderIds.has(o.id) &&
       (o.payment_status === 'completed' || o.payment_status === 'free')
     );
     const weekRevenue = weekOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
@@ -40,7 +62,7 @@ export default function Dashboard() {
     const allPaidOrders = allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0 && o.stripe_fee > 0);
     const allFeesTotal = allPaidOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
     const paidOrderIds = new Set(allPaidOrders.map(o => o.id));
-    const paidTicketCount = allTickets.filter(t => 
+    const paidTicketCount = allTickets.filter(t =>
       paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
     ).length;
     const avgFeePerTicket = paidTicketCount > 0 ? allFeesTotal / paidTicketCount : 0;
