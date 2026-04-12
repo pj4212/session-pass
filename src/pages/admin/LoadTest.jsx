@@ -72,20 +72,18 @@ export default function LoadTest() {
     }
 
     const startTime = Date.now();
-    const allDetails = [];
     let successCount = 0;
     let errorCount = 0;
 
     setLiveProgress({ completed: 0, total: count, successes: 0, errors: 0 });
 
-    for (let idx = 0; idx < count; idx++) {
-      if (cancelRef.current) break;
-
+    // Fire ALL requests simultaneously — true concurrency
+    const promises = Array.from({ length: count }, (_, idx) => {
       const t0 = Date.now();
-      let detail;
       const MAX_ATTEMPTS = 5;
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        if (cancelRef.current) { detail = { index: idx, status: 'cancelled', elapsed_ms: Date.now() - t0 }; break; }
+
+      const attempt = async (attemptNum) => {
+        if (cancelRef.current) return { index: idx, status: 'cancelled', elapsed_ms: Date.now() - t0 };
         try {
           const res = await base44.functions.invoke('createCheckout', {
             buyer: { first_name: 'LoadTest', last_name: `User${idx}`, email: `loadtest${idx}@test.com` },
@@ -93,33 +91,40 @@ export default function LoadTest() {
             occurrence_id: selectedEvent,
             skip_emails: true
           });
-          detail = {
+          return {
             index: idx,
             status: res.data?.order_number ? 'success' : 'error',
             order_number: res.data?.order_number || null,
             error: res.data?.error || null,
             elapsed_ms: Date.now() - t0,
-            attempts: attempt + 1
+            attempts: attemptNum + 1
           };
-          break;
         } catch (err) {
           const errMsg = err?.response?.data?.error || err?.message || '';
           const isRateLimit = err?.response?.status === 429 || errMsg.includes('Rate limit');
-          if (isRateLimit && attempt < MAX_ATTEMPTS - 1) {
-            await sleep(Math.min(3000 * Math.pow(2, attempt), 30000));
-            continue;
+          if (isRateLimit && attemptNum < MAX_ATTEMPTS - 1) {
+            await sleep(Math.min(3000 * Math.pow(2, attemptNum), 30000));
+            return attempt(attemptNum + 1);
           }
-          detail = { index: idx, status: 'error', error: errMsg || 'Unknown error', elapsed_ms: Date.now() - t0, attempts: attempt + 1 };
-          break;
+          return { index: idx, status: 'error', error: errMsg || 'Unknown error', elapsed_ms: Date.now() - t0, attempts: attemptNum + 1 };
         }
-      }
+      };
 
-      allDetails.push(detail);
-      if (detail.status === 'success') successCount++;
-      else if (detail.status === 'error') errorCount++;
+      return attempt(0).then(detail => {
+        if (detail.status === 'success') successCount++;
+        else if (detail.status === 'error') errorCount++;
+        setLiveProgress(prev => ({
+          completed: (prev?.completed || 0) + 1,
+          total: count,
+          successes: successCount,
+          errors: errorCount
+        }));
+        return detail;
+      });
+    });
 
-      setLiveProgress({ completed: allDetails.length, total: count, successes: successCount, errors: errorCount });
-    }
+    const allResults = await Promise.allSettled(promises);
+    const allDetails = allResults.map(r => r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message });
 
     const totalElapsed = Date.now() - startTime;
     const timings = allDetails.filter(d => d.elapsed_ms).map(d => d.elapsed_ms);
