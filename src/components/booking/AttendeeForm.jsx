@@ -69,7 +69,10 @@ export default function AttendeeForm({
       <div>
         <div>
           <Label>Platinum Leader *</Label>
-          <Select value={attendee.platinum_leader_id || ''} onValueChange={v => update('platinum_leader_id', v)}>
+          <Select
+            value={leaders.length > 0 && leaders.some(l => l.id === attendee.platinum_leader_id) ? attendee.platinum_leader_id : undefined}
+            onValueChange={v => update('platinum_leader_id', v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select leader..." />
             </SelectTrigger>
