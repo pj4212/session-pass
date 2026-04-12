@@ -291,16 +291,20 @@ export default function EventPage() {
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '';
-    let normalized = dateStr;
-    if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
-      normalized = dateStr + 'Z';
+    // If the stored datetime has no timezone suffix (e.g. "2026-04-15T20:00:00"),
+    // it's already in the event's local timezone — extract the time directly.
+    if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr) && dateStr.includes('T')) {
+      const timePart = dateStr.split('T')[1];
+      const [hStr, mStr] = timePart.split(':');
+      let h = Number(hStr);
+      const ampm = h >= 12 ? 'pm' : 'am';
+      h = h % 12 || 12;
+      return `${h}:${mStr} ${ampm}`;
     }
-    const d = new Date(normalized);
+    // Otherwise it has a timezone offset — parse and format with the event's timezone
+    const d = new Date(dateStr);
     const tz = occurrence?.timezone;
-    if (tz) {
-      return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: tz });
-    }
-    return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true, ...(tz ? { timeZone: tz } : {}) });
   };
 
   return (
