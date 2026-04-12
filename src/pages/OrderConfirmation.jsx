@@ -102,16 +102,19 @@ export default function OrderConfirmation() {
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '';
-    let normalized = dateStr;
-    if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
-      normalized = dateStr + 'Z';
+    if (!/Z|[+-]\d{2}:\d{2}$/.test(dateStr) && dateStr.includes('T')) {
+      const timePart = dateStr.split('T')[1];
+      const [hStr, mStr] = timePart.split(':');
+      let h = Number(hStr);
+      const ampm = h >= 12 ? 'pm' : 'am';
+      h = h % 12 || 12;
+      return `${h}:${mStr} ${ampm}`;
     }
-    const d = new Date(normalized);
+    const d = new Date(dateStr);
     const tz = occurrence?.timezone;
-    if (tz) {
-      return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: tz });
-    }
-    return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    const opts = { hour: 'numeric', minute: '2-digit', hour12: true };
+    if (tz) opts.timeZone = tz;
+    return d.toLocaleTimeString('en-AU', opts);
   };
 
   return (

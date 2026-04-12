@@ -168,6 +168,7 @@ Deno.serve(async (req) => {
 
       // Register online attendees with Zoom webinar
       let zoomJoinUrls = {};
+      let zoomFallbackTickets = new Set();
       if (occurrence) {
         const onlineTickets = tickets.filter(t => t.attendance_mode === 'online');
         const hasZoomWebinar = occurrence.zoom_meeting_id || (occurrence.zoom_link && /\/register\/WN_|\/w\/\d+/.test(occurrence.zoom_link));
@@ -189,10 +190,13 @@ Deno.serve(async (req) => {
               for (const reg of zoomData.registrations) {
                 if (reg.join_url) {
                   zoomJoinUrls[reg.ticket_id] = reg.join_url;
+                  if (reg.registration_link_fallback) {
+                    zoomFallbackTickets.add(reg.ticket_id);
+                  }
                 }
               }
             }
-            console.log(`Zoom registration complete: ${Object.keys(zoomJoinUrls).length} join URLs obtained`);
+            console.log(`Zoom registration complete: ${Object.keys(zoomJoinUrls).length} join URLs obtained (${zoomFallbackTickets.size} fallbacks)`);
           } catch (err) {
             console.error('Zoom registration failed (non-blocking):', err.message);
           }
@@ -205,7 +209,7 @@ Deno.serve(async (req) => {
           await Promise.all([
             sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketTypeMap)
               .catch(err => console.error(`Failed to send order receipt to ${order.buyer_email}:`, err.message)),
-            sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls)
+            sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls, zoomFallbackTickets)
               .catch(err => console.error(`Failed to send combined tickets email to ${order.buyer_email}:`, err.message))
           ]);
         } else {
@@ -217,7 +221,7 @@ Deno.serve(async (req) => {
           for (let i = 0; i < tickets.length; i += EMAIL_BATCH) {
             const batch = tickets.slice(i, i + EMAIL_BATCH);
             await Promise.all(batch.map(ticket =>
-              sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id], zoomJoinUrls[ticket.id])
+              sendTicketEmail(base44, ticket, occurrence, ticketTypeMap[ticket.ticket_type_id], zoomJoinUrls[ticket.id], zoomFallbackTickets.has(ticket.id))
                 .catch(err => console.error(`Failed to send ticket email to ${ticket.attendee_email}:`, err.message))
             ));
           }
@@ -374,7 +378,7 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
 </html>`;
 }
 
-function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
+function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl, isRegistrationFallback = false) {
   const eventDate = formatEventDate(occurrence.event_date);
   const startTime = formatTime(occurrence.start_datetime, occurrence.timezone);
   const endTime = formatTime(occurrence.end_datetime, occurrence.timezone);
@@ -385,7 +389,7 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
   const registrationLink = occurrence.zoom_link || '';
 
   let accessBlock = '';
-  if (isOnline && joinUrl) {
+  if (isOnline && joinUrl && !isRegistrationFallback) {
     const joinBtnHtml = `
         <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">You've been registered for the webinar. Use the link below to join:</p>
         <a href="${joinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-bottom:12px;">Join Webinar →</a>`;
@@ -395,6 +399,18 @@ function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">🖥 Join Online</h3>
             ${joinBtnHtml}
+          </td></tr>
+        </table>
+      </td></tr>`;
+  } else if (isOnline && (isRegistrationFallback || registrationLink)) {
+    const regLink = joinUrl || registrationLink;
+    accessBlock = `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-radius:8px;padding:20px;border:1px solid #fde68a;">
+          <tr><td>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#92400e;">🖥 Register for Webinar</h3>
+            <p style="margin:0 0 12px;font-size:13px;color:#64748b;line-height:1.4;">Please register using the link below to get your personal join link for the session.</p>
+            <a href="${regLink}" style="display:inline-block;background:#d97706;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar →</a>
           </td></tr>
         </table>
       </td></tr>`;
@@ -509,9 +525,9 @@ async function sendOrderReceiptEmail(base44, order, occurrence, tickets, ticketT
   console.log(`Order receipt email sent to ${order.buyer_email} for order ${order.order_number}`);
 }
 
-async function sendTicketEmail(base44, ticket, occurrence, ticketType, joinUrl) {
+async function sendTicketEmail(base44, ticket, occurrence, ticketType, joinUrl, isRegistrationFallback = false) {
   const isOnline = ticket.attendance_mode === 'online';
-  const html = buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl);
+  const html = buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl, isRegistrationFallback);
 
   await sendWithRetry(() => resend.emails.send({
     from: 'Session Pass <noreply@session-pass.com>',
@@ -522,7 +538,7 @@ async function sendTicketEmail(base44, ticket, occurrence, ticketType, joinUrl) 
   console.log(`Ticket email sent to ${ticket.attendee_email} for ticket ${ticket.id}`);
 }
 
-function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls = {}) {
+function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls = {}, zoomFallbackTicketIds = new Set()) {
   const eventDate = formatEventDate(occurrence.event_date);
   const startTime = formatTime(occurrence.start_datetime, occurrence.timezone);
   const endTime = formatTime(occurrence.end_datetime, occurrence.timezone);
@@ -542,8 +558,10 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
   const hasJoinUrls = Object.keys(zoomJoinUrls).length > 0;
   const registrationLink = occurrence.zoom_link || '';
 
+  const allFallbacks = hasJoinUrls && zoomFallbackTicketIds.size > 0 && tickets.filter(t => t.attendance_mode === 'online').every(t => zoomFallbackTicketIds.has(t.id));
+
   let zoomBlock = '';
-  if (hasOnlineTickets && hasJoinUrls) {
+  if (hasOnlineTickets && hasJoinUrls && !allFallbacks) {
     const joinHtml = `<p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.4;">Your online attendees have been registered. Each ticket below includes a direct join link.</p>`;
     zoomBlock = `
       <tr><td style="padding:0 40px 24px;">
@@ -551,6 +569,18 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
           <tr><td>
             <h3 style="margin:0 0 8px;font-size:15px;color:#4338ca;">\ud83d\udda5 Join Online</h3>
             ${joinHtml}
+          </td></tr>
+        </table>
+      </td></tr>`;
+  } else if (hasOnlineTickets && (allFallbacks || registrationLink)) {
+    const regLink = registrationLink;
+    zoomBlock = `
+      <tr><td style="padding:0 40px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-radius:8px;padding:20px;border:1px solid #fde68a;">
+          <tr><td>
+            <h3 style="margin:0 0 8px;font-size:15px;color:#92400e;">\ud83d\udda5 Register for Webinar</h3>
+            <p style="margin:0 0 12px;font-size:13px;color:#64748b;line-height:1.4;">Please register using the link below to get your personal join link.</p>
+            ${regLink ? `<a href="${regLink}" style="display:inline-block;background:#d97706;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Register for Webinar \u2192</a>` : ''}
           </td></tr>
         </table>
       </td></tr>`;
@@ -585,11 +615,18 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
     const modeBg = isOnline ? '#eef2ff;color:#4338ca' : '#f0fdf4;color:#166534';
     const ticketJoinUrl = zoomJoinUrls[ticket.id];
 
+    const isFallback = zoomFallbackTicketIds.has(ticket.id);
     let joinHtml = '';
-    if (isOnline && ticketJoinUrl) {
+    if (isOnline && ticketJoinUrl && !isFallback) {
       joinHtml = `
         <div style="margin-top:12px;">
           <a href="${ticketJoinUrl}" style="display:inline-block;background:${BRAND.buttonBg};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Join Webinar →</a>
+        </div>`;
+    } else if (isOnline && (isFallback || registrationLink)) {
+      const regLink = ticketJoinUrl || registrationLink;
+      joinHtml = `
+        <div style="margin-top:12px;">
+          <a href="${regLink}" style="display:inline-block;background:#d97706;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;">Register for Webinar →</a>
         </div>`;
     }
 
@@ -678,8 +715,8 @@ function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap
 </html>`;
 }
 
-async function sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls = {}) {
-  const html = buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls);
+async function sendCombinedTicketsEmail(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls = {}, zoomFallbackTicketIds = new Set()) {
+  const html = buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls, zoomFallbackTicketIds);
 
   await sendWithRetry(() => resend.emails.send({
     from: 'Session Pass <noreply@session-pass.com>',

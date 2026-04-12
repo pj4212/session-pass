@@ -197,11 +197,23 @@ Deno.serve(async (req) => {
           registrant_id: result.registrant_id
         });
       } else {
+        // Registration failed — save the webinar registration link as fallback
+        const registrationLink = occurrence.zoom_link || '';
+        if (registrationLink) {
+          try {
+            await base44.asServiceRole.entities.Ticket.update(ticket.id, {
+              zoom_join_url: registrationLink
+            });
+          } catch (err) {
+            console.error(`Failed to save fallback zoom_link on ticket ${ticket.id}:`, err.message);
+          }
+        }
         results.push({
           ticket_id: ticket.id,
           email: ticket.attendee_email,
-          join_url: null,
-          error: 'registration_failed'
+          join_url: registrationLink || null,
+          registration_link_fallback: true,
+          error: 'auto_registration_failed'
         });
       }
     }

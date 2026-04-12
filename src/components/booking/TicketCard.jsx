@@ -24,7 +24,7 @@ export default function TicketCard({ ticket, occurrence, ticketType }) {
         <span className="text-muted-foreground">Ticket Type:</span> {ticketType?.name || 'General'}
       </p>
 
-      {ticket.attendance_mode === 'online' && ticket.zoom_join_url && (
+      {ticket.attendance_mode === 'online' && ticket.zoom_join_url && !ticket.zoom_join_url.includes('/register/') && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3 mt-3">
           <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Join Webinar</p>
           <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">You're registered — click below to join directly.</p>
@@ -35,7 +35,29 @@ export default function TicketCard({ ticket, occurrence, ticketType }) {
         </div>
       )}
 
-      {ticket.attendance_mode === 'online' && !ticket.zoom_join_url && (
+      {ticket.attendance_mode === 'online' && ticket.zoom_join_url && ticket.zoom_join_url.includes('/register/') && (
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded p-3 mt-3">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Register for Webinar</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">Please register using the link below to get your personal join link.</p>
+          <a href={ticket.zoom_join_url} target="_blank" rel="noopener noreferrer" 
+             className="inline-block bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-amber-700">
+            Register for Webinar →
+          </a>
+        </div>
+      )}
+
+      {ticket.attendance_mode === 'online' && !ticket.zoom_join_url && occurrence?.zoom_link && (
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded p-3 mt-3">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Register for Webinar</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">Please register using the link below to get your personal join link.</p>
+          <a href={occurrence.zoom_link} target="_blank" rel="noopener noreferrer" 
+             className="inline-block bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-amber-700">
+            Register for Webinar →
+          </a>
+        </div>
+      )}
+
+      {ticket.attendance_mode === 'online' && !ticket.zoom_join_url && !occurrence?.zoom_link && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3 mt-3">
           <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Online Event</p>
           <p className="text-xs text-blue-600 dark:text-blue-400">Your webinar join link will be emailed to you before the event.</p>
