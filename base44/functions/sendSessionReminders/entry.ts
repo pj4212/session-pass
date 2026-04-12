@@ -57,16 +57,27 @@ function formatEventDate(dateStr) {
   return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function formatTime(datetimeStr) {
+function formatTime(datetimeStr, timezone) {
   if (!datetimeStr) return '';
+  // If no timezone suffix, the value is stored in the event's local timezone — extract directly
+  if (!/Z|[+-]\d{2}:\d{2}$/.test(datetimeStr) && datetimeStr.includes('T')) {
+    const timePart = datetimeStr.split('T')[1];
+    const [hStr, mStr] = timePart.split(':');
+    let h = Number(hStr);
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return `${h}:${mStr} ${ampm}`;
+  }
   const d = new Date(datetimeStr);
-  return d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const opts = { hour: 'numeric', minute: '2-digit', hour12: true };
+  if (timezone) opts.timeZone = timezone;
+  return d.toLocaleTimeString('en-AU', opts);
 }
 
 function buildReminderEmailHtml(ticket, occurrence, reminderType) {
   const eventDate = formatEventDate(occurrence.event_date);
-  const startTime = formatTime(occurrence.start_datetime);
-  const endTime = formatTime(occurrence.end_datetime);
+  const startTime = formatTime(occurrence.start_datetime, occurrence.timezone);
+  const endTime = formatTime(occurrence.end_datetime, occurrence.timezone);
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
   const isOnline = ticket.attendance_mode === 'online';
   

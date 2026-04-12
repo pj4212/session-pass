@@ -258,16 +258,27 @@ function formatEventDate(dateStr) {
   return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function formatTime(datetimeStr) {
+function formatTime(datetimeStr, timezone) {
   if (!datetimeStr) return '';
+  // If no timezone suffix, the value is stored in the event's local timezone — extract directly
+  if (!/Z|[+-]\d{2}:\d{2}$/.test(datetimeStr) && datetimeStr.includes('T')) {
+    const timePart = datetimeStr.split('T')[1];
+    const [hStr, mStr] = timePart.split(':');
+    let h = Number(hStr);
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return `${h}:${mStr} ${ampm}`;
+  }
   const d = new Date(datetimeStr);
-  return d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const opts = { hour: 'numeric', minute: '2-digit', hour12: true };
+  if (timezone) opts.timeZone = timezone;
+  return d.toLocaleTimeString('en-AU', opts);
 }
 
 function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
   const eventDate = formatEventDate(occurrence.event_date);
-  const startTime = formatTime(occurrence.start_datetime);
-  const endTime = formatTime(occurrence.end_datetime);
+  const startTime = formatTime(occurrence.start_datetime, occurrence.timezone);
+  const endTime = formatTime(occurrence.end_datetime, occurrence.timezone);
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
   const totalText = order.total_amount > 0 ? `$${order.total_amount.toFixed(2)} AUD` : 'Free';
   const orderUrl = `https://session-pass.com/order/${order.order_number}`;
@@ -365,8 +376,8 @@ function buildOrderEmailHtml(order, occurrence, tickets, ticketTypeMap) {
 
 function buildTicketEmailHtml(ticket, occurrence, ticketType, joinUrl) {
   const eventDate = formatEventDate(occurrence.event_date);
-  const startTime = formatTime(occurrence.start_datetime);
-  const endTime = formatTime(occurrence.end_datetime);
+  const startTime = formatTime(occurrence.start_datetime, occurrence.timezone);
+  const endTime = formatTime(occurrence.end_datetime, occurrence.timezone);
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
   const isOnline = ticket.attendance_mode === 'online';
   const mode = isOnline ? 'Online' : 'In-Person';
@@ -513,8 +524,8 @@ async function sendTicketEmail(base44, ticket, occurrence, ticketType, joinUrl) 
 
 function buildCombinedTicketsEmailHtml(order, occurrence, tickets, ticketTypeMap, zoomJoinUrls = {}) {
   const eventDate = formatEventDate(occurrence.event_date);
-  const startTime = formatTime(occurrence.start_datetime);
-  const endTime = formatTime(occurrence.end_datetime);
+  const startTime = formatTime(occurrence.start_datetime, occurrence.timezone);
+  const endTime = formatTime(occurrence.end_datetime, occurrence.timezone);
   const timeStr = startTime && endTime ? `${startTime} – ${endTime}` : startTime || '';
 
   let venueBlock = '';
