@@ -80,14 +80,15 @@ function buildLocation(occurrence, ticket) {
 
 function generateGoogleUrl(occurrence, ticket) {
   const tz = occurrence.timezone || 'Australia/Brisbane';
-  // Google Calendar accepts local times with ctz parameter to specify the timezone
-  const start = formatCompact(occurrence.start_datetime);
-  const end = formatCompact(occurrence.end_datetime);
+  // Google Calendar's dates parameter always expects UTC — ctz only sets display timezone
+  const startUtc = localToUTC(occurrence.start_datetime, tz);
+  const endUtc = localToUTC(occurrence.end_datetime, tz);
+  const fmt = (iso) => iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: occurrence.name,
-    dates: `${start}/${end}`,
+    dates: `${fmt(startUtc)}/${fmt(endUtc)}`,
     details: buildDescription(occurrence, ticket),
     location: buildLocation(occurrence, ticket),
     ctz: tz,
