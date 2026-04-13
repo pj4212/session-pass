@@ -83,6 +83,12 @@ export default function EventForm() {
           const tts = await base44.entities.TicketType.filter({ occurrence_id: sourceId });
           
           if (isEdit) {
+            // If event has no custom questions but belongs to a series, inherit from series
+            let resolvedCustomQuestions = ev.custom_questions || '';
+            if (!resolvedCustomQuestions && ev.series_id) {
+              const parentSeries = series.find(s => s.id === ev.series_id);
+              if (parentSeries?.custom_questions) resolvedCustomQuestions = parentSeries.custom_questions;
+            }
             setForm({
               template_id: ev.template_id || '', series_id: ev.series_id || '', name: ev.name, slug: ev.slug,
               description: ev.description || '',
@@ -98,7 +104,7 @@ export default function EventForm() {
               venue_details: ev.venue_details || '',
               is_published: ev.is_published,
               status: ev.status || 'draft',
-              custom_questions: ev.custom_questions || ''
+              custom_questions: resolvedCustomQuestions
             });
             setTicketTypes(tts.map(tt => ({ ...tt, _existing: true })));
           } else {
@@ -140,6 +146,15 @@ export default function EventForm() {
       if (field === 'location_id') {
         const loc = locations.find(l => l.id === value);
         if (loc) next.timezone = loc.timezone;
+      }
+      // When series changes, auto-import series questions if event has none
+      if (field === 'series_id' && value && value !== 'none') {
+        const series = seriesList.find(s => s.id === value);
+        const currentQs = (() => { try { return JSON.parse(prev.custom_questions || '[]'); } catch { return []; } })();
+        const seriesQs = (() => { try { return JSON.parse(series?.custom_questions || '[]'); } catch { return []; } })();
+        if (currentQs.length === 0 && seriesQs.length > 0) {
+          next.custom_questions = series.custom_questions;
+        }
       }
       return next;
     });
@@ -517,9 +532,32 @@ export default function EventForm() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Booking Questions</CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Set custom questions for this event. If left empty, questions from the parent series will be used instead.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {form.series_id && form.series_id !== 'none'
+              ? 'Questions inherited from the series are shown below. You can customise, remove, or add new questions for this specific event.'
+              : 'Set custom questions for this event. If left empty, questions from the parent series will be used instead.'}
+          </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          {form.series_id && form.series_id !== 'none' && (() => {
+            const series = seriesList.find(s => s.id === form.series_id);
+            const seriesQs = (() => { try { return JSON.parse(series?.custom_questions || '[]'); } catch { return []; } })();
+            const eventQs = (() => { try { return JSON.parse(form.custom_questions || '[]'); } catch { return []; } })();
+            if (seriesQs.length > 0 && eventQs.length === 0) {
+              return (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateForm('custom_questions', series.custom_questions)}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />Import {seriesQs.length} question{seriesQs.length > 1 ? 's' : ''} from series
+                </Button>
+              );
+            }
+            return null;
+          })()}
           <CustomQuestionsEditor
             questions={(() => { try { return JSON.parse(form.custom_questions || '[]'); } catch { return []; } })()}
             onChange={qs => updateForm('custom_questions', JSON.stringify(qs))}
