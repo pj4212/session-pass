@@ -2,24 +2,43 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarPlus } from 'lucide-react';
 
-// Normalize a datetime string: ensure it's treated as UTC
-function normalizeDate(datetimeStr) {
-  let s = datetimeStr;
-  if (!/Z|[+-]\d{2}:\d{2}$/.test(s)) s = s + 'Z';
-  return new Date(s);
+// The start_datetime/end_datetime on occurrences are LOCAL times in the event's timezone
+// (e.g. "2026-04-22T20:00:00" means 8pm in the event timezone). They have NO offset suffix.
+
+// Parse a local datetime string into its raw numeric parts (no timezone interpretation)
+function parseLocalParts(datetimeStr) {
+  // datetimeStr is like "2026-04-22T20:00:00"
+  const [datePart, timePart] = datetimeStr.split('T');
+  const [year, month, day] = datePart.split('-');
+  const [hour, minute, second] = (timePart || '00:00:00').split(':');
+  return { year, month, day, hour, minute, second: second || '00' };
 }
 
-// Format a local time in the given IANA timezone as YYYYMMDDTHHMMSS (for TZID-based ICS)
-function formatICSDate(datetimeStr, tz) {
-  const d = normalizeDate(datetimeStr);
-  // Use Intl to get parts in the target timezone
-  const parts = new Intl.DateTimeFormat('en-AU', {
+// Format as YYYYMMDDTHHMMSS (for ICS TZID-based dates and Google Calendar)
+function formatCompact(datetimeStr) {
+  const p = parseLocalParts(datetimeStr);
+  return `${p.year}${p.month}${p.day}T${p.hour}${p.minute}${p.second}`;
+}
+
+// Convert a local datetime in a given IANA timezone to a true UTC ISO string
+function localToUTC(datetimeStr, tz) {
+  // Build a date that JS interprets in UTC, then use Intl to find the offset
+  const p = parseLocalParts(datetimeStr);
+  // Create a reference UTC date
+  const utcRef = new Date(Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second));
+  // Find what that UTC instant looks like in the target timezone
+  const inTz = new Intl.DateTimeFormat('en-US', {
     timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  }).formatToParts(d);
-  const p = {};
-  parts.forEach(({ type, value }) => { p[type] = value; });
-  return `${p.year}${p.month}${p.day}T${p.hour}${p.minute}${p.second}`;
+  }).formatToParts(utcRef);
+  const tp = {};
+  inTz.forEach(({ type, value }) => { tp[type] = value; });
+  // Compute offset: what UTC instant maps to those tz parts?
+  const tzAsUtc = Date.UTC(+tp.year, +tp.month - 1, +tp.day, +tp.hour === '24' ? 0 : +tp.hour, +tp.minute, +tp.second);
+  const offsetMs = tzAsUtc - utcRef.getTime();
+  // The actual UTC time = local time - offset
+  const actualUtc = new Date(utcRef.getTime() - offsetMs);
+  return actualUtc.toISOString();
 }
 
 function buildDescription(occurrence, ticket) {
@@ -61,14 +80,14 @@ function buildLocation(occurrence, ticket) {
 
 function generateGoogleUrl(occurrence, ticket) {
   const tz = occurrence.timezone || 'Australia/Brisbane';
-  const start = normalizeDate(occurrence.start_datetime);
-  const end = normalizeDate(occurrence.end_datetime);
-  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  // Google Calendar accepts local times with ctz parameter to specify the timezone
+  const start = formatCompact(occurrence.start_datetime);
+  const end = formatCompact(occurrence.end_datetime);
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: occurrence.name,
-    dates: `${fmt(start)}/${fmt(end)}`,
+    dates: `${start}/${end}`,
     details: buildDescription(occurrence, ticket),
     location: buildLocation(occurrence, ticket),
     ctz: tz,
@@ -78,8 +97,10 @@ function generateGoogleUrl(occurrence, ticket) {
 }
 
 function generateOutlookUrl(occurrence, ticket) {
-  const start = normalizeDate(occurrence.start_datetime).toISOString();
-  const end = normalizeDate(occurrence.end_datetime).toISOString();
+  const tz = occurrence.timezone || 'Australia/Brisbane';
+  // Outlook needs true UTC ISO strings
+  const start = localToUTC(occurrence.start_datetime, tz);
+  const end = localToUTC(occurrence.end_datetime, tz);
 
   const params = new URLSearchParams({
     path: '/calendar/action/compose',
@@ -96,8 +117,9 @@ function generateOutlookUrl(occurrence, ticket) {
 
 function generateICSBlob(occurrence, ticket) {
   const tz = occurrence.timezone || 'Australia/Brisbane';
-  const start = formatICSDate(occurrence.start_datetime, tz);
-  const end = formatICSDate(occurrence.end_datetime, tz);
+  // The stored datetimes are already local to the event timezone, so use them directly
+  const start = formatCompact(occurrence.start_datetime);
+  const end = formatCompact(occurrence.end_datetime);
   const desc = buildDescription(occurrence, ticket).replace(/\n/g, '\\n');
   const loc = buildLocation(occurrence, ticket);
 
