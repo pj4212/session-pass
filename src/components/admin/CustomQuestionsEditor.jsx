@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function CustomQuestionsEditor({ questions = [], onChange, ticketTypeNames = [] }) {
   const addQuestion = () => {
@@ -73,28 +73,28 @@ export default function CustomQuestionsEditor({ questions = [], onChange, ticket
                 placeholder="Question label (e.g. Company Name)"
                 className="text-sm"
               />
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <select
-                    value={q.type}
-                    onChange={e => updateQuestion(idx, 'type', e.target.value)}
-                    className="h-8 rounded-md border border-input bg-background text-foreground px-2 text-xs"
-                  >
-                    <option value="text">Text</option>
-                    <option value="select">Dropdown</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={q.applies_to || 'all'}
-                    onChange={e => updateQuestion(idx, 'applies_to', e.target.value)}
-                    className="h-8 rounded-md border border-input bg-background text-foreground px-2 text-xs"
-                  >
+              <div className="flex items-center gap-4 flex-wrap">
+                <Select value={q.type} onValueChange={v => updateQuestion(idx, 'type', v)}>
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="select">Dropdown</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={q.applies_to || 'all'} onValueChange={v => updateQuestion(idx, 'applies_to', v)}>
+                  <SelectTrigger className="h-8 w-36 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {appliesOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                     ))}
-                  </select>
-                </div>
+                  </SelectContent>
+                </Select>
+
                 <div className="flex items-center gap-1.5">
                   <Switch
                     checked={q.required}
