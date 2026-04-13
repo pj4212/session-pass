@@ -42,7 +42,7 @@ export default function EventForm() {
 
   const [form, setForm] = useState({
     template_id: '', series_id: '', name: '', slug: '', description: '',
-    event_date: '', start_datetime: '', end_datetime: '',
+    start_datetime: '', end_datetime: '',
     timezone: 'Australia/Brisbane', event_mode: 'in_person',
     recurrence_pattern: '',
     location_id: '', zoom_link: '', zoom_meeting_id: '',
@@ -84,7 +84,6 @@ export default function EventForm() {
             setForm({
               template_id: ev.template_id || '', series_id: ev.series_id || '', name: ev.name, slug: ev.slug,
               description: ev.description || '',
-              event_date: ev.event_date || '',
               start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
               end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
@@ -104,7 +103,6 @@ export default function EventForm() {
             setForm({
               template_id: ev.template_id || '', series_id: ev.series_id || '', name: ev.name + ' (Copy)',
               slug: ev.slug + '-copy', description: ev.description || '',
-              event_date: ev.event_date || '',
               start_datetime: ev.start_datetime ? ev.start_datetime.slice(0, 16) : '',
               end_datetime: ev.end_datetime ? ev.end_datetime.slice(0, 16) : '',
               timezone: ev.timezone || 'Australia/Brisbane', event_mode: ev.event_mode,
@@ -181,11 +179,14 @@ export default function EventForm() {
     // Store datetime values as-entered (no timezone conversion)
     // Append :00 for seconds if needed, treat as literal time
     const toISO = (val) => val ? val + ':00' : '';
+    // Auto-derive event_date from start_datetime
+    const derivedEventDate = form.start_datetime ? form.start_datetime.slice(0, 10) : '';
     // Auto-set sales_close_date to 1 hour after end time
     const endDt = form.end_datetime ? new Date(form.end_datetime + ':00') : null;
     const salesClose = endDt ? new Date(endDt.getTime() + 60 * 60 * 1000).toISOString() : '';
     const eventData = {
       ...form,
+      event_date: derivedEventDate,
       series_id: form.series_id === 'none' ? '' : form.series_id,
       start_datetime: toISO(form.start_datetime),
       end_datetime: toISO(form.end_datetime),
@@ -292,17 +293,13 @@ export default function EventForm() {
         <Textarea value={form.description} onChange={e => updateForm('description', e.target.value)} rows={3} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Event Date *</Label>
-          <Input type="date" value={form.event_date} onChange={e => updateForm('event_date', e.target.value)} />
-        </div>
-        <div>
-          <Label>Start Time *</Label>
+          <Label>Start Date & Time *</Label>
           <Input type="datetime-local" value={form.start_datetime} onChange={e => updateForm('start_datetime', e.target.value)} />
         </div>
         <div>
-          <Label>End Time *</Label>
+          <Label>End Date & Time *</Label>
           <Input type="datetime-local" value={form.end_datetime} onChange={e => updateForm('end_datetime', e.target.value)} />
         </div>
       </div>
