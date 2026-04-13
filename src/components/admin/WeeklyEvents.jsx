@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, Briefcase, CheckCircle2, MapPin, Wifi, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Ticket, CheckCircle2, MapPin, Wifi, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function getWeekBounds(weekOffset = 0) {
@@ -72,10 +72,13 @@ export default function WeeklyEvents({ events, tickets, ticketTypes }) {
 
   const eventsWithStats = weekEvents.map(ev => {
     const evTickets = tickets.filter(t => t.occurrence_id === ev.id);
-    const candidates = evTickets.filter(t => (ttMap[t.ticket_type_id]?.ticket_category || 'candidate') === 'candidate').length;
-    const businessOwners = evTickets.filter(t => ttMap[t.ticket_type_id]?.ticket_category === 'business_owner').length;
     const checkedIn = evTickets.filter(t => t.check_in_status === 'checked_in').length;
-    return { ...ev, candidates, businessOwners, checkedIn, total: evTickets.length };
+    const typeCounts = {};
+    evTickets.forEach(t => {
+      const typeName = ttMap[t.ticket_type_id]?.name || 'Unknown';
+      typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+    });
+    return { ...ev, typeCounts, checkedIn, total: evTickets.length };
   }).sort((a, b) => b.total - a.total);
 
   return (
@@ -114,26 +117,23 @@ export default function WeeklyEvents({ events, tickets, ticketTypes }) {
               </div>
               <ModeIcon mode={ev.event_mode} />
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <Stat icon={Briefcase} label="Business" value={ev.businessOwners} color="text-amber-400" />
-              <Stat icon={Users} label="Candidates" value={ev.candidates} color="text-blue-400" />
-              <Stat icon={CheckCircle2} label="Checked In" value={ev.checkedIn} color="text-emerald-400" />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {Object.entries(ev.typeCounts).map(([name, count]) => (
+                <div key={name} className="flex items-center gap-1">
+                  <Ticket className="h-3 w-3 text-blue-400" />
+                  <span className="text-sm font-semibold text-foreground">{count}</span>
+                  <span className="text-xs text-muted-foreground">{name}</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                <span className="text-sm font-semibold text-foreground">{ev.checkedIn}</span>
+                <span className="text-xs text-muted-foreground">Checked In</span>
+              </div>
             </div>
           </Link>
         ))}
       </div>
-    </div>
-  );
-}
-
-function Stat({ icon: Icon, label, value, color }) {
-  return (
-    <div className="text-center">
-      <div className="flex items-center justify-center gap-1 mb-0.5">
-        <Icon className={`h-3.5 w-3.5 ${color}`} />
-        <span className="text-lg font-bold text-foreground">{value}</span>
-      </div>
-      <p className="text-[10px] text-muted-foreground leading-tight">{label}</p>
     </div>
   );
 }
