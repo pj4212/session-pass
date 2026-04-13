@@ -5,10 +5,15 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 
-export default function CustomQuestionsEditor({ questions = [], onChange }) {
+export default function CustomQuestionsEditor({ questions = [], onChange, ticketTypeNames = [] }) {
   const addQuestion = () => {
     onChange([...questions, { label: '', type: 'text', required: false, applies_to: 'all', options: [] }]);
   };
+
+  const appliesOptions = [
+    { value: 'all', label: 'All Tickets' },
+    ...ticketTypeNames.map(n => ({ value: n, label: n }))
+  ];
 
   const updateQuestion = (idx, field, value) => {
     const updated = questions.map((q, i) => i === idx ? { ...q, [field]: value } : q);
@@ -73,7 +78,7 @@ export default function CustomQuestionsEditor({ questions = [], onChange }) {
                   <select
                     value={q.type}
                     onChange={e => updateQuestion(idx, 'type', e.target.value)}
-                    className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+                    className="h-8 rounded-md border border-input bg-background text-foreground px-2 text-xs"
                   >
                     <option value="text">Text</option>
                     <option value="select">Dropdown</option>
@@ -83,11 +88,11 @@ export default function CustomQuestionsEditor({ questions = [], onChange }) {
                   <select
                     value={q.applies_to || 'all'}
                     onChange={e => updateQuestion(idx, 'applies_to', e.target.value)}
-                    className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+                    className="h-8 rounded-md border border-input bg-background text-foreground px-2 text-xs"
                   >
-                    <option value="all">All Tickets</option>
-                    <option value="candidate">Candidates Only</option>
-                    <option value="business_owner">Business Owners Only</option>
+                    {appliesOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex items-center gap-1.5">

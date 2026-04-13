@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 export default function AttendeeForm({ 
   index, 
   total, 
-  ticketTypeName, 
+  ticketTypeName = '', 
   attendanceMode, 
   attendee, 
   onChange, 
@@ -13,14 +13,14 @@ export default function AttendeeForm({
   isBuyerSlot = false,
   emailOptional = false,
   askPlatinumLeader = true,
-  customQuestions = [],
-  ticketCategory = 'candidate'
+  customQuestions = []
 }) {
-  // Filter questions to only those that apply to this ticket's category
+  // Filter questions to those that apply to this ticket type by name
   const applicableQuestions = customQuestions.filter(q => {
     const appliesTo = q.applies_to || 'all';
-    return appliesTo === 'all' || appliesTo === ticketCategory;
+    return appliesTo === 'all' || appliesTo === ticketTypeName;
   });
+
   const update = (field, value) => {
     onChange({ ...attendee, [field]: value });
   };
@@ -87,7 +87,7 @@ export default function AttendeeForm({
             <select
               value={attendee.platinum_leader_id || ''}
               onChange={e => update('platinum_leader_id', e.target.value)}
-              className="flex h-9 w-full appearance-none items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 w-full appearance-none items-center rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="" disabled>Select leader...</option>
               {leaders.map(l => (
@@ -107,7 +107,7 @@ export default function AttendeeForm({
               <select
                 value={(attendee.custom_answers || {})[q.label] || ''}
                 onChange={e => updateCustomAnswer(q.label, e.target.value)}
-                className="flex h-9 w-full appearance-none items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex h-9 w-full appearance-none items-center rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="" disabled>Select...</option>
                 {(q.options || []).map((opt, oIdx) => (

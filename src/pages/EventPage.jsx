@@ -117,22 +117,18 @@ export default function EventPage() {
           ticket_type_id: ttId,
           ticketTypeName: tt.name,
           attendance_mode: tt.attendance_mode,
-          ticket_category: tt.ticket_category || 'candidate',
           sort_order: tt.sort_order || 0
         });
       }
     }
-    // Sort so business_owner (sort_order 0) comes first — buyer details auto-fill into first slot
+    // Sort by sort_order so buyer's ticket type comes first
     slots.sort((a, b) => a.sort_order - b.sort_order);
     return slots;
   }, [selections, ticketTypes]);
 
   // Find which attendee index should receive the buyer's details:
   // prefer the first business_owner slot, otherwise fall back to index 0
-  const buyerSlotIndex = useMemo(() => {
-    const boIdx = attendeeSlots.findIndex(s => s.ticket_category === 'business_owner');
-    return boIdx >= 0 ? boIdx : 0;
-  }, [attendeeSlots]);
+  const buyerSlotIndex = 0;
 
   useEffect(() => {
     setAttendees(prev => {
@@ -183,11 +179,11 @@ export default function EventPage() {
       if (needsEmail && !a.email) return `Please fill in the email for Ticket ${i + 1}.`;
       if (needsEmail && !/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
       if (askPlatinumLeader && !a.platinum_leader_id) return `Please select a Platinum Leader for Ticket ${i + 1}.`;
-      // Validate required custom questions (filtered by ticket category)
-      const ticketCat = a.ticket_category || 'candidate';
+      // Validate required custom questions (filtered by ticket type name)
+      const ttName = a.ticketTypeName || '';
       for (const q of customQuestions) {
         const appliesTo = q.applies_to || 'all';
-        if (appliesTo !== 'all' && appliesTo !== ticketCat) continue;
+        if (appliesTo !== 'all' && appliesTo !== ttName) continue;
         if (q.required && !(a.custom_answers || {})[q.label]) {
           return `Please answer "${q.label}" for Ticket ${i + 1}.`;
         }
@@ -439,7 +435,7 @@ export default function EventPage() {
                       emailOptional={sendAllToBuyer && i !== buyerSlotIndex}
                       askPlatinumLeader={askPlatinumLeader}
                       customQuestions={customQuestions}
-                      ticketCategory={att.ticket_category || 'candidate'}
+                      ticketTypeName={att.ticketTypeName || ''}
                     />
                   ))}
                 </div>

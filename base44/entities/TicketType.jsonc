@@ -24,14 +24,6 @@
         "in_person"
       ]
     },
-    "ticket_category": {
-      "type": "string",
-      "title": "Ticket Category",
-      "enum": [
-        "candidate",
-        "business_owner"
-      ]
-    },
     "price": {
       "type": "number",
       "title": "Price",
