@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2, Copy, Check, ChevronDown, ChevronRight, Monitor, MapPin, Download } from 'lucide-react';
+import CustomQuestionsEditor from '@/components/admin/CustomQuestionsEditor';
 import { toast } from 'sonner';
 
 function slugify(str) {
@@ -29,7 +30,7 @@ export default function SeriesManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', slug: '', description: '', is_published: false, status: 'draft' });
+  const [form, setForm] = useState({ name: '', slug: '', description: '', is_published: false, status: 'draft', ask_platinum_leader: true, custom_questions: '[]' });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -86,13 +87,21 @@ export default function SeriesManagement() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: '', slug: '', description: '', is_published: false, status: 'draft' });
+    setForm({ name: '', slug: '', description: '', is_published: false, status: 'draft', ask_platinum_leader: true, custom_questions: '[]' });
     setDialogOpen(true);
   };
 
   const openEdit = (series) => {
     setEditing(series);
-    setForm({ name: series.name, slug: series.slug, description: series.description || '', is_published: series.is_published, status: series.status || 'draft' });
+    setForm({
+      name: series.name,
+      slug: series.slug,
+      description: series.description || '',
+      is_published: series.is_published,
+      status: series.status || 'draft',
+      ask_platinum_leader: series.ask_platinum_leader !== false,
+      custom_questions: series.custom_questions || '[]'
+    });
     setDialogOpen(true);
   };
 
@@ -331,6 +340,23 @@ export default function SeriesManagement() {
               }} />
               <Label>Published</Label>
             </div>
+
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Booking Questions</h3>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={form.ask_platinum_leader}
+                  onCheckedChange={v => updateForm('ask_platinum_leader', v)}
+                />
+                <Label>Ask for Platinum Leader</Label>
+              </div>
+
+              <CustomQuestionsEditor
+                questions={(() => { try { return JSON.parse(form.custom_questions || '[]'); } catch { return []; } })()}
+                onChange={qs => updateForm('custom_questions', JSON.stringify(qs))}
+              />
+            </div>
+
             <Button onClick={handleSave} disabled={saving || !form.name || !form.slug} className="w-full">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
               {editing ? 'Save Changes' : 'Create Series'}

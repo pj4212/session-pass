@@ -34,6 +34,15 @@
         "completed"
       ],
       "default": "draft"
+    },
+    "ask_platinum_leader": {
+      "type": "boolean",
+      "title": "Ask Platinum Leader",
+      "default": true
+    },
+    "custom_questions": {
+      "type": "string",
+      "title": "Custom Questions"
     }
   },
   "required": [

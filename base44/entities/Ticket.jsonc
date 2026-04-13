@@ -93,6 +93,10 @@
         "refunded"
       ],
       "default": "active"
+    },
+    "custom_answers": {
+      "type": "string",
+      "title": "Custom Answers"
     }
   },
   "required": [

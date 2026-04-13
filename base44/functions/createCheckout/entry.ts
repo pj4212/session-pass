@@ -193,7 +193,8 @@ Deno.serve(async (req) => {
             upline_mentor_id: att.upline_mentor_id || '',
             platinum_leader_id: att.platinum_leader_id || '',
             qr_code_hash: tempHash,
-            ticket_status: 'active'
+            ticket_status: 'active',
+            custom_answers: att.custom_answers || ''
           }),
           `create paid ticket for ${att.email}`
         );
@@ -272,7 +273,8 @@ Deno.serve(async (req) => {
             upline_mentor_id: att.upline_mentor_id || '',
             platinum_leader_id: att.platinum_leader_id || '',
             qr_code_hash: 'temp',
-            ticket_status: 'active'
+            ticket_status: 'active',
+            custom_answers: att.custom_answers || ''
           }),
           `create free ticket for ${att.email}`
         );

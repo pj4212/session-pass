@@ -11,10 +11,18 @@ export default function AttendeeForm({
   onChange, 
   leaders,
   isBuyerSlot = false,
-  emailOptional = false
+  emailOptional = false,
+  askPlatinumLeader = true,
+  customQuestions = []
 }) {
   const update = (field, value) => {
     onChange({ ...attendee, [field]: value });
+  };
+
+  const updateCustomAnswer = (qLabel, value) => {
+    const answers = { ...(attendee.custom_answers || {}) };
+    answers[qLabel] = value;
+    onChange({ ...attendee, custom_answers: answers });
   };
 
   const isFirstTicket = isBuyerSlot;
@@ -66,7 +74,7 @@ export default function AttendeeForm({
         </div>
       )}
 
-      <div>
+      {askPlatinumLeader && (
         <div>
           <Label>Platinum Leader *</Label>
           <div className="relative">
@@ -83,7 +91,34 @@ export default function AttendeeForm({
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
           </div>
         </div>
-      </div>
+      )}
+
+      {customQuestions.map((q, qIdx) => (
+        <div key={qIdx}>
+          <Label>{q.label}{q.required ? ' *' : ''}</Label>
+          {q.type === 'select' ? (
+            <div className="relative">
+              <select
+                value={(attendee.custom_answers || {})[q.label] || ''}
+                onChange={e => updateCustomAnswer(q.label, e.target.value)}
+                className="flex h-9 w-full appearance-none items-center rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="" disabled>Select...</option>
+                {(q.options || []).map((opt, oIdx) => (
+                  <option key={oIdx} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+            </div>
+          ) : (
+            <Input
+              value={(attendee.custom_answers || {})[q.label] || ''}
+              onChange={e => updateCustomAnswer(q.label, e.target.value)}
+              placeholder={q.label}
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 }

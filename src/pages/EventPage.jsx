@@ -32,6 +32,7 @@ export default function EventPage() {
   const [occurrence, setOccurrence] = useState(null);
   const [location, setLocation] = useState(null);
   const [seriesSlug, setSeriesSlug] = useState(null);
+  const [seriesConfig, setSeriesConfig] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,10 @@ export default function EventPage() {
 
       if (occ.series_id) {
         base44.entities.EventSeries.filter({ id: occ.series_id }).then(s => {
-          if (s.length) setSeriesSlug(s[0].slug);
+          if (s.length) {
+            setSeriesSlug(s[0].slug);
+            setSeriesConfig(s[0]);
+          }
         });
       }
 
@@ -176,11 +180,23 @@ export default function EventPage() {
       if (!a.first_name || !a.last_name) return `Please fill in the name for Ticket ${i + 1}.`;
       if (needsEmail && !a.email) return `Please fill in the email for Ticket ${i + 1}.`;
       if (needsEmail && !/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
-      if (!a.platinum_leader_id) return `Please select a Platinum Leader for Ticket ${i + 1}.`;
+      if (askPlatinumLeader && !a.platinum_leader_id) return `Please select a Platinum Leader for Ticket ${i + 1}.`;
+      // Validate required custom questions
+      for (const q of customQuestions) {
+        if (q.required && !(a.custom_answers || {})[q.label]) {
+          return `Please answer "${q.label}" for Ticket ${i + 1}.`;
+        }
+      }
     }
 
     return null;
   };
+
+  const askPlatinumLeader = seriesConfig ? seriesConfig.ask_platinum_leader !== false : true;
+  const customQuestions = (() => {
+    try { return JSON.parse(seriesConfig?.custom_questions || '[]'); }
+    catch { return []; }
+  })();
 
   const handleCheckout = async () => {
     const validationError = validateForm();
@@ -228,7 +244,8 @@ export default function EventPage() {
         last_name: a.last_name,
         email: a.email || buyer.email,
         ticket_type_id: a.ticket_type_id,
-        platinum_leader_id: a.platinum_leader_id
+        platinum_leader_id: askPlatinumLeader ? a.platinum_leader_id : '',
+        custom_answers: a.custom_answers ? JSON.stringify(a.custom_answers) : ''
       })),
       occurrence_id: occurrence.id,
       origin_url: window.location.origin,
@@ -411,6 +428,8 @@ export default function EventPage() {
                       leaders={leaders}
                       isBuyerSlot={i === buyerSlotIndex}
                       emailOptional={sendAllToBuyer && i !== buyerSlotIndex}
+                      askPlatinumLeader={askPlatinumLeader}
+                      customQuestions={customQuestions}
                     />
                   ))}
                 </div>
