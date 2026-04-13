@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
-import { Trash2, Loader2, CheckCircle2, Circle, Briefcase, Users, Monitor, MapPin } from 'lucide-react';
+import { Trash2, Loader2, CheckCircle2, Circle, Monitor, MapPin } from 'lucide-react';
 import ConvertModeDialog from './ConvertModeDialog';
 
 export default function AttendeeDetailDialog({ ticket, ticketType, leader, order, occurrence, ticketTypes, open, onClose, onUpdate }) {
@@ -12,7 +12,7 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
 
   if (!ticket) return null;
 
-  const isBO = ticketType?.ticket_category === 'business_owner';
+
   const isCheckedIn = ticket.check_in_status === 'checked_in';
   const isActive = ticket.ticket_status === 'active';
   const isPaid = order?.payment_status === 'completed' && order?.total_amount > 0;
@@ -59,10 +59,7 @@ export default function AttendeeDetailDialog({ ticket, ticketType, leader, order
               {isCheckedIn ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
               {isCheckedIn ? 'Checked In' : 'Not Checked In'}
             </Badge>
-            <Badge variant="secondary" className="gap-1">
-              {isBO ? <Briefcase className="h-3 w-3" /> : <Users className="h-3 w-3" />}
-              {isBO ? 'Business Owner' : 'Candidate'}
-            </Badge>
+
           </div>
 
           {/* Details grid */}

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Download, Trash2, RefreshCw, Loader2, Search, CheckCircle2, Circle, Users, Briefcase, ArrowLeft } from 'lucide-react';
+import { Download, Trash2, RefreshCw, Loader2, Search, CheckCircle2, Circle, ArrowLeft } from 'lucide-react';
 import AttendeeCard from '@/components/admin/AttendeeCard';
 import AttendeeDetailDialog from '@/components/admin/AttendeeDetailDialog';
 
@@ -26,7 +26,6 @@ export default function AttendeeList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [orders, setOrders] = useState({});
   const [rescheduleTicket, setRescheduleTicket] = useState(null);
@@ -70,10 +69,6 @@ export default function AttendeeList() {
   const filtered = tickets.filter(t => {
     if (statusFilter !== 'all' && t.ticket_status !== statusFilter) return false;
     if (modeFilter !== 'all' && t.attendance_mode !== modeFilter) return false;
-    if (categoryFilter !== 'all') {
-      const cat = ticketTypes[t.ticket_type_id]?.ticket_category || 'candidate';
-      if (cat !== categoryFilter) return false;
-    }
     if (search) {
       const s = search.toLowerCase();
       const name = `${t.attendee_first_name} ${t.attendee_last_name}`.toLowerCase();
@@ -84,7 +79,6 @@ export default function AttendeeList() {
 
   const handleDetailUpdate = (ticketId, updates) => {
     if (updates === null) {
-      // Deleted
       setTickets(prev => prev.filter(t => t.id !== ticketId));
     } else {
       setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, ...updates } : t));
@@ -95,7 +89,6 @@ export default function AttendeeList() {
   const handleDelete = async (ticket) => {
     if (!confirm(`Permanently delete ticket for ${ticket.attendee_first_name} ${ticket.attendee_last_name}? This cannot be undone.`)) return;
     setActionLoading(true);
-    // If online ticket on a webinar event, deregister from Zoom first
     if (ticket.attendance_mode === 'online' && occurrence && (occurrence.zoom_meeting_id || (occurrence.zoom_link && /\/register\/WN_|\/w\/\d+/.test(occurrence.zoom_link)))) {
       try {
         await base44.functions.invoke('deregisterZoomAttendee', {
@@ -121,7 +114,6 @@ export default function AttendeeList() {
     if (!targetOccurrenceId) return;
     setActionLoading(true);
 
-    // Validate uniqueness on target occurrence
     const validation = await base44.functions.invoke('validateTickets', {
       occurrence_id: targetOccurrenceId,
       attendees: [{
@@ -135,11 +127,9 @@ export default function AttendeeList() {
       return;
     }
 
-    // Cancel old ticket
     await base44.entities.Ticket.update(rescheduleTicket.id, { ticket_status: 'cancelled' });
 
-    // Create new ticket on target occurrence
-    const newTicket = await base44.entities.Ticket.create({
+    await base44.entities.Ticket.create({
       order_id: rescheduleTicket.order_id,
       occurrence_id: targetOccurrenceId,
       ticket_type_id: rescheduleTicket.ticket_type_id,
@@ -153,7 +143,6 @@ export default function AttendeeList() {
       ticket_status: 'active'
     });
 
-    // Send email
     const targetOcc = allOccurrences.find(o => o.id === targetOccurrenceId);
     if (targetOcc) {
       await base44.integrations.Core.SendEmail({
@@ -170,12 +159,11 @@ export default function AttendeeList() {
   };
 
   const exportCSV = () => {
-    const headers = ['Name', 'Email', 'Ticket Type', 'Category', 'Leader', 'Check-In', 'Status'];
+    const headers = ['Name', 'Email', 'Ticket Type', 'Leader', 'Check-In', 'Status'];
     const rows = filtered.map(t => [
       `${t.attendee_first_name} ${t.attendee_last_name}`,
       t.attendee_email,
       ticketTypes[t.ticket_type_id]?.name || '',
-      ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'Business Owner' : 'Candidate',
       leaders[t.platinum_leader_id]?.name || '',
       t.check_in_status,
       t.ticket_status
@@ -193,9 +181,9 @@ export default function AttendeeList() {
 
   const isSuperAdmin = user?.role === 'super_admin';
 
-  const candidateCount = filtered.filter(t => (ticketTypes[t.ticket_type_id]?.ticket_category || 'candidate') === 'candidate').length;
-  const boCount = filtered.filter(t => ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner').length;
   const checkedInCount = filtered.filter(t => t.check_in_status === 'checked_in').length;
+  const onlineCount = filtered.filter(t => t.attendance_mode === 'online').length;
+  const inPersonCount = filtered.filter(t => t.attendance_mode === 'in_person').length;
 
   return (
     <div className="space-y-4">
@@ -223,12 +211,12 @@ export default function AttendeeList() {
           <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
         </div>
         <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
-          <p className="text-lg sm:text-xl font-bold text-blue-400">{candidateCount}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Candidates</p>
+          <p className="text-lg sm:text-xl font-bold text-blue-400">{onlineCount}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Online</p>
         </div>
         <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
-          <p className="text-lg sm:text-xl font-bold text-amber-400">{boCount}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Business</p>
+          <p className="text-lg sm:text-xl font-bold text-amber-400">{inPersonCount}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">In-Person</p>
         </div>
         <div className="bg-card border border-border rounded-lg px-3 py-2 text-center">
           <p className="text-lg sm:text-xl font-bold text-emerald-400">{checkedInCount}</p>
@@ -242,7 +230,7 @@ export default function AttendeeList() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search name or email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:flex">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="sm:w-32 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -258,14 +246,6 @@ export default function AttendeeList() {
               <SelectItem value="all">All Modes</SelectItem>
               <SelectItem value="online">Online</SelectItem>
               <SelectItem value="in_person">In-Person</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="sm:w-36 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="candidate">Candidates</SelectItem>
-              <SelectItem value="business_owner">Business Owners</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -299,7 +279,6 @@ export default function AttendeeList() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Category</TableHead>
               <TableHead>Leader</TableHead>
               <TableHead>Check-In</TableHead>
               <TableHead>Status</TableHead>
@@ -312,11 +291,6 @@ export default function AttendeeList() {
                 <TableCell className="text-sm font-medium whitespace-nowrap">{t.attendee_first_name} {t.attendee_last_name}</TableCell>
                 <TableCell className="text-sm truncate max-w-[180px]">{t.attendee_email}</TableCell>
                 <TableCell className="text-sm">{ticketTypes[t.ticket_type_id]?.name || '—'}</TableCell>
-                <TableCell>
-                  <Badge variant={ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'default' : 'secondary'} className="text-xs">
-                    {ticketTypes[t.ticket_type_id]?.ticket_category === 'business_owner' ? 'BO' : 'Cand'}
-                  </Badge>
-                </TableCell>
                 <TableCell className="text-sm">{leaders[t.platinum_leader_id]?.name || '—'}</TableCell>
                 <TableCell>
                   <Badge variant={t.check_in_status === 'checked_in' ? 'default' : 'secondary'} className="text-xs">
@@ -343,7 +317,7 @@ export default function AttendeeList() {
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">No attendees found</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

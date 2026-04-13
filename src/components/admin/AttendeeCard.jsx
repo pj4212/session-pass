@@ -1,9 +1,9 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, RefreshCw, CheckCircle2, Circle, Users, Briefcase } from 'lucide-react';
+import { Trash2, RefreshCw, CheckCircle2, Circle } from 'lucide-react';
 
 export default function AttendeeCard({ ticket, ticketType, leader, isSuperAdmin, actionLoading, onDelete, onReschedule }) {
-  const isBO = ticketType?.ticket_category === 'business_owner';
+
   const isCheckedIn = ticket.check_in_status === 'checked_in';
   const isActive = ticket.ticket_status === 'active';
 
@@ -29,9 +29,8 @@ export default function AttendeeCard({ ticket, ticketType, leader, isSuperAdmin,
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 mt-2">
-        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-1">
-          {isBO ? <Briefcase className="h-3 w-3" /> : <Users className="h-3 w-3" />}
-          {isBO ? 'Business Owner' : 'Candidate'}
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+          {ticketType?.name || 'Unknown'}
         </Badge>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
           {ticket.attendance_mode === 'online' ? 'Online' : 'In-Person'}
