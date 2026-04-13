@@ -46,9 +46,10 @@ function buildDescription(occurrence, ticket) {
   const lines = [];
 
   if (isOnline) {
-    if (occurrence.zoom_link) {
+    const joinUrl = ticket?.zoom_join_url || occurrence.zoom_link;
+    if (joinUrl) {
       lines.push('🖥 Join Online');
-      lines.push(`Register for webinar: ${occurrence.zoom_link}`);
+      lines.push(`Join webinar: ${joinUrl}`);
     }
   } else {
     if (occurrence.venue_link) {
@@ -73,7 +74,7 @@ function buildDescription(occurrence, ticket) {
 function buildLocation(occurrence, ticket) {
   const isOnline = ticket?.attendance_mode === 'online' || occurrence.event_mode === 'online_stream';
   if (isOnline) {
-    return occurrence.zoom_link || 'Online';
+    return ticket?.zoom_join_url || occurrence.zoom_link || 'Online';
   }
   return occurrence.venue_details || occurrence.venue_name || '';
 }

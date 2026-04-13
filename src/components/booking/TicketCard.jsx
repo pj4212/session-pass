@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Monitor, MapPin } from "lucide-react";
+import AddToCalendar from './AddToCalendar';
 
 export default function TicketCard({ ticket, occurrence, ticketType }) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.qr_code_hash)}`;
@@ -74,6 +75,12 @@ export default function TicketCard({ ticket, occurrence, ticketType }) {
       {ticket.attendance_mode !== 'online' && ticket.qr_code_hash && ticket.qr_code_hash !== 'pending' && ticket.qr_code_hash !== 'temp' && (
         <div className="mt-4 flex justify-center">
           <img src={qrUrl} alt="QR Code" className="w-40 h-40" />
+        </div>
+      )}
+
+      {occurrence && (
+        <div className="mt-3">
+          <AddToCalendar occurrence={occurrence} ticket={ticket} />
         </div>
       )}
     </div>
