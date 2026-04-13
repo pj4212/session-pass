@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2, Copy, Check, ChevronDown, ChevronRight, Monitor, MapPin } from 'lucide-react';
+import { Plus, Edit, Loader2, ExternalLink, Calendar, Trash2, Copy, Check, ChevronDown, ChevronRight, Monitor, MapPin, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 function slugify(str) {
@@ -34,6 +34,27 @@ export default function SeriesManagement() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState({});
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await base44.functions.invoke('exportData', {}, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `session-pass-export-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Export downloaded successfully');
+    } catch (err) {
+      toast.error('Export failed: ' + (err.message || 'Unknown error'));
+    }
+    setExporting(false);
+  };
 
   const toggleExpand = (id) => {
     setExpandedSeries(prev => ({ ...prev, [id]: !prev[id] }));
@@ -119,7 +140,13 @@ export default function SeriesManagement() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Event Series</h1>
-        <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" />New Series</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Download className="h-4 w-4 mr-1.5" />}
+            Export All Data
+          </Button>
+          <Button onClick={openNew}><Plus className="h-4 w-4 mr-1.5" />New Series</Button>
+        </div>
       </div>
 
       {/* Desktop table */}
