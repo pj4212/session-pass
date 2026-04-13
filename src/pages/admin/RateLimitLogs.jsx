@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Terminal } from 'lucide-react';
+import { AlertCircle, Terminal, Trash2, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
 export default function RateLimitLogs() {
@@ -11,6 +12,7 @@ export default function RateLimitLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -53,10 +55,29 @@ export default function RateLimitLogs() {
           <p className="text-muted-foreground">
             Tracks retryable errors (like rate limits) that occur in critical backend functions.
           </p>
+        {logs.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={clearing}
+            onClick={async () => {
+              setClearing(true);
+              for (const log of logs) {
+                await base44.entities.RateLimitLog.delete(log.id);
+              }
+              setLogs([]);
+              setClearing(false);
+            }}
+            className="gap-1.5"
+          >
+            {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            Clear All Logs
+          </Button>
+        )}
         </div>
-      </div>
+        </div>
 
-      {loading && <p>Loading logs...</p>}
+        {loading && <p>Loading logs...</p>}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
