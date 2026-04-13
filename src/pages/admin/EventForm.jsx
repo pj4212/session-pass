@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import VenueSelector from '../../components/admin/VenueSelector';
 import ZoomPanelistsManager from '../../components/admin/ZoomPanelistsManager';
+import CustomQuestionsEditor from '../../components/admin/CustomQuestionsEditor';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -49,7 +50,8 @@ export default function EventForm() {
     zoom_webinar_mode: 'auto',
     venue_id: '', venue_name: '', venue_link: '', parking_link: '',
     venue_details: '', is_published: false,
-    status: 'draft'
+    status: 'draft',
+    custom_questions: ''
   });
   const [ticketTypes, setTicketTypes] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -95,7 +97,8 @@ export default function EventForm() {
               venue_link: ev.venue_link || '', parking_link: ev.parking_link || '',
               venue_details: ev.venue_details || '',
               is_published: ev.is_published,
-              status: ev.status || 'draft'
+              status: ev.status || 'draft',
+              custom_questions: ev.custom_questions || ''
             });
             setTicketTypes(tts.map(tt => ({ ...tt, _existing: true })));
           } else {
@@ -112,7 +115,8 @@ export default function EventForm() {
               venue_id: ev.venue_id || '', venue_name: ev.venue_name || '',
               venue_link: ev.venue_link || '', parking_link: ev.parking_link || '',
               venue_details: ev.venue_details || '',
-              is_published: false, status: 'draft'
+              is_published: false, status: 'draft',
+              custom_questions: ev.custom_questions || ''
             });
             setTicketTypes(tts.map(tt => ({
               name: tt.name, attendance_mode: tt.attendance_mode, ticket_category: tt.ticket_category || 'candidate',
@@ -509,6 +513,20 @@ export default function EventForm() {
       )}
 
 
+
+      {/* Booking Questions (Event-Level Override) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Booking Questions</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Set custom questions for this event. If left empty, questions from the parent series will be used instead.</p>
+        </CardHeader>
+        <CardContent>
+          <CustomQuestionsEditor
+            questions={(() => { try { return JSON.parse(form.custom_questions || '[]'); } catch { return []; } })()}
+            onChange={qs => updateForm('custom_questions', JSON.stringify(qs))}
+          />
+        </CardContent>
+      </Card>
 
       {/* Ticket Types */}
       <Card>

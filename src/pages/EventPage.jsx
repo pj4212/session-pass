@@ -33,6 +33,7 @@ export default function EventPage() {
   const [location, setLocation] = useState(null);
   const [seriesSlug, setSeriesSlug] = useState(null);
   const [seriesConfig, setSeriesConfig] = useState(null);
+  const [eventConfig, setEventConfig] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ export default function EventPage() {
       }
       const occ = allOccurrences[0];
       setOccurrence(occ);
+      setEventConfig(occ);
 
       if (occ.series_id) {
         base44.entities.EventSeries.filter({ id: occ.series_id }).then(s => {
@@ -181,8 +183,11 @@ export default function EventPage() {
       if (needsEmail && !a.email) return `Please fill in the email for Ticket ${i + 1}.`;
       if (needsEmail && !/\S+@\S+\.\S+/.test(a.email)) return `Please enter a valid email for Ticket ${i + 1}.`;
       if (askPlatinumLeader && !a.platinum_leader_id) return `Please select a Platinum Leader for Ticket ${i + 1}.`;
-      // Validate required custom questions
+      // Validate required custom questions (filtered by ticket category)
+      const ticketCat = a.ticket_category || 'candidate';
       for (const q of customQuestions) {
+        const appliesTo = q.applies_to || 'all';
+        if (appliesTo !== 'all' && appliesTo !== ticketCat) continue;
         if (q.required && !(a.custom_answers || {})[q.label]) {
           return `Please answer "${q.label}" for Ticket ${i + 1}.`;
         }
@@ -193,8 +198,12 @@ export default function EventPage() {
   };
 
   const askPlatinumLeader = seriesConfig ? seriesConfig.ask_platinum_leader !== false : true;
+  // Event-level questions override series-level; fall back to series if event has none
   const customQuestions = (() => {
-    try { return JSON.parse(seriesConfig?.custom_questions || '[]'); }
+    const eventQs = eventConfig?.custom_questions;
+    const seriesQs = seriesConfig?.custom_questions;
+    const raw = eventQs || seriesQs || '[]';
+    try { return JSON.parse(raw); }
     catch { return []; }
   })();
 
@@ -430,6 +439,7 @@ export default function EventPage() {
                       emailOptional={sendAllToBuyer && i !== buyerSlotIndex}
                       askPlatinumLeader={askPlatinumLeader}
                       customQuestions={customQuestions}
+                      ticketCategory={att.ticket_category || 'candidate'}
                     />
                   ))}
                 </div>

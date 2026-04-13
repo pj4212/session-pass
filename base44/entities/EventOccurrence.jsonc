@@ -134,6 +134,10 @@
         "completed"
       ],
       "default": "draft"
+    },
+    "custom_questions": {
+      "type": "string",
+      "title": "Custom Questions"
     }
   },
   "required": [

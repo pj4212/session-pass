@@ -7,7 +7,7 @@ import { Plus, Trash2, GripVertical } from 'lucide-react';
 
 export default function CustomQuestionsEditor({ questions = [], onChange }) {
   const addQuestion = () => {
-    onChange([...questions, { label: '', type: 'text', required: false, options: [] }]);
+    onChange([...questions, { label: '', type: 'text', required: false, applies_to: 'all', options: [] }]);
   };
 
   const updateQuestion = (idx, field, value) => {
@@ -77,6 +77,17 @@ export default function CustomQuestionsEditor({ questions = [], onChange }) {
                   >
                     <option value="text">Text</option>
                     <option value="select">Dropdown</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={q.applies_to || 'all'}
+                    onChange={e => updateQuestion(idx, 'applies_to', e.target.value)}
+                    className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+                  >
+                    <option value="all">All Tickets</option>
+                    <option value="candidate">Candidates Only</option>
+                    <option value="business_owner">Business Owners Only</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-1.5">

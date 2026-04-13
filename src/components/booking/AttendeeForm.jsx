@@ -13,8 +13,14 @@ export default function AttendeeForm({
   isBuyerSlot = false,
   emailOptional = false,
   askPlatinumLeader = true,
-  customQuestions = []
+  customQuestions = [],
+  ticketCategory = 'candidate'
 }) {
+  // Filter questions to only those that apply to this ticket's category
+  const applicableQuestions = customQuestions.filter(q => {
+    const appliesTo = q.applies_to || 'all';
+    return appliesTo === 'all' || appliesTo === ticketCategory;
+  });
   const update = (field, value) => {
     onChange({ ...attendee, [field]: value });
   };
@@ -93,7 +99,7 @@ export default function AttendeeForm({
         </div>
       )}
 
-      {customQuestions.map((q, qIdx) => (
+      {applicableQuestions.map((q, qIdx) => (
         <div key={qIdx}>
           <Label>{q.label}{q.required ? ' *' : ''}</Label>
           {q.type === 'select' ? (
