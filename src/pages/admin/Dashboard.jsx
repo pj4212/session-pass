@@ -73,16 +73,21 @@ export default function Dashboard() {
     const weekRevenue = weekOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
     const paidWeekOrders = weekOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0);
     const ttMap = Object.fromEntries(allTicketTypes.map(tt => [tt.id, tt]));
-    const allPaidOrders = allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0 && o.stripe_fee > 0);
-    const allFeesTotal = allPaidOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
-    const paidOrderIds = new Set(allPaidOrders.map(o => o.id));
-    const paidTicketCount = allTickets.filter(t =>
-      paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
+    // For avg fee calculation, only use orders where stripe_fee is actually recorded
+    const ordersWithFees = allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0 && o.stripe_fee > 0);
+    const allFeesTotal = ordersWithFees.reduce((sum, o) => sum + o.stripe_fee, 0);
+    const feeOrderIds = new Set(ordersWithFees.map(o => o.id));
+    const ticketsWithFees = allTickets.filter(t =>
+      feeOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
     ).length;
-    const avgFeePerTicket = paidTicketCount > 0 ? allFeesTotal / paidTicketCount : 0;
-    // Estimate week's fees using avg fee per paid ticket
+    const avgFeePerTicket = ticketsWithFees > 0 ? allFeesTotal / ticketsWithFees : 0;
+
+    // For counting paid tickets this week, use all completed paid orders (not just those with fee synced)
+    const allPaidOrderIds = new Set(
+      allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0).map(o => o.id)
+    );
     const weekPaidTicketCount = weekTickets.filter(t =>
-      paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
+      allPaidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
     ).length;
     const estimatedWeekFees = weekPaidTicketCount * avgFeePerTicket;
     const weekProfit = weekRevenue - estimatedWeekFees;
