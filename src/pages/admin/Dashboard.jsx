@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight, RefreshCw } from 'lucide-react';
+import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight, RefreshCw, Download } from 'lucide-react';
 import LiveSessionBanner from '@/components/admin/LiveSessionBanner';
 import WeeklyEvents from '@/components/admin/WeeklyEvents';
 
@@ -15,6 +15,20 @@ export default function Dashboard() {
   const [allTickets, setAllTickets] = useState([]);
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    const res = await base44.functions.invoke('exportAllData', {});
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `session_pass_export_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
+  }
 
   async function load() {
     setLoading(true);
@@ -209,6 +223,10 @@ export default function Dashboard() {
       <div className="flex flex-wrap gap-3">
         <Button variant="secondary" asChild><Link to="/admin/events"><List className="h-4 w-4 mr-1.5" />View Events</Link></Button>
         <Button variant="secondary" asChild><Link to="/admin/reports"><BarChart3 className="h-4 w-4 mr-1.5" />Reports</Link></Button>
+        <Button variant="secondary" onClick={handleExport} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+          Export All Data
+        </Button>
       </div>
     </div>
   );
