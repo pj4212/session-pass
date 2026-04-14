@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Download, Trash2, RefreshCw, Loader2, Search, CheckCircle2, Circle, ArrowLeft } from 'lucide-react';
+import { Download, Trash2, RefreshCw, Loader2, Search, CheckCircle2, Circle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import AttendeeCard from '@/components/admin/AttendeeCard';
 import AttendeeDetailDialog from '@/components/admin/AttendeeDetailDialog';
 
@@ -33,6 +33,7 @@ export default function AttendeeList() {
   const [allOccurrences, setAllOccurrences] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [sortName, setSortName] = useState('none'); // 'none' | 'asc' | 'desc'
 
   useEffect(() => {
     loadData();
@@ -75,6 +76,11 @@ export default function AttendeeList() {
       if (!name.includes(s) && !t.attendee_email.toLowerCase().includes(s)) return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (sortName === 'none') return 0;
+    const nameA = `${a.attendee_first_name} ${a.attendee_last_name}`.toLowerCase();
+    const nameB = `${b.attendee_first_name} ${b.attendee_last_name}`.toLowerCase();
+    return sortName === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
   });
 
   const handleDetailUpdate = (ticketId, updates) => {
@@ -276,7 +282,14 @@ export default function AttendeeList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => setSortName(s => s === 'none' ? 'asc' : s === 'asc' ? 'desc' : 'none')}>
+                <span className="inline-flex items-center gap-1">
+                  Name
+                  {sortName === 'none' && <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
+                  {sortName === 'asc' && <ArrowUp className="h-3 w-3" />}
+                  {sortName === 'desc' && <ArrowDown className="h-3 w-3" />}
+                </span>
+              </TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Leader</TableHead>
