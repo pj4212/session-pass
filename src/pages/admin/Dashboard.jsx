@@ -64,31 +64,26 @@ export default function Dashboard() {
     // Tickets sold for this week's events (regardless of when purchased)
     const weekTickets = allTickets.filter(t => weekEventIds.has(t.occurrence_id));
 
-    // Orders for this week's events
-    const weekOrderIds = new Set(weekTickets.map(t => t.order_id));
-    const weekOrders = allOrders.filter(o =>
-      weekOrderIds.has(o.id) &&
-      (o.payment_status === 'completed' || o.payment_status === 'free')
-    );
-    const weekRevenue = weekOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-    const paidWeekOrders = weekOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0);
     const ttMap = Object.fromEntries(allTicketTypes.map(tt => [tt.id, tt]));
-    // For avg fee calculation, only use orders where stripe_fee is actually recorded
-    const ordersWithFees = allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0 && o.stripe_fee > 0);
+
+    // Calculate revenue directly from tickets × ticket type price (more accurate than summing orders)
+    const weekPaidTickets = weekTickets.filter(t => {
+      const tt = ttMap[t.ticket_type_id];
+      return tt && tt.price > 0;
+    });
+    const weekPaidTicketCount = weekPaidTickets.length;
+    const weekRevenue = weekPaidTickets.reduce((sum, t) => sum + (ttMap[t.ticket_type_id]?.price || 0), 0);
+
+    // Avg fee: total recorded stripe fees / total paid tickets across all orders with fees
+    const ordersWithFees = allOrders.filter(o => o.payment_status === 'completed' && o.stripe_fee > 0);
     const allFeesTotal = ordersWithFees.reduce((sum, o) => sum + o.stripe_fee, 0);
     const feeOrderIds = new Set(ordersWithFees.map(o => o.id));
-    const ticketsWithFees = allTickets.filter(t =>
-      feeOrderIds.has(t.order_id)
-    ).length;
-    const avgFeePerTicket = ticketsWithFees > 0 ? allFeesTotal / ticketsWithFees : 0;
+    const allPaidTicketsWithFees = allTickets.filter(t => {
+      const tt = ttMap[t.ticket_type_id];
+      return feeOrderIds.has(t.order_id) && tt && tt.price > 0;
+    }).length;
+    const avgFeePerTicket = allPaidTicketsWithFees > 0 ? allFeesTotal / allPaidTicketsWithFees : 0;
 
-    // For counting paid tickets this week, use all completed paid orders (not just those with fee synced)
-    const allPaidOrderIds = new Set(
-      allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0).map(o => o.id)
-    );
-    const weekPaidTicketCount = weekTickets.filter(t =>
-      allPaidOrderIds.has(t.order_id)
-    ).length;
     const estimatedWeekFees = weekPaidTicketCount * avgFeePerTicket;
     const weekProfit = weekRevenue - estimatedWeekFees;
 
