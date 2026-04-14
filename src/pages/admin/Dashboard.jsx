@@ -121,8 +121,10 @@ export default function Dashboard() {
 
     setStats({
       weekTickets: weekTickets.length,
+      weekPaidTickets: weekPaidTicketCount,
       weekRevenue,
       avgFeePerTicket,
+      estimatedWeekFees,
       weekProfit,
       upcomingCount: upcoming.length,
       nextEvents
@@ -146,7 +148,7 @@ export default function Dashboard() {
     { label: 'Tickets This Week', value: stats.weekTickets, icon: Ticket, accent: 'text-blue-400 bg-blue-500/15' },
     { label: 'Revenue This Week', value: `$${stats.weekRevenue.toFixed(2)}`, icon: DollarSign, accent: 'text-emerald-400 bg-emerald-500/15' },
     { label: 'Avg Stripe Fee / Ticket', value: `$${stats.avgFeePerTicket.toFixed(2)}`, icon: TrendingUp, accent: 'text-red-400 bg-red-500/15' },
-    { label: 'Est. Profit After Fees', value: `$${stats.weekProfit.toFixed(2)}`, icon: DollarSign, accent: 'text-purple-400 bg-purple-500/15' },
+    { label: 'Est. Profit After Fees', value: `$${stats.weekProfit.toFixed(2)}`, subtitle: `${stats.weekPaidTickets} paid tickets · ~$${stats.estimatedWeekFees.toFixed(2)} fees`, icon: DollarSign, accent: 'text-purple-400 bg-purple-500/15' },
     { label: 'Upcoming Events', value: stats.upcomingCount, icon: Calendar, accent: 'text-amber-400 bg-amber-500/15' },
   ];
 
@@ -174,6 +176,7 @@ export default function Dashboard() {
               </div>
             </div>
             <p className="text-2xl font-bold text-foreground">{card.value}</p>
+            {card.subtitle && <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>}
           </div>
         ))}
       </div>
