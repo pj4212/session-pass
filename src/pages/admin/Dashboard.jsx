@@ -80,8 +80,12 @@ export default function Dashboard() {
       paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
     ).length;
     const avgFeePerTicket = paidTicketCount > 0 ? allFeesTotal / paidTicketCount : 0;
-    const weekFeesTotal = paidWeekOrders.reduce((sum, o) => sum + (o.stripe_fee || 0), 0);
-    const weekProfit = weekRevenue - weekFeesTotal;
+    // Estimate week's fees using avg fee per paid ticket
+    const weekPaidTicketCount = weekTickets.filter(t =>
+      paidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
+    ).length;
+    const estimatedWeekFees = weekPaidTicketCount * avgFeePerTicket;
+    const weekProfit = weekRevenue - estimatedWeekFees;
 
     const upcoming = allEvents.filter(e => 
       new Date(e.event_date) >= now && e.status === 'published'
@@ -142,7 +146,7 @@ export default function Dashboard() {
     { label: 'Tickets This Week', value: stats.weekTickets, icon: Ticket, accent: 'text-blue-400 bg-blue-500/15' },
     { label: 'Revenue This Week', value: `$${stats.weekRevenue.toFixed(2)}`, icon: DollarSign, accent: 'text-emerald-400 bg-emerald-500/15' },
     { label: 'Avg Stripe Fee / Ticket', value: `$${stats.avgFeePerTicket.toFixed(2)}`, icon: TrendingUp, accent: 'text-red-400 bg-red-500/15' },
-    { label: 'Profit After Fees', value: `$${stats.weekProfit.toFixed(2)}`, icon: DollarSign, accent: 'text-purple-400 bg-purple-500/15' },
+    { label: 'Est. Profit After Fees', value: `$${stats.weekProfit.toFixed(2)}`, icon: DollarSign, accent: 'text-purple-400 bg-purple-500/15' },
     { label: 'Upcoming Events', value: stats.upcomingCount, icon: Calendar, accent: 'text-amber-400 bg-amber-500/15' },
   ];
 
