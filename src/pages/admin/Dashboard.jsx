@@ -78,7 +78,7 @@ export default function Dashboard() {
     const allFeesTotal = ordersWithFees.reduce((sum, o) => sum + o.stripe_fee, 0);
     const feeOrderIds = new Set(ordersWithFees.map(o => o.id));
     const ticketsWithFees = allTickets.filter(t =>
-      feeOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
+      feeOrderIds.has(t.order_id)
     ).length;
     const avgFeePerTicket = ticketsWithFees > 0 ? allFeesTotal / ticketsWithFees : 0;
 
@@ -87,7 +87,7 @@ export default function Dashboard() {
       allOrders.filter(o => o.payment_status === 'completed' && o.total_amount > 0).map(o => o.id)
     );
     const weekPaidTicketCount = weekTickets.filter(t =>
-      allPaidOrderIds.has(t.order_id) && ttMap[t.ticket_type_id]?.requires_payment
+      allPaidOrderIds.has(t.order_id)
     ).length;
     const estimatedWeekFees = weekPaidTicketCount * avgFeePerTicket;
     const weekProfit = weekRevenue - estimatedWeekFees;
