@@ -32,6 +32,44 @@ export default function Dashboard() {
     setExporting(false);
   }
 
+  async function handleExportTicketsCsv() {
+    setExporting(true);
+    const [csvOrders, csvTickets, csvOccurrences, csvTicketTypes] = await Promise.all([
+      base44.entities.Order.filter({ ...wsFilter }, '-created_date', 5000),
+      base44.entities.Ticket.filter({ ...wsFilter }, '-created_date', 5000),
+      base44.entities.EventOccurrence.filter({ ...wsFilter }, '-created_date', 5000),
+      base44.entities.TicketType.filter({ ...wsFilter }, '-created_date', 5000),
+    ]);
+    const orderMap = Object.fromEntries(csvOrders.map(o => [o.id, o]));
+    const occMap = Object.fromEntries(csvOccurrences.map(o => [o.id, o]));
+    const ttMapCsv = Object.fromEntries(csvTicketTypes.map(tt => [tt.id, tt]));
+
+    const headers = ['Order ID','Order Number','Buyer Name','Buyer Email','Total Amount','Payment Status','Order Date','Ticket ID','Attendee First Name','Attendee Last Name','Attendee Email','Ticket Type','Attendance Mode','Check-In Status','Event Name','Event Date'];
+    const rows = csvTickets.map(t => {
+      const order = orderMap[t.order_id] || {};
+      const occ = occMap[t.occurrence_id] || {};
+      const tt = ttMapCsv[t.ticket_type_id] || {};
+      return [
+        order.id || '', order.order_number || '', order.buyer_name || '', order.buyer_email || '',
+        order.total_amount != null ? order.total_amount.toFixed(2) : '', order.payment_status || '',
+        order.created_date ? new Date(order.created_date).toLocaleDateString('en-AU') : '',
+        t.id, t.attendee_first_name || '', t.attendee_last_name || '', t.attendee_email || '',
+        tt.name || '', t.attendance_mode || '', t.check_in_status || '',
+        occ.name || '', occ.event_date || ''
+      ];
+    });
+
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `all_tickets_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
+  }
+
   async function handleSyncStripeFees() {
     setSyncingFees(true);
     const res = await base44.functions.invoke('syncStripeFees', {});
@@ -248,6 +286,10 @@ export default function Dashboard() {
       <div className="flex flex-wrap gap-3">
         <Button variant="secondary" asChild><Link to="/admin/events"><List className="h-4 w-4 mr-1.5" />View Events</Link></Button>
         <Button variant="secondary" asChild><Link to="/admin/reports"><BarChart3 className="h-4 w-4 mr-1.5" />Reports</Link></Button>
+        <Button variant="secondary" onClick={handleExportTicketsCsv} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+          Export Tickets CSV
+        </Button>
         <Button variant="secondary" onClick={handleExport} disabled={exporting}>
           {exporting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
           Export All Data
