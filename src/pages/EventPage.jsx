@@ -213,19 +213,6 @@ export default function EventPage() {
     setSubmitting(true);
     setSubmitError(null);
 
-    // Check if in iframe
-    if (window.self !== window.top) {
-      const hasPayment = attendees.some(a => {
-        const tt = ticketTypes.find(t => t.id === a.ticket_type_id);
-        return tt && tt.price > 0;
-      });
-      if (hasPayment) {
-        setSubmitError('Payment checkout only works from the published app. Please open the app in a new tab.');
-        setSubmitting(false);
-        return;
-      }
-    }
-
     // Validate with backend
     const validation = await base44.functions.invoke('validateTickets', {
       occurrence_id: occurrence.id,
@@ -268,11 +255,7 @@ export default function EventPage() {
     const lastLeader = attendees.find(a => a.platinum_leader_id)?.platinum_leader_id || '';
     if (lastLeader) localStorage.setItem(LEADER_STORAGE_KEY, lastLeader);
 
-    if (result.data.payment_required) {
-      window.location.href = result.data.checkout_url;
-    } else {
-      window.location.href = `/order/${result.data.order_number}`;
-    }
+    window.location.href = `/order/${result.data.order_number}`;
   };
 
   if (loading) {
@@ -454,12 +437,7 @@ export default function EventPage() {
                 >
                   {submitting ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing...</>
-                  ) : (
-                    totalTickets > 0 && Object.entries(selections).some(([id, qty]) => {
-                      const tt = ticketTypes.find(t => t.id === id);
-                      return qty > 0 && tt && tt.price > 0;
-                    }) ? 'Proceed to Payment' : 'Complete Booking'
-                  )}
+                  ) : 'Complete Booking'}
                 </Button>
               </>
             )}

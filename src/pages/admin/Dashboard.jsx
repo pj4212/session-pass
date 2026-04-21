@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import useWorkspaceFilter from '@/hooks/useWorkspaceFilter';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight, RefreshCw, Download, CreditCard } from 'lucide-react';
+import { Ticket, DollarSign, Calendar, AlertTriangle, Plus, List, BarChart3, Loader2, TrendingUp, ChevronRight, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import LiveSessionBanner from '@/components/admin/LiveSessionBanner';
 import WeeklyEvents from '@/components/admin/WeeklyEvents';
@@ -17,8 +17,6 @@ export default function Dashboard() {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [syncingFees, setSyncingFees] = useState(false);
-
   async function handleExport() {
     setExporting(true);
     const res = await base44.functions.invoke('exportAllData', {});
@@ -70,15 +68,6 @@ export default function Dashboard() {
     setExporting(false);
   }
 
-  async function handleSyncStripeFees() {
-    setSyncingFees(true);
-    const res = await base44.functions.invoke('syncStripeFees', {});
-    const d = res.data;
-    toast.success(`Synced ${d.synced} orders · Actual fees: $${d.total_actual_fees.toFixed(2)}`);
-    setSyncingFees(false);
-    await load();
-  }
-
   async function load() {
     setLoading(true);
     const now = new Date();
@@ -115,26 +104,8 @@ export default function Dashboard() {
 
     const ttMap = Object.fromEntries(allTicketTypes.map(tt => [tt.id, tt]));
 
-    // Calculate revenue directly from tickets × ticket type price (more accurate than summing orders)
-    const weekPaidTickets = weekTickets.filter(t => {
-      const tt = ttMap[t.ticket_type_id];
-      return tt && tt.price > 0;
-    });
-    const weekPaidTicketCount = weekPaidTickets.length;
-    const weekRevenue = weekPaidTickets.reduce((sum, t) => sum + (ttMap[t.ticket_type_id]?.price || 0), 0);
-
-    // Avg fee: total recorded stripe fees / total paid tickets across all orders with fees
-    const ordersWithFees = allOrders.filter(o => o.payment_status === 'completed' && o.stripe_fee > 0);
-    const allFeesTotal = ordersWithFees.reduce((sum, o) => sum + o.stripe_fee, 0);
-    const feeOrderIds = new Set(ordersWithFees.map(o => o.id));
-    const allPaidTicketsWithFees = allTickets.filter(t => {
-      const tt = ttMap[t.ticket_type_id];
-      return feeOrderIds.has(t.order_id) && tt && tt.price > 0;
-    }).length;
-    const avgFeePerTicket = allPaidTicketsWithFees > 0 ? allFeesTotal / allPaidTicketsWithFees : 0;
-
-    const estimatedWeekFees = weekPaidTicketCount * avgFeePerTicket;
-    const weekProfit = weekRevenue - estimatedWeekFees;
+    // Calculate revenue directly from tickets × ticket type price
+    const weekRevenue = weekTickets.reduce((sum, t) => sum + (ttMap[t.ticket_type_id]?.price || 0), 0);
 
     const upcoming = allEvents.filter(e => 
       new Date(e.event_date) >= now && e.status === 'published'
@@ -170,11 +141,7 @@ export default function Dashboard() {
 
     setStats({
       weekTickets: weekTickets.length,
-      weekPaidTickets: weekPaidTicketCount,
       weekRevenue,
-      avgFeePerTicket,
-      estimatedWeekFees,
-      weekProfit,
       upcomingCount: upcoming.length,
       nextEvents
     });
@@ -196,8 +163,6 @@ export default function Dashboard() {
   const statCards = [
     { label: 'Tickets This Week', value: stats.weekTickets, icon: Ticket, accent: 'text-blue-400 bg-blue-500/15' },
     { label: 'Revenue This Week', value: `$${stats.weekRevenue.toFixed(2)}`, icon: DollarSign, accent: 'text-emerald-400 bg-emerald-500/15' },
-    { label: 'Avg Stripe Fee / Ticket', value: `$${stats.avgFeePerTicket.toFixed(2)}`, icon: CreditCard, accent: 'text-red-400 bg-red-500/15', action: handleSyncStripeFees, actionLoading: syncingFees },
-    { label: 'Est. Profit After Fees', value: `$${stats.weekProfit.toFixed(2)}`, subtitle: `${stats.weekPaidTickets} paid tickets · ~$${stats.estimatedWeekFees.toFixed(2)} fees`, icon: DollarSign, accent: 'text-purple-400 bg-purple-500/15' },
     { label: 'Upcoming Events', value: stats.upcomingCount, icon: Calendar, accent: 'text-amber-400 bg-amber-500/15' },
   ];
 
@@ -224,14 +189,7 @@ export default function Dashboard() {
                 <card.icon className="h-4 w-4" />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <p className="text-2xl font-bold text-foreground">{card.value}</p>
-              {card.action && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={card.action} disabled={card.actionLoading} title="Sync Stripe Fees">
-                  {card.actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                </Button>
-              )}
-            </div>
+            <p className="text-2xl font-bold text-foreground">{card.value}</p>
             {card.subtitle && <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>}
           </div>
         ))}

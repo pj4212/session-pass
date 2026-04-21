@@ -34,21 +34,14 @@
       "title": "Total Amount",
       "default": 0
     },
-    "stripe_fee": {
-      "type": "number",
-      "title": "Stripe Fee"
-    },
     "payment_status": {
       "type": "string",
       "title": "Payment Status",
       "enum": [
-        "pending",
         "completed",
-        "refunded",
-        "failed",
         "free"
       ],
-      "default": "pending"
+      "default": "free"
     },
     "order_status": {
       "type": "string",
@@ -59,14 +52,6 @@
         "refund_requested"
       ],
       "default": "confirmed"
-    },
-    "stripe_checkout_session_id": {
-      "type": "string",
-      "title": "Stripe Checkout Session ID"
-    },
-    "stripe_payment_intent_id": {
-      "type": "string",
-      "title": "Stripe Payment Intent ID"
     },
     "send_all_to_buyer": {
       "type": "boolean",

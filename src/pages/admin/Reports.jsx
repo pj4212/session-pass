@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function exportCsv(headers, rows, filename) {
@@ -32,8 +32,6 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -115,30 +113,12 @@ export default function Reports() {
     });
   });
 
-  const hasActualFees = orders.some(o => o.stripe_fee != null);
-
   // Report 3: Revenue by occurrence
   const revenueReport = filteredOccurrences.map(o => {
     const oOrders = orders.filter(ord => ord.occurrence_id === o.id && (ord.payment_status === 'completed' || ord.payment_status === 'free'));
     const revenue = oOrders.reduce((s, ord) => s + (ord.total_amount || 0), 0);
-    const paidOrders = oOrders.filter(ord => ord.payment_status === 'completed' && ord.total_amount > 0);
-    const estimatedFees = paidOrders.reduce((s, ord) => s + (ord.total_amount * 0.029 + 0.30), 0);
-    const actualFees = paidOrders.reduce((s, ord) => s + (ord.stripe_fee || 0), 0);
-    const fees = hasActualFees ? actualFees : estimatedFees;
-    return { name: o.name, date: o.event_date, location: locations[o.location_id]?.name || '—', revenue, fees, estimatedFees, actualFees, profit: revenue - fees };
+    return { name: o.name, date: o.event_date, location: locations[o.location_id]?.name || '—', revenue };
   });
-
-  async function handleSyncStripeFees() {
-    setSyncing(true);
-    setSyncResult(null);
-    const res = await base44.functions.invoke('syncStripeFees', {});
-    setSyncResult(res.data);
-    setSyncing(false);
-    toast.success(`Synced ${res.data.synced} orders. Actual fees: $${res.data.total_actual_fees.toFixed(2)} vs estimated: $${res.data.total_estimated_fees.toFixed(2)}`);
-    // Reload orders to pick up stripe_fee
-    const freshOrders = await base44.entities.Order.filter({});
-    setOrders(freshOrders);
-  }
 
   // Report 5: Team Attribution
   const leaderReport = {};
@@ -233,54 +213,27 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="revenue" className="space-y-3">
-          <div className="flex flex-wrap gap-2 justify-between items-center">
-            <Button variant="outline" size="sm" onClick={handleSyncStripeFees} disabled={syncing}>
-              {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-              {syncing ? 'Syncing Stripe...' : 'Sync Actual Stripe Fees'}
-            </Button>
+          <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => exportCsv(
-              ['Event', 'Date', 'Location', 'Revenue', hasActualFees ? 'Actual Fees' : 'Est. Fees', 'Profit'],
-              revenueReport.map(r => [r.name, r.date, r.location, r.revenue.toFixed(2), r.fees.toFixed(2), r.profit.toFixed(2)]),
+              ['Event', 'Date', 'Location', 'Revenue'],
+              revenueReport.map(r => [r.name, r.date, r.location, r.revenue.toFixed(2)]),
               'revenue-report.csv'
             )}><Download className="h-4 w-4 mr-1" />CSV</Button>
           </div>
-          {syncResult && (
-            <div className="bg-card border border-border rounded-lg p-4 text-sm space-y-1">
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Stripe Fee Sync Complete
-              </div>
-              <p className="text-muted-foreground">Synced {syncResult.synced} orders · Skipped {syncResult.skipped} · Errors {syncResult.errors}</p>
-              <div className="grid grid-cols-3 gap-3 mt-2 pt-2 border-t border-border">
-                <div><p className="text-xs text-muted-foreground">Estimated Fees</p><p className="font-semibold">${syncResult.total_estimated_fees.toFixed(2)}</p></div>
-                <div><p className="text-xs text-muted-foreground">Actual Fees</p><p className="font-semibold">${syncResult.total_actual_fees.toFixed(2)}</p></div>
-                <div><p className="text-xs text-muted-foreground">Difference</p><p className="font-semibold ${syncResult.difference > 0 ? 'text-red-400' : 'text-emerald-400'}">{syncResult.difference >= 0 ? '+' : ''}${syncResult.difference.toFixed(2)}</p></div>
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold">${revenueReport.reduce((s, r) => s + r.revenue, 0).toFixed(2)}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{hasActualFees ? 'Stripe Fees (actual)' : 'Stripe Fees (est.)'}</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold text-red-400">${revenueReport.reduce((s, r) => s + r.fees, 0).toFixed(2)}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profit After Fees</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold text-emerald-400">${revenueReport.reduce((s, r) => s + r.profit, 0).toFixed(2)}</p></CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold">${revenueReport.reduce((s, r) => s + r.revenue, 0).toFixed(2)}</p></CardContent>
+          </Card>
           <div className="border rounded-lg overflow-auto">
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Event</TableHead><TableHead>Date</TableHead><TableHead>Location</TableHead><TableHead>Revenue</TableHead><TableHead>Fees</TableHead><TableHead>Profit</TableHead>
+                <TableHead>Event</TableHead><TableHead>Date</TableHead><TableHead>Location</TableHead><TableHead>Revenue</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {revenueReport.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell>{r.name}</TableCell><TableCell>{r.date}</TableCell><TableCell>{r.location}</TableCell>
-                    <TableCell>${r.revenue.toFixed(2)}</TableCell><TableCell className="text-red-400">${r.fees.toFixed(2)}</TableCell><TableCell className="text-emerald-400">${r.profit.toFixed(2)}</TableCell>
+                    <TableCell>${r.revenue.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

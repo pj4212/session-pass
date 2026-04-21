@@ -1,10 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-import Stripe from 'npm:stripe@14.14.0';
 import { Resend } from 'npm:resend@3.2.0';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"));
 
 // Retry wrapper with exponential backoff for any retryable operation (DB, email, API)
 async function withRetry(fn, label = 'operation', maxRetries = 8) {
@@ -158,7 +155,6 @@ Deno.serve(async (req) => {
     }
 
     const orderNumber = generateOrderNumber();
-    const isFree = totalAmount === 0;
 
     // Create order
     const order = await withRetry(
@@ -169,91 +165,14 @@ Deno.serve(async (req) => {
         buyer_phone: buyer.phone || '',
         occurrence_id: occurrence.id,
         total_amount: totalAmount,
-        payment_status: isFree ? 'free' : 'pending',
+        payment_status: totalAmount === 0 ? 'free' : 'completed',
         order_status: 'confirmed',
         send_all_to_buyer: !!send_all_to_buyer
       }),
       'create order'
     );
 
-    if (!isFree) {
-      for (const att of attendees) {
-        const tt = ticketTypeMap[att.ticket_type_id];
-        const tempHash = 'pending';
-        await withRetry(
-          () => base44.asServiceRole.entities.Ticket.create({
-            workspace_id: occurrence.workspace_id || '',
-            order_id: order.id,
-            occurrence_id: occurrence.id,
-            ticket_type_id: att.ticket_type_id,
-            attendance_mode: tt.attendance_mode,
-            attendee_first_name: att.first_name,
-            attendee_last_name: att.last_name,
-            attendee_email: att.email.toLowerCase(),
-            upline_mentor_id: att.upline_mentor_id || '',
-            platinum_leader_id: att.platinum_leader_id || '',
-            qr_code_hash: tempHash,
-            ticket_status: 'active',
-            custom_answers: att.custom_answers || ''
-          }),
-          `create paid ticket for ${att.email}`
-        );
-      }
-
-      // Create Stripe Checkout session
-      const lineItems = [];
-      const ticketsByType = {};
-      for (const att of attendees) {
-        const tt = ticketTypeMap[att.ticket_type_id];
-        if (tt.price > 0) {
-          if (!ticketsByType[tt.id]) {
-            ticketsByType[tt.id] = { tt, count: 0 };
-          }
-          ticketsByType[tt.id].count++;
-        }
-      }
-
-      for (const { tt, count } of Object.values(ticketsByType)) {
-        lineItems.push({
-          price_data: {
-            currency: 'aud',
-            product_data: { name: `${tt.name} (${tt.attendance_mode === 'online' ? 'Online' : 'In-Person'})` },
-            unit_amount: Math.round(tt.price * 100)
-          },
-          quantity: count
-        });
-      }
-
-      const baseUrl = origin_url || 'https://session-pass.com';
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: lineItems,
-        mode: 'payment',
-        success_url: `${baseUrl}/order/${orderNumber}?payment=success`,
-        cancel_url: `${baseUrl}/event/${occurrence.slug}?payment=cancelled`,
-        customer_email: buyer.email,
-        metadata: {
-          order_id: order.id,
-          order_number: orderNumber,
-          base44_app_id: Deno.env.get("BASE44_APP_ID")
-        }
-      });
-
-      await withRetry(
-        () => base44.asServiceRole.entities.Order.update(order.id, {
-          stripe_checkout_session_id: session.id
-        }),
-        'update order with stripe session'
-      );
-
-      return Response.json({ 
-        checkout_url: session.url,
-        order_number: orderNumber,
-        payment_required: true
-      });
-    }
-
-    // FREE ORDER — create tickets in parallel batches for speed
+    // Create tickets in parallel batches for speed
     const tickets = [];
     const BATCH_SIZE = 4;
     for (let i = 0; i < attendees.length; i += BATCH_SIZE) {
@@ -367,8 +286,7 @@ Deno.serve(async (req) => {
     }
 
     return Response.json({ 
-      order_number: orderNumber,
-      payment_required: false 
+      order_number: orderNumber
     });
   } catch (error) {
     console.error("createCheckout error:", error);

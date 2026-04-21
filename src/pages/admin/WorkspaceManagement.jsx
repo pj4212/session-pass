@@ -53,9 +53,6 @@ export default function WorkspaceManagement() {
       description: editWs.description || '',
       default_timezone: editWs.default_timezone || 'Australia/Brisbane',
       support_email: editWs.support_email || '',
-      stripe_secret_key: editWs.stripe_secret_key || '',
-      stripe_publishable_key: editWs.stripe_publishable_key || '',
-      stripe_webhook_secret: editWs.stripe_webhook_secret || '',
       zoom_client_id: editWs.zoom_client_id || '',
       zoom_client_secret: editWs.zoom_client_secret || '',
       zoom_account_id: editWs.zoom_account_id || '',
@@ -92,7 +89,6 @@ export default function WorkspaceManagement() {
               <TableHead>Name</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Timezone</TableHead>
-              <TableHead>Stripe</TableHead>
               <TableHead>Zoom</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
@@ -105,9 +101,6 @@ export default function WorkspaceManagement() {
                 <TableCell className="font-medium">{ws.name}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{ws.slug}</TableCell>
                 <TableCell className="text-sm">{ws.default_timezone || '—'}</TableCell>
-                <TableCell>
-                  {ws.stripe_secret_key ? <Badge variant="default" className="text-xs">Connected</Badge> : <Badge variant="secondary" className="text-xs">Not Set</Badge>}
-                </TableCell>
                 <TableCell>
                   {ws.zoom_client_id ? <Badge variant="default" className="text-xs">Connected</Badge> : <Badge variant="secondary" className="text-xs">Not Set</Badge>}
                 </TableCell>
@@ -146,7 +139,7 @@ export default function WorkspaceManagement() {
               </TableRow>
             ))}
             {workspaces.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No workspaces yet. Create your first workspace to get started.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No workspaces yet. Create your first workspace to get started.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -232,24 +225,6 @@ export default function WorkspaceManagement() {
                     <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-semibold text-sm mb-3">Stripe Settings</h3>
-                <div className="space-y-3">
-                  <div>
-                    <Label>Stripe Secret Key</Label>
-                    <Input type="password" value={editWs.stripe_secret_key || ''} onChange={e => setEditWs(prev => ({ ...prev, stripe_secret_key: e.target.value }))} placeholder="sk_live_..." />
-                  </div>
-                  <div>
-                    <Label>Stripe Publishable Key</Label>
-                    <Input value={editWs.stripe_publishable_key || ''} onChange={e => setEditWs(prev => ({ ...prev, stripe_publishable_key: e.target.value }))} placeholder="pk_live_..." />
-                  </div>
-                  <div>
-                    <Label>Stripe Webhook Secret</Label>
-                    <Input type="password" value={editWs.stripe_webhook_secret || ''} onChange={e => setEditWs(prev => ({ ...prev, stripe_webhook_secret: e.target.value }))} placeholder="whsec_..." />
-                  </div>
-                </div>
               </div>
 
               <div className="border-t pt-4">

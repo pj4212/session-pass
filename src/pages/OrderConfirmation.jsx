@@ -14,8 +14,6 @@ export default function OrderConfirmation() {
   const [tickets, setTickets] = useState([]);
   const [ticketTypes, setTicketTypes] = useState({});
   const [loading, setLoading] = useState(true);
-  const [polling, setPolling] = useState(false);
-
   const loadOrder = async () => {
     const orders = await base44.entities.Order.filter({ order_number: orderNumber });
     if (!orders.length) {
@@ -48,27 +46,6 @@ export default function OrderConfirmation() {
     loadOrder();
   }, [orderNumber]);
 
-  // Poll if payment pending
-  useEffect(() => {
-    if (!order || order.payment_status !== 'pending') return;
-
-    setPolling(true);
-    const interval = setInterval(async () => {
-      const orders = await base44.entities.Order.filter({ order_number: orderNumber });
-      if (orders.length && orders[0].payment_status !== 'pending') {
-        setOrder(orders[0]);
-        // Reload tickets
-        const tix = await base44.entities.Ticket.filter({ order_id: orders[0].id });
-        setTickets(tix);
-        setPolling(false);
-        clearInterval(interval);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [order?.payment_status]);
-
-
 
   if (loading) {
     return (
@@ -89,8 +66,6 @@ export default function OrderConfirmation() {
     );
   }
 
-  const isPending = order.payment_status === 'pending';
-  const isFailed = order.payment_status === 'failed';
   const isConfirmed = order.payment_status === 'completed' || order.payment_status === 'free';
 
   const formatDate = (dateStr) => {
@@ -120,23 +95,6 @@ export default function OrderConfirmation() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        {isPending && (
-          <Alert className="mb-6">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <AlertDescription>
-              We're confirming your payment. This page will update automatically.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {isFailed && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>
-              Payment failed. Your order was not completed. Please try booking again.
-            </AlertDescription>
-          </Alert>
-        )}
-
         {isConfirmed && (
           <div className="flex items-center gap-3 mb-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
             <CheckCircle2 className="h-6 w-6 text-green-600" />

@@ -33,22 +33,6 @@
       "title": "Support Email",
       "format": "email"
     },
-    "stripe_account_id": {
-      "type": "string",
-      "title": "Stripe Account ID"
-    },
-    "stripe_secret_key": {
-      "type": "string",
-      "title": "Stripe Secret Key"
-    },
-    "stripe_publishable_key": {
-      "type": "string",
-      "title": "Stripe Publishable Key"
-    },
-    "stripe_webhook_secret": {
-      "type": "string",
-      "title": "Stripe Webhook Secret"
-    },
     "zoom_client_id": {
       "type": "string",
       "title": "Zoom Client ID"
